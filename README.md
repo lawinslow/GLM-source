@@ -20,6 +20,7 @@ export FABM=true
 ##External Libraries
 
 ###libnetcdf
+
 On a Mac, installed using Macports
 ````
 sudo port install netcdf
@@ -30,9 +31,12 @@ sudo port install netcdf-fortran
 
 ###libgb 
 Install on Mac with Brew
+````
+TODO: Add Brew instructions here
+````
 
 
-Notes from original README
+##Notes from original README
 ````
 # Notes 2013-11-26
 #
