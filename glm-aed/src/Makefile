@@ -154,6 +154,7 @@ else
 endif
 
 LIBS+=-lnetcdf #-lnetcdff
+LIBS+=-L/opt/local/lib
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
