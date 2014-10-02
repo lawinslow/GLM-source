@@ -165,7 +165,8 @@ ifeq ($(WITH_PLOTS),false)
   CFLAGS=-Wall -I$(UTILDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
 else
   CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
-endifFFLAGS+=$(DEBUG_FFLAGS) $(OPT_FFLAGS)
+endif
+FFLAGS+=$(DEBUG_FFLAGS) $(OPT_FFLAGS)
 
 FORT_OBJS=ode_solvers.o \
           glm_types.o   \
