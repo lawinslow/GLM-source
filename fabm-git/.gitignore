@@ -1,0 +1,12 @@
+*.i90
+*.mod
+*.obj
+*.suo
+*.u2d
+*.nc
+lib/
+modules/
+timestamp
+VERSION
+include/version.h
+*.pyc
