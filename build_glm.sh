@@ -62,7 +62,7 @@ cd ${FABMDIR}
 cd ${FABMDIR}/src
 make || exit 1
 
-if [ "$OSTYPE" != "Darwin" ] ; then
+if [ "$OSTYPE" != "darwin13" ] ; then
   cd ${PLOTDIR}
   make || exit 1
 fi
