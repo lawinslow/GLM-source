@@ -6,7 +6,6 @@ export FORTRAN_COMPILER=IFORT
 
 if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
    . /opt/intel/bin/compilervars.sh intel64
-   export PATH="/opt/intel/bin:$PATH"
    export FC=ifort
    export NETCDFHOME=/opt/intel
 elif [ "$FORTRAN_COMPILER" = "IFORT11" ] ; then
