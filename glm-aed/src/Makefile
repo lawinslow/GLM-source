@@ -33,13 +33,15 @@
 #                                                                             #
 ###############################################################################
 
-ifeq ($(OSTYPE),darwin13)
-  WITH_PLOTS=false
-  WITH_XPLOTS=false
-else
-  WITH_PLOTS=true
-  WITH_XPLOTS=true
-endif
+#ifeq ($(OSTYPE),’darwin13’)
+#  WITH_PLOTS=false
+#  WITH_XPLOTS=false
+#else
+#  WITH_PLOTS=true
+#  WITH_XPLOTS=true
+#endif
+WITH_PLOTS=false
+WITH_XPLOTS=false
 
 UTILDIR=../../libutil
 
