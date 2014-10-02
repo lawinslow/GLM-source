@@ -33,7 +33,7 @@
 #                                                                             #
 ###############################################################################
 
-ifeq ($(OSTYPE),Darwin)
+ifeq ($(OSTYPE),darwin13)
   WITH_PLOTS=false
   WITH_XPLOTS=false
 else
@@ -67,6 +67,9 @@ ifeq ($(FORTRAN_COMPILER),IFORT11)
   F90=ifort
 endif
 ifeq ($(FORTRAN_COMPILER),IFORT12)
+  F90=ifort
+endif
+ifeq ($(FORTRAN_COMPILER),IFORT15)
   F90=ifort
 endif
 ifeq ($(FORTRAN_COMPILER),OPEN64)
