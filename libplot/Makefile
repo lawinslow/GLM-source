@@ -37,7 +37,7 @@ OBJS=${objdir}/xbasic.o \
      ${objdir}/plotter.o
 
 CFLAGS=-DXPLOTS
-INCLUDES=-I${incdir} -I.
+INCLUDES=-I${incdir} -I. -I/opt/local/include
 
 ifeq ($(SINGLE),true)
   CFLAGS += -DSINGLE=1
