@@ -1,0 +1,56 @@
+! Auxillary input file for CAEDYM diagenesis model for prescribed flux option (ie. if IBC2=2)
+!-------------------------------------!
+0.00       !   1     DOCL             ! NOTE: Dissolved elements are ignored;
+9      !   2     POCL             ! Particulates are applied in units of
+0.00       !   3     DOPL             !         *** umol /cm2 /yr ***
+0.33       !   4     POPL             !
+0.00       !   5     DONL             !
+6.69       !   6     PONL             !
+0.00       !   7     DOCR             !
+16       !   8     POCR             !
+0.00       !   9     DOPR             !
+0.06       !  10     POPR             !
+0.00       !  11     DONR             !
+1.25       !  12     PONR             !
+0.00       !  13     DO               !
+0.00       !  14     PO4              !
+0.00       !  15     NH4              !
+0.00       !  16     NO3              !
+0.00       !  17     Ca               !
+0.00       !  18     Mg               !
+0.00       !  19     Na               !
+0.00       !  20     K                !
+0.00       !  21     FeII             !
+0.00       !  22     FeIII            !
+0.00       !  23     MnII             !
+0.00       !  24     MnIV             ! 
+0.00       !  25     SiO2             !
+0.00       !  26     Cl               !
+0.00       !  27     DIC              !
+0.00       !  28     SO4              !
+0.00       !  29     CH4              !
+0.00       !  30     H2S              !
+0.00       !  31     Zn               !
+0.00       !  32     pH               !
+0.00       !  33     pe               !
+0.00       !  34     CHGBAL           !
+0.001      !  35     FeOH3A           ! Fe(OH)3A
+0.004      !  36     FeOH3B           ! Fe(OH)3B
+0.004      !  37     MnO2A            ! MnO2A
+0.002      !  38     MnO2B            ! MnO2B
+0.00       !  39     FeS(ppt)         ! FeS
+0.00       !  40     Pyrite           ! FeS2
+0.00       !  41     Siderite         ! FeCO3
+0.00       !  42     Rhodchros        ! MnCO3
+0.00       !  43     Calcite          ! CaCO3
+0.00       !  44     ZnS              ! ZnS
+0.01       !  45     POZnL            !
+0.00       !  46     DOZnL            !
+0.00       !  47     PIP              ! Adsorbed PO4
+0.00       !  48     PIN              ! Adsorbed NH4
+0.00       !  49     SSOL1            !
+0.00       !  50     SSOL2            !
+0.00       !  51     CHLOR            !
+0.00       !  52     IZn_4            !
+0.00       !  53     EXTC             !
+!-------------------------------------!

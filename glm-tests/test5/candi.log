@@ -1,0 +1,59 @@
+     =============================================
+         Results from Corg-mass conservation check
+ Flux in (fg0+fg1+fg2) :         0.0000000000
+ Flux out              :         0.0002622300
+ Flux through reac     :         1.4214021205
+ O2-POC-flux           :         1.3773276510
+ NO-POC-flux           :         0.0309573824
+ Mn-POC-flux           :         0.0000007640
+ Fe-POC-flux           :         0.0000184948
+ SO-POC-flux           :         0.0008166395
+ CH-POC-flux           :         0.0122811888
+ Corgrate              :         1.4214021205
+     =============================================
+   Definition of the fluxes: out of sediment (-) into it (+)
+    Units: [umol/cm**2/a]
+   Flux O2         :        0.0176764137
+   Flux O2 Theory  :      623.5531742080
+   Flux NO3        :      -41.5174181115
+   Flux SO4        :     -148.7267884370
+   Flux PO4        :      -17.8743553084
+   Flux PO4 Theory :       -0.0060691191
+   Flux NH4        :       24.0457395957
+   Flux MnII       :     1479.6670442311
+   Flux FeII       :      318.6468967190
+   Flux CH4        :      569.9380203230
+     =============================================
+     Fluxes at the bottom:                        
+   Flux O2         :       -0.0177499998
+   Flux NO3        :       -0.0054928009
+   Flux SO4        :       -0.0046209917
+   Flux PO4        :       -0.0080466011
+   Flux NH4        :       -0.0000000427
+   Flux MnII       :        0.0000000000
+   Flux FeII       :        0.0000000000
+   Flux CH4        :        0.0000000000
+   Flux OM         :       -0.0002622300
+     =============================================
+         Vertical integrated secondary redox-rates
+ RNHOX                 :        17.9385386097
+ RSOX                  :        60.1217646771
+ RMNOX                 :         3.5052602676
+ RFEOX                 :        32.5856738969
+ RMNFE                 :         0.0002807731
+ RFENO3                :         0.0000000000
+ RMNO2TS               :         0.0000055372
+ RCH4OX                :       232.7431410473
+ RCH4SO4               :         0.0001267497
+ RNO3TS                :         0.2099966531
+ RTSFE3                :         0.0000136926
+ RFESOX                :         0.0275024220
+ RFESFE3               :         0.0000024000
+ RFESMN4               :         0.0000344378
+ RMnNO3                :         0.0003511681
+     =============================================
+             Vertical integrated equilibrium rates
+  RDCO2                :         0.0000000000
+  RDHCO3               :         0.0000000000
+  RDCO3                :         0.0000000000
+     =============================================

@@ -1,0 +1,36 @@
+!-----------------------------------------------------------
+! plots_window defines the size of the window used for 
+! display of the plots
+!-----------------------------------------------------------
+
+&plots_window
+  width = 1200
+  height = 500
+/
+
+!-----------------------------------------------------------
+! plots
+!  nplots - the number of plots
+!  title  - list of titles, one for each plot
+!  min_z  - list of minimum values for the z component
+!  max_z  - list of maximum values for the z component
+! 
+! For the moment really only the min/max values are worth
+! tinkering with
+!-----------------------------------------------------------
+&plots
+  nplots = 2
+  plot_width = 500
+  plot_height = 350
+!
+  title = 'Temperature', 'Salinity'!,'DO','Tracer','crypt','chlor','mdiat','fdiat','PO4'!,'zoop'
+  vars  = 'temp','salt'!,'aed_oxygen_oxy','aed_tracer_ss1','aed_phytoplankton_crypt','aed_phytoplankton_chlor','aed_phytoplankton_mdiat','aed_phytoplankton_fdiat','aed_phosphorus_frp'!,'zoo01'
+  min_z =  4.0, 0.2!,   0.0,   0.0 ,   0.0,  0.0,   0., 0., 0.
+  max_z = 25.0, 0.31!, 400.0, 1 , 350.0, 2.5, 100., 5., 5.
+/
+
+!-----------------------------------------------------------
+&validation
+  time = 
+  depths =
+/

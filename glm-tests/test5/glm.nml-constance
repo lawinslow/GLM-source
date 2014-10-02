@@ -1,0 +1,277 @@
+!-------------------------------------------------------------------------------
+! general model setup
+!-------------------------------------------------------------------------------
+!
+! sim_name  [string]
+!               title of simulation
+! nlev      [integer, minimum = 1, maximum = 1000]
+!               Number of depth levels used to describe the water column
+!
+! wq_sw     WQ modelling sw (.FALSE.=off,.TRUE.=on)
+! Kw        background light attenuation (m**-1)
+!
+!-------------------------------------------------------------------------------
+&glm_setup
+   sim_name = 'GLM Simulation'
+   max_layers = 100
+   min_layer_vol = 0.025
+   min_layer_thick = 1.00
+   max_layer_thick = 4.00
+   Kw = 0.2
+   multi_ben = .true.
+/
+
+!-------------------------------------------------------------------------------
+! fabm setup
+!-------------------------------------------------------------------------------
+! ode_method        [integer]
+!                     ODE scheme for source and sink dynamics
+!                     1: first-order explicit (not positive)
+!                     2: second-order explicit Runge-Kutta (not positive)
+!                     3: fourth-order explicit Runge-Kutta (not positive)
+!                     4: Patankar (first-order, not conservative)
+!                     5: Patankar-RK (second-order, not conservative)
+!                     6: Patankar-RK (does not work, not conservative)
+!                     7: Modified Patankar (1st-order, conservat., posit.)
+!                     8: Modified Patankar-RK (2nd-order, conservat., posit.)
+!                     9: Modified Patankar-RK (does not work, conservat.,
+!                       posit.)
+!                     10: Extended Modified Patankar (1st-order, conservat.,
+!                       posit.)
+!                     11: Extended Modified Patankar-RK (2nd-order, conservat.,
+!                       posit.)
+!                     This variable is used only if bio_calc = True
+! split_factor      [integer, minimum = 1]
+!                     number of biogeochemical time steps per physical time step
+! bioshade_feedback [bool]
+!                     feedback of bio-turbidity to temperature equation
+!-------------------------------------------------------------------------------
+&fabm_setup
+   ode_method = 1
+   split_factor = 1
+   bioshade_feedback = .true.
+   repair_state = .true.
+   fabm_nml_file = 'fabm.nml'
+/
+
+!-------------------------------------------------------------------------------
+! lake details
+!-------------------------------------------------------------------------------
+!
+! name      [string]
+!             name of the station
+! latitude  [float, minimum = -90, maximum = 90, unit = deg North]
+!             latitude
+! longitude [float, minimum = -360, maximum = 360, unit = deg East]
+!             longitude
+! base_elev base elevation (m)
+! crest_elev          crest elevation (m)
+!  bsn_len        basin length at crest (m)
+!  bsn_wid         basin width at crest (m)
+! H elevations
+! A Area (m2 * 1000)
+! V Volume V(m3 * 1000)
+!
+!-------------------------------------------------------------------------------
+&morphometry
+   lake_name  = 'Bodensee'
+   latitude   = 47.4
+   longitude  = 9.1
+   base_elev  = 140.00
+   crest_elev = 400.00
+   bsn_len    = 65000
+   bsn_wid    = 14000
+   bsn_vals   = 11
+   !   H(m)  A(m2 * 1000) V(m3 * 1000)
+!   H = 145, 170, 195, 220, 245, 270, 295, 320,
+!       345, 370, 395
+!   A = 6380.,   30800.,   55140.,   85380.,  125710.,  177860., 228220.,  272770.,
+!       324220.,  377830.,  472650.
+!   V =   2.440e+03,   4.12e+05,   1.35e+06, 2.97e+06,   5.48e+06,   9.16e+06, 1.41e+07,
+!         2.030e+07,   2.770e+07, 3.66000000e+07,   4.67000000e+07
+   H = 145., 170., 195., 220., 245., 270., 295., 320., 345., 370., 395.
+   A = 6380., 30800., 55140., 85380., 125710., 177860., 228220., 272770., 324220., 377830., 472650.
+   V =   2440., 412000., 1350000., 2970000., 5480000., 9160000., 14100000., 20300000., 27700000., 36600000., 46700000.
+/
+
+!-------------------------------------------------------------------------------
+! duration of run
+!-------------------------------------------------------------------------------
+!
+! timefmt [integer]
+!           method to specify start and duration of model run
+!           1: duration computed from number of time steps, MaxN (bogus start
+!             date used) [no longer implemented!!]
+!           2: duration computed from given start and stop dates (number of time
+!             steps MaxN computed)
+!           3: duration computed from number of time steps, MaxN (start date as
+!             specified, stop date computed)
+! start   [string, format = "yyyy-mm-dd hh:mm:ss"]
+!           nominal start date
+!           This variable is used only if timefmt != 1
+! stop    [string, format = "yyyy-mm-dd hh:mm:ss"]
+!           nominal stop date
+!           This variable is used only if timefmt = 2
+! dt        [float, minimum = 0.001, maximum = 86400, unit = s]
+!               Time step for integration
+! numb_days [number of days to run the simulation ]
+!           This variable is used only if timefmt != 2
+! #MaxN    [integer]
+!           nominal number of time steps
+!           maxN is now obsolete - it is calculated from num_days*(86400 / dt)
+!
+!-------------------------------------------------------------------------------
+&time
+   timefmt = 3
+   start = '1998-05-01 00:00:00'
+   !stop = '1999-05-02 00:00:00'
+   stop = '2007-05-02 00:00:00'
+   dt = 3600.0
+   num_days=3288
+   !num_days=730
+   !num_days=8
+/
+
+!-------------------------------------------------------------------------------
+! format for output and filename(s)
+!-------------------------------------------------------------------------------
+!
+! out_dir     [string]
+!               path to output directory (set permissions)
+! out_fn      [string]
+!               output string used to generate output file names
+! out_lkn     [logical]  Output Lake Number to a file
+! out_oflo    [logical]  Output outflow quality to a file
+! nsave       [integer, minimum = 1, maximum = 86400]
+!               save results every 'nsave' timesteps
+! csv_at      [real]
+!               height at whivh to dump a csv file
+! csv_name    [string]
+!               name of csv output file
+! csv_nvars   [integer]
+!               number of variables to output
+! csv_vars    [strings]
+!               list of names of variables to output,order IS important
+!
+!-------------------------------------------------------------------------------
+&output
+   out_dir = '.'
+   out_fn = 'output'
+   out_lkn = .false.
+   out_oflo = .false.
+   nsave = 24
+   csv_at = 17.
+   csv_name = 'WQ17.csv'
+   csv_nvars = 16
+   csv_vars = 'temp',
+              'salt',
+              'aed_oxygen_oxy',
+              'aed_silica_rsi',
+              'aed_nitrogen_amm',
+              'aed_nitrogen_nit',
+              'aed_phosphorus_frp',
+              'aed_organic_matter_don',
+              'aed_organic_matter_pon',
+              'aed_organic_matter_dop',
+              'aed_organic_matter_pop',
+              'aed_organic_matter_doc',
+              'aed_organic_matter_poc',
+              'aed_phytoplankton_green',
+              'aed_phytoplankton_crypto',
+              'aed_phytoplankton_diatom'
+/
+
+!-------------------------------------------------------------------------------
+! initial condition profiles
+!-------------------------------------------------------------------------------
+&init_profiles
+    num_depths = 4
+    the_depths = 0.49,4.26,18.50,190.00
+    the_temps  = 4.00,4.00,4.00,4.00
+    the_sals   = .760,.760,.760,.760
+/
+
+!-------------------------------------------------------------------------------
+! meteorology
+!-------------------------------------------------------------------------------
+!
+!   met_sw         Include surface meteorological forcing
+!   lw_type        Type LW measurement (LW_IN/LW_CC/LW_NET)
+!   rain_sw        Rainfall composition
+!   snow_sw        Snowfall
+!   atm_stab       Account for non-neutral atmospheric stability
+!   meteo_fl       Name of meteorology input file
+!
+!-------------------------------------------------------------------------------
+&meteorology
+   met_sw     = .true.
+   lw_type    = 'LW_CC'
+   rain_sw    = .false.
+   snow_sw    = .true.
+   atm_stab   = .false.
+   meteo_fl   = 'met.csv'
+   wind_factor = 1.0
+/
+
+!-------------------------------------------------------------------------------
+! inflows 
+!-------------------------------------------------------------------------------
+!
+!  num_inflows       number of inflowing streams
+!  names_of_strms    names of streams
+!  strm_hf_angle     stream half angle (degrees)
+!  strmbd_slope      streambed slope (degrees)
+!  strmbd_drag       streambed drag coefficient
+!  inflow_fl         inflow data filename
+!
+!-------------------------------------------------------------------------------
+&inflow
+   num_inflows    = 1
+   names_of_strms = 'river1'     !, 'river2'
+   strm_hf_angle  = 85.0         !, 85.0
+   strmbd_slope   = 0.573        !, 0.573
+   strmbd_drag    = 0.0160       !, 0.0160
+   inflow_factor = 1.0           !,1.0
+   inflow_fl      = 'inflow.csv' !, 'inflow2.csv'
+   inflow_varnum  = 17,
+   inflow_vars    = 'FLOW',
+                    'TEMP',
+                    'SALT',
+                    'aed_oxygen_oxy',
+                    'aed_silica_rsi',
+                    'aed_nitrogen_amm',
+                    'aed_nitrogen_nit',
+                    'aed_phosphorus_frp',
+                    'aed_organic_matter_don',
+                    'aed_organic_matter_pon',
+                    'aed_organic_matter_dop',
+                    'aed_organic_matter_pop',
+                    'aed_organic_matter_doc',
+                    'aed_organic_matter_poc',
+                    'aed_phytoplankton_green',
+                    'aed_phytoplankton_crypto',
+                    'aed_phytoplankton_diatom'
+/
+
+!-------------------------------------------------------------------------------
+! outflows
+!-------------------------------------------------------------------------------
+!
+!  num_outlet    no. of outlets
+!  flt_off_sw    floating offtake switches
+!  outl_elvs     outlet elevations
+!  bsn_len_outl  basin length at outlets (m)
+!  bsn_wid_outl  basin width at outlets (m)
+!  outflow_fl    outflow data file
+!
+!-------------------------------------------------------------------------------
+&outflow
+   num_outlet   = 1
+   flt_off_sw   = .false.
+   outl_elvs    = 330.50
+   bsn_len_outl = 799
+   bsn_wid_outl = 399
+   outflow_fl   = 'outflow.csv'
+   outflow_factor = 1.0
+/
+

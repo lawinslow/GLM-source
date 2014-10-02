@@ -1,0 +1,4 @@
+#!/bin/bash
+
+../../glm-aed/src/glm $*
+exit 0
