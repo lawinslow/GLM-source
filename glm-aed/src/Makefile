@@ -48,6 +48,7 @@ UTILDIR=../../libutil
 DEFINES=
 FINCLUDES=
 CINCLUDES=-I$(UTILDIR)/include
+CINCLUDES+=-I/opt/local/include
 LIBS=-L$(UTILDIR) -lutil
 ifeq ($(WITH_PLOTS),true)
   DEFINES+=-DPLOTS
