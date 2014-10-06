@@ -950,7 +950,7 @@ void initialise_lake(int namlst)
     }
 
     // Now interpolate into at least 50 layers
-    while (NumLayers <= 50) {
+    while (NumLayers <= 3) {
         for (i = botmLayer; i < NumLayers; i++) {
             nx = 2 * (surfLayer - i);
             np = surfLayer - i;
