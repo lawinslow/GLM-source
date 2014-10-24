@@ -1,0 +1,22 @@
+# The fortran modules provided by this target.
+provides
+ aed_carbon
+ aed_chlorophylla
+ aed_core
+ aed_iron
+ aed_models
+ aed_nitrogen
+ aed_organic_matter
+ aed_oxygen
+ aed_pathogens
+ aed_phosphorus
+ aed_phyto_utils
+ aed_phytoplankton
+ aed_sedflux
+ aed_silica
+ aed_sulfur
+ aed_totals
+ aed_tracer
+ aed_util
+ aed_zoop_utils
+ aed_zooplankton

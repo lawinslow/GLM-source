@@ -1,0 +1,6 @@
+# The fortran modules provided by this target.
+provides
+ fabm_iow_age
+ fabm_iow_ergom
+ fabm_iow_spm
+ iow_model_library

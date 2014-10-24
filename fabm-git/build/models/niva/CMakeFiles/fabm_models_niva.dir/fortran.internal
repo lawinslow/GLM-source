@@ -1,0 +1,4 @@
+# The fortran modules provided by this target.
+provides
+ fabm_niva_oxydep
+ niva_model_library
