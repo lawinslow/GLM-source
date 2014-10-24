@@ -203,8 +203,10 @@ ifeq ($(WITH_PLOTS),true)
   endif
 endif
 
-ifeq ($(PLOTDIR),)
-  PLOTDIR=../../libplot
+ifeq ($(WITH_PLOTS),false)
+  CFLAGS=-Wall -I$(UTILDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
+else
+  CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
 endif
 
 CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
