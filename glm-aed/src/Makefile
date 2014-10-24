@@ -194,6 +194,7 @@ else
   # OPT_FFLAGS=
 endif
 
+LIBS+=-L/opt/local/lib
 LIBS+=-lnetcdf
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
