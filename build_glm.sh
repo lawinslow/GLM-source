@@ -11,6 +11,7 @@ export FORTRAN_COMPILER=IFORT
 
 if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
    . /opt/intel/bin/compilervars.sh intel64
+   export PATH="/opt/intel/bin:$PATH"
    export FC=ifort
    export NETCDFHOME=/opt/intel
 elif [ "$FORTRAN_COMPILER" = "IFORT11" ] ; then
@@ -77,7 +78,7 @@ if [ "${FABM}" = "true" ] ; then
   make || exit 1
 fi
 
-if [ "$OSTYPE" != "darwin13" ] ; then
+if [ "$OSTYPE" != "Darwin" ] ; then
   cd ${PLOTDIR}
   make || exit 1
 fi
@@ -93,7 +94,7 @@ make || exit 1
 
 cd ${CURDIR}/glm-aed
 
-if [ "$OSTYPE" != "darwin13" ] ; then
+if [ "$OSTYPE" != "Darwin" ] ; then
   VERSION=`grep GLM_VERSION src/glm.h | cut -f2 -d\"`
   echo glm version $VERSION
   VERSDEB=`head -1 debian/changelog | cut -f2 -d\( | cut -f1 -d-`
