@@ -36,7 +36,7 @@ OBJS=${objdir}/xbasic.o \
      ${objdir}/colours.o \
      ${objdir}/plotter.o
 
-CFLAGS=-O3
+CFLAGS=-O3 -DXPLOTS
 INCLUDES=-I${incdir} -I.
 
 ifeq ($(SINGLE),true)
