@@ -1,0 +1,6 @@
+*.png
+output.nc
+WQ_*.csv
+lake.csv
+outlet.csv
+overflow.csv
