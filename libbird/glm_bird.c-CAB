@@ -1,0 +1,79 @@
+/******************************************************************************
+ *                                                                            *
+ * glm_bird.c                                                                 *
+ *                                                                            *
+ * Bird and Hulstrom's Solar Irradiance Model                                 *
+ * Richard E. Bird and Roland L. Hulstrom                                     *
+ * A Simplified Clear Sky Model for Direct and Diffuse Insolation on          *
+ *                                                       Horizontal Surfaces. *
+ * SERI/TR-642-761                                                            *
+ * Solar Energy Research Institute                                            *
+ * Golden, Colorado, USA, February 1981.                                      *
+ *                                                                            *
+ ******************************************************************************/
+
+#include <math.h>
+
+#include "glm.h"
+#include "glm_types.h"
+#include "glm_bird.h"
+#include "aed_time.h"
+
+/*
+static AED_REAL Elevation = 200; //# Station Elevation in m
+static AED_REAL AP = 973;        //# Atmospheric Pressure in milibars
+static AED_REAL Oz = 0.279;      //# Ozone concentration in atm-cm
+static AED_REAL WatVap = 1.1;    //# Total Precipitable water vapor in atm-cm
+static AED_REAL AOD500 = 0.033;  //# Dimensionless Aerosol Optical Depth at wavelength 500 nm
+static AED_REAL AOD380 = 0.038;  //# Dimensionless Aerosol Optical Depth at wavelength 380 nm
+static AED_REAL Albedo = 0.2;    //# Albedo value kept at default
+*/
+static AED_REAL deg2rad = Pi/180.;
+
+
+/******************************************************************************
+ *                                                                            *
+ * http://www.itacanet.org/the-sun-as-a-source-of-energy/part-2-solar-energy-reaching-the-earths-surface/
+ *                                                                            *
+ *    I_0 = I_sc [ 1 + 0.034 * cos( 2Pi( n / 265.25) ) ]                      *
+ *                                                                            *
+ * Where:                                                                     *
+ * I_0 = extraterrestrial (outside the atmosphere) irradiance on a plane      *
+ *                                perpendicular to the Sun's rays (W/m2),     *
+ * I_sc = the solar constant (1367 W/m2),                                     *
+ * n = the day of the year such that for January the 1st n = 1.               *
+ *                                                                            *
+ * CAB: shouldn't that be 365.25 ??? [or better, 365.242 ? ]                  *
+ *                                                                            *
+ * http://www.itacanet.org/the-sun-as-a-source-of-energy/part-4-irradiation-calculations/
+ *  has :                                                                     *
+ *                                                                            *
+ *    I_0 = I_sc [ 1 + 0.034 * cos(2Pi ( n / 365.25) ) ]          (W/m2)(4.3) *
+ *                                                                            *
+ * which would suggest I was right .... so ....                               *
+ *                                                                            *
+ ******************************************************************************/
+
+
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+AED_REAL calc_bird(AED_REAL Lon, AED_REAL Lat, int jday, int iclock)
+{
+    AED_REAL JD = day_of_year(jday) + (iclock / 86400.);
+
+    AED_REAL T = JD / 36525.0;
+    AED_REAL M = 357.52910 + 35999.05030*T - 0.0001559*T*T - 0.00000048*T*T*T;
+    AED_REAL M_rad = M * deg2rad;
+    AED_REAL e = 0.016708617 - 0.000042037*T - 0.0000001236*T*T;
+    AED_REAL C = (1.914600 - 0.004817*T - 0.000014*T*T) * sin(M_rad) +
+                         (0.019993 - 0.000101 * T) * sin(2. * M_rad) +
+			                  0.000290 * sin(3. * M_rad);
+
+    AED_REAL R = 1.000001018 * (1.-e*e) / (1. + e * cos(M_rad + C * deg2rad));
+ 
+    // Earth/sun distance correction, Rsq = 1/R^2
+    AED_REAL Rsq = 1./(R*R);
+
+    return I_sc * Rsq;
+}
