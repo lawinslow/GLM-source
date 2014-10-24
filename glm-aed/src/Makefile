@@ -73,6 +73,9 @@ endif
 ifeq ($(FORTRAN_COMPILER),IFORT12)
   F90=ifort
 endif
+ifeq ($(FORTRAN_COMPILER),IFORT15)
+  F90=ifort
+endif
 ifeq ($(FORTRAN_COMPILER),OPEN64)
   F90=open95
 endif
