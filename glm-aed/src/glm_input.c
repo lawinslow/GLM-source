@@ -41,6 +41,7 @@
 #include "aed_time.h"
 #include "glm_util.h"
 #include "aed_csv.h"
+#include "glm_bird.h"
 
 
 //#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
@@ -60,8 +61,18 @@ typedef struct _out_data_ {
     int draw_idx;
 } OutflowDataT;
 
+
+typedef struct _bubl_data_ {
+    int bubf;
+    int flow_idx;
+    int port_idx;
+    int depth_idx;
+    int length_idx;
+} BubbleDataT;
+
 static InflowDataT inf[MaxInf];
 static OutflowDataT outf[MaxOut];
+static BubbleDataT bubl;
 
 static int metf;
 static int rain_idx, hum_idx, lwav_idx, sw_idx, atmp_idx, wind_idx, snow_idx,
@@ -75,24 +86,23 @@ static int have_snow = FALSE, have_rain_conc = FALSE;
 static int n_steps;
 
 static MetDataType *submet = NULL;
-static REALTYPE loaded_day;
+static AED_REAL loaded_day;
 
-REALTYPE wind_factor = 1.0;   //# Windspeed scaling factor
-REALTYPE sw_factor   = 1.0;
-REALTYPE lw_factor   = 1.0;
-REALTYPE at_factor   = 1.0;
-REALTYPE rh_factor   = 1.0;
-REALTYPE rain_factor = 1.0;
+AED_REAL wind_factor = 1.0;   //# Windspeed scaling factor
+AED_REAL sw_factor   = 1.0;
+AED_REAL lw_factor   = 1.0;
+AED_REAL at_factor   = 1.0;
+AED_REAL rh_factor   = 1.0;
+AED_REAL rain_factor = 1.0;
 
 
 int *WQ_VarsIdx = NULL;
 
-
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void read_daily_inflow(int julian, int NumInf, REALTYPE *flow, REALTYPE *temp,
-                                               REALTYPE *salt, REALTYPE *wq)
+void read_daily_inflow(int julian, int NumInf, AED_REAL *flow, AED_REAL *temp,
+                                               AED_REAL *salt, AED_REAL *wq)
 {
     int csv;
     int i,j,k;
@@ -121,7 +131,7 @@ void read_daily_inflow(int julian, int NumInf, REALTYPE *flow, REALTYPE *temp,
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void read_daily_outflow(int julian, int NumOut, REALTYPE *draw)
+void read_daily_outflow(int julian, int NumOut, AED_REAL *draw)
 {
     int csv, i;
 
@@ -139,8 +149,8 @@ void read_daily_outflow(int julian, int NumOut, REALTYPE *draw)
  ******************************************************************************/
 void read_daily_met(int julian, MetDataType *met)
 {
-    int csv, i;
-    REALTYPE now, tomorrow;
+    int csv, i, idx;
+    AED_REAL now, tomorrow, t_val, sol;
 
     now = julian;
     tomorrow = now + 1.0;
@@ -152,7 +162,7 @@ void read_daily_met(int julian, MetDataType *met)
     find_day(csv, time_idx, julian);
 
     i = 0;
-    while (get_csv_val_r(csv, time_idx) < tomorrow) {
+    while ( (t_val = get_csv_val_r(csv, time_idx)) < tomorrow) {
         if ( i >= n_steps ) {
             int dd,mm,yy;
             calendar_date(now,&yy,&mm,&dd);
@@ -160,36 +170,69 @@ void read_daily_met(int julian, MetDataType *met)
             break;
         }
 
+        idx = floor((t_val-floor(t_val))*24+1.e-8); // add 1.e-8 to compensate for rounding error
+        // fprintf(stderr, "Read met for %16.8f ; %15.12f (%2d)\n", t_val, (t_val-floor(t_val))*24., idx);
+        if ( idx != i ) {
+            int dd,mm,yy;
+            calendar_date(now,&yy,&mm,&dd);
+            fprintf(stderr, "Possible sequence issue in met for day %4d-%02d-%02d\n", yy,mm,dd);
+        }
+
         // Rain is the exception - goes as is
-        submet[i].Rain        = get_csv_val_r(csv, rain_idx) * rain_factor * 1000.;
-        submet[i].RelHum      = get_csv_val_r(csv, hum_idx)  * rh_factor;
-        if ( submet[i].RelHum > 100. ) submet[i].RelHum = 100.;
-        submet[i].LongWave    = get_csv_val_r(csv, lwav_idx) * lw_factor;
-        submet[i].ShortWave   = get_csv_val_r(csv, sw_idx)   * sw_factor;
-        submet[i].AirTemp     = get_csv_val_r(csv, atmp_idx) * at_factor;
-        submet[i].WindSpeed   = get_csv_val_r(csv, wind_idx) * wind_factor;
+        submet[idx].Rain        = get_csv_val_r(csv, rain_idx) * rain_factor * 1000.;
+        submet[idx].RelHum      = get_csv_val_r(csv, hum_idx)  * rh_factor;
+        if ( submet[idx].RelHum > 100. ) submet[idx].RelHum = 100.;
+
+        if ( lwav_idx != -1 )
+            submet[idx].LongWave  = get_csv_val_r(csv, lwav_idx) * lw_factor;
+        else
+            submet[idx].LongWave  = 0.;
+        if ( sw_idx != -1 )
+            submet[idx].ShortWave = get_csv_val_r(csv, sw_idx) * sw_factor;
+        else
+            submet[idx].ShortWave = 0.;
+
+        switch ( rad_mode ) {
+            case 0 : // use the value already read.
+            case 1 :
+            case 2 :
+                break;
+            case 3 :
+            case 4 :
+            case 5 :
+                sol = calc_bird(Longitude, Latitude, julian, idx*3600, timezone_m);
+                if ( rad_mode == 4 )
+                    sol = clouded_bird(sol, submet[idx].LongWave);
+                if ( rad_mode == 3 )
+                    submet[idx].LongWave = cloud_from_bird(sol, submet[idx].ShortWave);
+                submet[idx].ShortWave = sol;
+                break;
+        }
+
+        submet[idx].AirTemp     = get_csv_val_r(csv, atmp_idx) * at_factor;
+        submet[idx].WindSpeed   = get_csv_val_r(csv, wind_idx) * wind_factor;
 
         // Read in rel humidity into svd (%), and convert to satvap
-        submet[i].SatVapDef   =  (submet[i].RelHum/100.) * saturated_vapour(submet[i].AirTemp);
+        submet[idx].SatVapDef   =  (submet[idx].RelHum/100.) * saturated_vapour(submet[idx].AirTemp);
 
         if ( have_snow )
-             submet[i].Snow = get_csv_val_r(csv,snow_idx) * 1000. ;
-        else submet[i].Snow = 0. ;
+             submet[idx].Snow = get_csv_val_r(csv,snow_idx) * 1000. ;
+        else submet[idx].Snow = 0. ;
 
         if ( have_rain_conc ) {
-            submet[i].RainConcPO4 = get_csv_val_r(csv, rpo4_idx);
-            submet[i].RainConcTp  = get_csv_val_r(csv, rtp_idx);
-            submet[i].RainConcNO3 = get_csv_val_r(csv, rno3_idx);
-            submet[i].RainConcNH4 = get_csv_val_r(csv, rnh4_idx);
-            submet[i].RainConcTn  = get_csv_val_r(csv, rtn_idx);
-            submet[i].RainConcSi  = get_csv_val_r(csv, rsi_idx);
+            submet[idx].RainConcPO4 = get_csv_val_r(csv, rpo4_idx);
+            submet[idx].RainConcTp  = get_csv_val_r(csv, rtp_idx);
+            submet[idx].RainConcNO3 = get_csv_val_r(csv, rno3_idx);
+            submet[idx].RainConcNH4 = get_csv_val_r(csv, rnh4_idx);
+            submet[idx].RainConcTn  = get_csv_val_r(csv, rtn_idx);
+            submet[idx].RainConcSi  = get_csv_val_r(csv, rsi_idx);
         } else {
-            submet[i].RainConcPO4 = 0.;
-            submet[i].RainConcTp  = 0.;
-            submet[i].RainConcNO3 = 0.;
-            submet[i].RainConcNH4 = 0.;
-            submet[i].RainConcTn  = 0.;
-            submet[i].RainConcSi  = 0.;
+            submet[idx].RainConcPO4 = 0.;
+            submet[idx].RainConcTp  = 0.;
+            submet[idx].RainConcNO3 = 0.;
+            submet[idx].RainConcNH4 = 0.;
+            submet[idx].RainConcTn  = 0.;
+            submet[idx].RainConcSi  = 0.;
         }
         i++;
 
@@ -206,7 +249,7 @@ void read_daily_met(int julian, MetDataType *met)
  ******************************************************************************/
 void read_sub_daily_met(int julian, int iclock, MetDataType *met)
 {
-    REALTYPE now ;
+    AED_REAL now ;
     int  idx = 0;
 
     now = julian;
@@ -218,6 +261,25 @@ void read_sub_daily_met(int julian, int iclock, MetDataType *met)
     idx = iclock/3600;
 
     *met = submet[idx];
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void read_bubble_data(int julian, AED_REAL *aFlow, int *nPorts,
+                                            AED_REAL *bDepth, AED_REAL *bLength)
+{
+    int csv;
+
+    csv = bubl.bubf;
+    find_day(csv, time_idx, julian);
+
+    *aFlow   = get_csv_val_r(csv, bubl.flow_idx);
+    *nPorts  = get_csv_val_i(csv, bubl.port_idx);
+    *bDepth  = get_csv_val_r(csv, bubl.depth_idx);
+    *bLength = get_csv_val_r(csv, bubl.length_idx);
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -296,6 +358,22 @@ void open_met_file(const char *fname, int snow_sw, int rain_sw,
     n_steps = 86400.0 / timestep;
     // Allocate sub daily met array with an element for each timestep
     submet = malloc(n_steps * sizeof(MetDataType));
+
+    if (subdaily) {
+        if ( sw_idx != -1 )  { // we have solar data
+            if ( lwav_idx == -1 ) rad_mode = 3;
+            else {
+                if ( lw_ind == LW_CC ) rad_mode = 1;
+                else                   rad_mode = 2;
+            }
+        } else { // no solar data
+            if ( lwav_idx == -1 ) rad_mode = 5;
+            else {
+                if ( lw_ind == LW_CC ) rad_mode = 4;
+            //  else                   rad_mode = X;
+            }
+        }
+    }
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -347,6 +425,26 @@ void open_outflow_file(int idx, const char *fname, const char *timefmt)
     locate_time_column(outf[idx].outf, "outflow", fname);
 
     outf[idx].draw_idx = find_csv_var(outf[idx].outf,"flow");
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void open_bubbler_file(const char *fname, const char *timefmt)
+{
+    if ( (bubl.bubf = open_csv_input(fname, timefmt)) < 0 ) {
+        fprintf(stderr, "Failed to open '%s'\n", fname);
+        exit(1) ;
+    }
+
+//  locate_time_column(bubl.bubf, "bubbler", fname);
+
+    bubl.flow_idx = find_csv_var(bubl.bubf, "aFlow");
+    bubl.port_idx = find_csv_var(bubl.bubf, "nPorts");
+    bubl.depth_idx = find_csv_var(bubl.bubf, "bDepth");
+    bubl.length_idx = find_csv_var(bubl.bubf, "bLength");
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 

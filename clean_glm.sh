@@ -20,17 +20,37 @@ export CURDIR=`pwd`
 export FABMDIR=${CURDIR}/fabm-git
 export PLOTDIR=${CURDIR}/libplot
 export UTILDIR=${CURDIR}/libutil
+export AED2DIR=${CURDIR}/libaed2
+if [ "${FABM_NEW_BUILD}" = "true" ] ; then
+  export FABMDIR=${CURDIR}/FABM-new/fabm-git
+else
+  export FABMDIR=${CURDIR}/fabm-git
+fi
+
 export COMPILATION_MODE=production
 export FABM=true
 
+cd ${AED2DIR}
+make distclean
+
 cd ${UTILDIR}
-make clean
+make distclean
 
 cd ${PLOTDIR}
-make clean
+make distclean
 
 cd ${FABMDIR}/src
+#make clean
 make distclean
+
+if [ -d ${CURDIR}/FABM-new/fabm-git/build ] ; then
+  cd ${CURDIR}/FABM-new/fabm-git/build
+  RMLIST=`find . -name CMakeFiles`
+  /bin/rm -rf ${RMLIST}
+  RMLIST=`find . -name cmake_install.cmake`
+  /bin/rm -f ${RMLIST}
+  /bin/rm -rf ${CURDIR}/FABM-new/fabm-git/build
+fi
 
 cd ${CURDIR}/glm-aed/src
 make clean
@@ -44,7 +64,8 @@ LIST2=`find . -name output.nc`
 LIST3=`find . -name lake.csv`
 LIST4=`find . -name outlet_\?\?.csv`
 LIST5=`find . -name overflow.csv`
-LIST=`echo $LIST1 $LIST2 $LIST3 $LIST4 $LIST5`
+LIST6=`find . -name stress_dbg.csv`
+LIST=`echo $LIST1 $LIST2 $LIST3 $LIST4 $LIST5 $LIST6`
 #echo $LIST1
 #echo $LIST2
 #echo $LIST3

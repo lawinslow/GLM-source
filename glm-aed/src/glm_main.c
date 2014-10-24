@@ -38,7 +38,7 @@
 
 #ifdef PLOTS
    #include <libplot.h>
-   extern int saveall;
+   extern CLOGICAL do_plots, saveall;
    extern char *plots_nml_name;
 #ifdef XPLOTS
    extern int xdisp;
@@ -92,6 +92,14 @@ int main(int argc, char *argv[])
         }
         argc--; argv++;
     }
+
+#ifdef PLOTS
+# ifdef XPLOTS
+    do_plots = xdisp || saveall;
+# else
+    do_plots = saveall;
+# endif
+#endif
 
     printf("       ------------------------------------------------\n");
     printf("       |  General Lake Model (GLM)   Version %s    |\n", GLM_VERSION);

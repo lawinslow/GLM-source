@@ -11,7 +11,7 @@
             'aed_organic_matter',
             'aed_phytoplankton',
             'aed_zooplankton',
-          ! 'aed_pathogens',
+            'aed_pathogens',
             'aed_tracer',
             'aed_totals'
 /
@@ -69,7 +69,7 @@
    theta_sed_dic = 1.08
    Fsed_dic_variable='aed_sedflux_Fsed_dic'
    pH_initial = 7.5
-   atmco2 = 390
+   atmco2 = 370e-6
    ionic = 0.1
    !-- CH4
    ch4_initial = 27.6
@@ -240,20 +240,20 @@
 
 !-------------------------------------------------------------------------------
 &aed_totals
-   TN =  'aed_nitrogen_nit',
-         'aed_nitrogen_amm',
-         'aed_organic_matter_don',
-         'aed_organic_matter_don',
-         'aed_phytoplankton_green_IN'
-   TP =  'aed_phosphorus_frp',
-         'aed_phosphorus_frp_ads',
-         'aed_organic_matter_dop',
-         'aed_organic_matter_dop',
-         'aed_phytoplankton_green_IP'
-   TOC = 'aed_organic_matter_doc',
-         'aed_organic_matter_poc',
-         'aed_phytoplankton_green'
-   TSS = 'aed_tracer_ss1',
-         'aed_phytoplankton_green' !, .... 
-   turbidity = 0.1,0.1            !,  <vector same length as TSS names>
+   TN_vars =  'aed_nitrogen_nit',
+              'aed_nitrogen_amm',
+              'aed_organic_matter_don',
+              'aed_organic_matter_don',
+              'aed_phytoplankton_green_IN'
+   TP_vars =  'aed_phosphorus_frp',
+              'aed_phosphorus_frp_ads',
+              'aed_organic_matter_dop',
+              'aed_organic_matter_dop',
+              'aed_phytoplankton_green_IP'
+   TOC_vars = 'aed_organic_matter_doc',
+              'aed_organic_matter_poc',
+              'aed_phytoplankton_green'
+   TSS_vars = 'aed_tracer_ss1',
+              'aed_phytoplankton_green' !, .... 
+!  turbidity = 0.1,0.1            !,  <vector same length as TSS names>
 /

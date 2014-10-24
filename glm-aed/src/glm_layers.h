@@ -34,38 +34,9 @@
 
 #include "glm.h"
 
-#ifdef _FORTRAN_VERSION_
-!###############################################################################
+void check_layer_thickness(void);
 
-  INTERFACE
-
-     SUBROUTINE check_layer_thickness() BIND(C,name="check_layer_thickness")
-     END SUBROUTINE check_layer_thickness
-
-     SUBROUTINE insert(q,di,bsl,t,s,wqx,ntims,width,ll) BIND(C,name="insert_")
-        USE ISO_C_BINDING
-        REALTYPE,INTENT(in)    :: Q
-        REALTYPE,INTENT(in)    :: DI
-        REALTYPE,INTENT(in)    :: BSL
-        REALTYPE,INTENT(in)    :: T
-        REALTYPE,INTENT(in)    :: S
-        REALTYPE,INTENT(in)    :: wqx(*)
-        INTEGER,INTENT(in)     :: NTIMS
-        REALTYPE,intent(inout) :: WIDTH
-        CINTEGER,INTENT(out)   :: ll
-     END SUBROUTINE Insert
-
-  END INTERFACE
-
-!===============================================================================
-#else
-/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-   void check_layer_thickness(void);
-
-   void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
-                             REALTYPE *wqx, int ntims, REALTYPE *width, int *ll);
-
-#endif
+void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
+                        AED_REAL *wqx, int ntims, AED_REAL *width, int *ll);
 
 #endif

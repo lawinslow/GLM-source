@@ -36,6 +36,7 @@
 #include "glm.h"
 
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "glm_util.h"
@@ -45,59 +46,61 @@
 
 #define _WQ_VarsTmp(i,j,k)  WQ_VarsTmp[_IDX_3d(Num_WQ_Vars,NumInf,MaxPar,i,j,k)]
 
-typedef REALTYPE wq_vars_t[MaxVars];
+typedef AED_REAL wq_vars_t[MaxVars];
 typedef wq_vars_t wq_partic_t[MaxPar];
 
 /******************************************************************************/
-static int flowing_depth(REALTYPE *HF, REALTYPE *DL, REALTYPE VOL,
-                                  REALTYPE DEPTH, REALTYPE Phi, REALTYPE Alpha);
-static REALTYPE extra_volume(REALTYPE d1, REALTYPE d2,
-                                 REALTYPE SurfaceHeight, InflowDataType *Inflow);
-static void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *outf);
+static int flowing_depth(AED_REAL *HF, AED_REAL *DL, AED_REAL VOL,
+                                  AED_REAL DEPTH, AED_REAL Phi, AED_REAL Alpha);
+static AED_REAL extra_volume(AED_REAL d1, AED_REAL d2,
+                                 AED_REAL SurfaceHeight, InflowDataType *Inflow);
+static void do_single_outflow(AED_REAL HeightOfOutflow, AED_REAL flow, OutflowDataType *outf);
 static int new_storage(int *iRiv);
 /*----------------------------------------------------------------------------*/
 
-static REALTYPE *WQ_VarsS = NULL;
+static AED_REAL *WQ_VarsS = NULL;
 static wq_partic_t *WQ_VarsTmp = NULL;
 
-static REALTYPE *dv = NULL;
+static AED_REAL *Delta_V = NULL; //# The delta V from each layer taken by outflow
+
+LOGICAL seepage = FALSE;
+AED_REAL seepage_rate = 0.0;
 
 /******************************************************************************
  * Removes the outflow at level Outflow_LayerNum                              *
  ******************************************************************************/
-void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *outf)
+void do_single_outflow(AED_REAL HeightOfOutflow, AED_REAL flow, OutflowDataType *outf)
 {
-    REALTYPE twopt9 = 2.9,
-             TSecDay = 86.4,
-             min_flow = 0.0001,
-             arfac = 1.0e6;  // Multiplicative factor to get area to m**2
+    const AED_REAL min_flow = 0.0001;
 
-    REALTYPE LenAtOutflow;  //# Reservoir length at height of withdrawal
-    REALTYPE AVDEL;         //#
-    REALTYPE DASNK;         //# Level above W.L. from which fluid is drawn
-    REALTYPE DEL;           //# Initial half withdrawal layer thickness
-    REALTYPE DELB;          //# Lower half withdrawal layer thickness
-    REALTYPE DELT;          //# Upper half withdrawal layer thickness
-    REALTYPE DS;            //# Density difference
-    REALTYPE DT;            //#
-    REALTYPE DZ;            //# Width over which density gradient is calculated
-    REALTYPE FlowRate;      //# Flow rate
-    REALTYPE F2,F3;
-    REALTYPE Grashof;       //# Grashof number
-    REALTYPE QSTAR;
-    REALTYPE R;             //# Outflow parameter
-    REALTYPE TEL;
-    REALTYPE Viscos;
-    REALTYPE WidthAtOutflow; //# Reservoir width at height of withdrawal
-    REALTYPE XN;            //# Brunt-Vaisala frequency
-    REALTYPE XNSQ ;         //# B-V frequency squared
-    REALTYPE zBot;          //# Height of bottom of withdrawal layer
-    REALTYPE zTop;          //# Height of top of withdrawal layer
+    AED_REAL LenAtOutflow;   //# Reservoir length at height of withdrawal
+    AED_REAL AVDEL;          //#
+    AED_REAL DASNK;          //# Level above W.L. from which fluid is drawn
+    AED_REAL ThickOutflow;   //# Thickness of withdrawal layer
+    AED_REAL DeltaBot;       //# Lower half withdrawal layer thickness
+    AED_REAL DeltaTop;       //# Upper half withdrawal layer thickness
+    AED_REAL Delta_rho;      //# Density difference between outflow layer i above or below
+    AED_REAL DT;             //#
+    AED_REAL Delta_z;        //# Width over which density gradient is calculated
+    AED_REAL FlowRate;       //# Flow rate
+    AED_REAL F2,F3;
+    AED_REAL Grashof;        //# Grashof number
+    AED_REAL QSTAR;
+    AED_REAL R;              //# Outflow parameter
+    AED_REAL TEL;
+    AED_REAL Viscos;         //# Vertical diffusivity of momentum averaged over the withdrawal thickness
+    AED_REAL WidthAtOutflow; //# Reservoir width at height of withdrawal
+    AED_REAL Nsqrd_outflow;  //# Brunt-Vaisala frequency squared
+    AED_REAL zBot;           //# Height of bottom of withdrawal layer
+    AED_REAL zTop;           //# Height of top of withdrawal layer
 
-    int i,iBot,ILP,ISINK,iTop,Outflow_LayerNum;
-    int NX;
+    int i,iBot,ILP;
+    int Outflow_half;        //# Which half of outflow calculating +1 = top half, -1 = bottom half
+    int iTop;
+    int Outflow_LayerNum;    //# Layer number of outflow height
+    int Layer_i;             //# Layer count either above or below outflow height
 
-    int flag;
+    int flag;                //# Used to describe the nature of the withdraw
 
 /*----------------------------------------------------------------------------*/
 //BEGIN
@@ -106,20 +109,21 @@ void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *out
         if (Lake[i].Height >=  HeightOfOutflow) break;
 
     //# Return if reservoir surface is below outlet level
-    if (i > surfLayer ) return;
+    if (i > surfLayer) return;
 
     Outflow_LayerNum = i;
 
     LenAtOutflow = 0.;
     WidthAtOutflow = 0.;
-    DEL = 0.0;
-    DELT = 0.;
+    ThickOutflow = 0.0;
+    DeltaTop = 0.;
     ILP = FALSE;
-    DZ = 0.0;
+    Delta_z = 0.0;
 
-    for (i = botmLayer; i <= surfLayer; i++) dv[i]=0.0;
+    //# Reset delta V for all layers as zero
+    for (i = botmLayer; i <= surfLayer; i++) Delta_V[i]=0.0;
 
-    /*---------------------------------------------------------------------*
+    /***********************************************************************
      * Determine offtake level, length, width and flow                     *
      *                                                                     *
      * withdrawal height selection                                         *
@@ -129,111 +133,146 @@ void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *out
      *      2) area = pi/4 * Length * Width                                *
      *      3) ratio Length:Width at outflow = crest                       *
      *                                                                     *
-     *---------------------------------------------------------------------*/
+     ***********************************************************************/
     if (outf == NULL) {
-        LenAtOutflow = LenAtCrest;
-        WidthAtOutflow = WidAtCrest;
-    } else {
-        if (outf->FloatOff) { // floating offtake
-            //# Assume offtake level close to surface
-            LenAtOutflow = Lake[surfLayer].LayerArea * arfac / WidAtCrest;
+        if ( HeightOfOutflow > zero) { //# Is an overflow so use crest height and width
+            LenAtOutflow = LenAtCrest;
             WidthAtOutflow = WidAtCrest;
-        } else { //# Fixed Offtake
-            LenAtOutflow = sqrt(Lake[Outflow_LayerNum].LayerArea*arfac*four/Pi*(LenAtCrest/WidAtCrest));
+        } else { //# Seepage use bottom layer (Eq. x & x in GLM manual)
+            LenAtOutflow = sqrt(Lake[Outflow_LayerNum].LayerArea*AreaFactor*4.0/Pi*(LenAtCrest/WidAtCrest));
+            WidthAtOutflow = LenAtOutflow * WidAtCrest/LenAtCrest;
+        }
+    } else {
+        if (outf->FloatOff) { // Floating offtake
+            //# Assume offtake level close to surface
+            LenAtOutflow = Lake[surfLayer].LayerArea * AreaFactor / WidAtCrest;
+            WidthAtOutflow = WidAtCrest;
+        } else { //# Fixed Offtake (Eq. x & x in GLM manual)
+            LenAtOutflow = sqrt(Lake[Outflow_LayerNum].LayerArea*AreaFactor*4.0/Pi*(LenAtCrest/WidAtCrest));
             WidthAtOutflow = LenAtOutflow * WidAtCrest/LenAtCrest;
         }
     }
 
-    FlowRate = flow / TSecDay;
+    FlowRate = flow / SecsPerDay * 1000;
 
     if (flow <= min_flow) return;
 
-    //#  Calculate withdrawal layer thickness
-    if (surfLayer == botmLayer)
-        dv[0] = flow;
-    else {
-        ISINK = 1;
-        NX = Outflow_LayerNum + 1;
+    //# Calculate withdrawal layer thickness and volume removed from each layer
+    if ((outf == NULL && HeightOfOutflow == zero) || surfLayer == botmLayer) {
+        //# Is a seepage or single layer lake take all from bottom layer
+        Delta_V[0] = flow;
+        //# Correction if bottom layer should be emptied. Note that for a single layer
+        //# lake, less than the specified outflow may be removed and this will be noted
+        //# in the lake.csv diagnostic file
+        if (surfLayer == botmLayer) {
+            if (Delta_V[0] >= Lake[0].LayerVol)
+                Delta_V[0] = Lake[0].LayerVol - 1.0;
+        } else {
+            for (i = botmLayer; i < surfLayer; i++) {
+                if (Delta_V[i] >= Lake[i].LayerVol) {
+                    Delta_V[i+1] = Delta_V[i+1] + Delta_V[i] - Lake[i].LayerVol + 1.0;
+                    Delta_V[i] = Lake[i].LayerVol - 1.0;
+                }
+             }
+        }
+    } else {
+        Outflow_half = 1; //# Start with withdraw from layers above outlet
+        Layer_i = Outflow_LayerNum + 1;
         while (1) {
-            if (NX > surfLayer) NX = surfLayer;
-            if (NX < botmLayer) NX = botmLayer;
-            DS = Lake[Outflow_LayerNum].Density - Lake[NX].Density;
+            if (Layer_i > surfLayer) Layer_i = surfLayer;
+            if (Layer_i < botmLayer) Layer_i = botmLayer;
+            Delta_rho = Lake[Outflow_LayerNum].SPDensity - Lake[Layer_i].SPDensity;
 
             flag = FALSE;
-            if (DS * (ISINK) <= zero)
+            if (Delta_rho * Outflow_half <= zero)
+                //# Density of outflow layer less than layer i above or greater than layer i below
+                //# i.e. unstable density
                 flag = TRUE;
             else {
-                DZ = Lake[NX].MeanHeight - HeightOfOutflow;
-                if ((DZ * (ISINK)) <= zero)
+                Delta_z = Lake[Layer_i].MeanHeight - HeightOfOutflow;
+                if ((Delta_z * Outflow_half) <= zero)
+                    //# Counting up and Delta_z is negative or counting down and Delta_z is positive
                     flag = TRUE;
-                else {
-                    XNSQ = DS * g / ((thsnd + Lake[Outflow_LayerNum].Density) * DZ);
-                    if (XNSQ <= zero) flag = TRUE;
+                else { //# Calculate the Brunt-Vaisala frequency of outflow (Eqn x in GLM Manual)
+                    Nsqrd_outflow = Delta_rho * g / ((1000.0 + Lake[Outflow_LayerNum].SPDensity) * Delta_z);
+                    if (Nsqrd_outflow <= zero) flag = TRUE;
                 }
             }
 
             if (flag) {
                 //# check for zero gradient
-                if (ISINK == 1)
-                    DEL = Lake[surfLayer].Height - HeightOfOutflow;
-                else
-                    DEL = HeightOfOutflow;
+                if (Outflow_half == 1) //# Taking from layers above only
+                    ThickOutflow = Lake[surfLayer].Height - HeightOfOutflow;
+                else //# Taking from layers below only
+                    ThickOutflow = HeightOfOutflow;
             } else {
-                XN = sqrt(XNSQ);
-                Viscos = Lake[Outflow_LayerNum].Epsilon * twenty;
+                //# vertical diffusivity of momentum averaged over withdraw layer
+                Viscos = Lake[Outflow_LayerNum].Epsilon * 20.0;
+                //# limit to molecular diffusivity
                 if (Viscos <= zero) Viscos = Visc;
-                Grashof = XNSQ * sqr(LenAtOutflow) * sqr(LenAtOutflow) / sqr(Viscos);
+                //# Grashof number (Eq. x in GLM manual)
+                Grashof = Nsqrd_outflow * sqr(LenAtOutflow) * sqr(LenAtOutflow) / sqr(Viscos);
                 flag = TRUE;
 
                 if (!ILP) {
                     //# Point sink case
-                    F3 = FlowRate/(XN*LenAtOutflow*sqr(LenAtOutflow));
-                    DEL = LenAtOutflow* pow(F3, (one/three));
-                    if ((two * DEL <= WidthAtOutflow) || (ISINK != 1)) {
+                    F3 = FlowRate/(sqrt(Nsqrd_outflow)*LenAtOutflow*sqr(LenAtOutflow));
+                    ThickOutflow = LenAtOutflow* pow(F3, (1.0/3.0));
+                    if ((2.0 * ThickOutflow <= WidthAtOutflow) || (Outflow_half != 1)) {
                         R = F3*sqrt(Grashof);
-                        if (R <= one) DEL = twopt9 * (pow((Viscos*Visc), (one/six)) * (pow((LenAtOutflow/XN), (one/three))));
+                        if (R <= 1.0)
+                            ThickOutflow = 2.9 * (pow((Viscos*Visc), (1.0/6.0)) *
+                                             (pow((LenAtOutflow/sqrt(Nsqrd_outflow)), (1.0/3.0))));
                         flag = FALSE;
                     }
                 }
 
                 if ( flag ) {
                     //# Line sink case
-                    F2 = FlowRate/WidthAtOutflow/XN/sqr(LenAtOutflow);
+                    //# Froude number (Eq. x in GLM Manual)
+                    F2 = FlowRate/WidthAtOutflow/sqrt(Nsqrd_outflow)/sqr(LenAtOutflow);
                     ILP = TRUE;
-                    DEL = two * LenAtOutflow * sqrt(F2);
-                    R = F2 * pow(Grashof, (one/three));
-                    if (R <= one) DEL = two*LenAtOutflow/pow(Grashof, (one/six));
+                    ThickOutflow = 2.0 * LenAtOutflow * sqrt(F2);
+                    //# R parameter (Eq. x in GLM Manual)
+                    R = F2 * pow(Grashof, (1.0/3.0));
+                    //# Thickness of outflow (Eq. x in GLM manual)
+                    if (R <= 1.0) ThickOutflow = 2.0*LenAtOutflow/pow(Grashof, (1.0/6.0));
                 }
             }
 
-            //# Check that the withdrawal layer does not intersect the top or bottom
-            //# Of the reservoir, and that del is less than the range over which
-            //# the density gradient is calculated.
-            if (ISINK == 1) {
-                if (DEL <= fabs(DZ) || NX == surfLayer) {
-                    DELT = DEL;
-                    if (DELT > (Lake[surfLayer].Height-HeightOfOutflow)) DELT = Lake[surfLayer].Height - HeightOfOutflow;
-                    ISINK = -1;
-                    NX = Outflow_LayerNum-1;
+            /******************************************************************
+             * Check that the withdrawal layer does not intersect the top or  *
+             * bottom of the reservoir, and that ThickOutflow is less than    *
+             * the range over which the density gradient is calculated.       *
+             ******************************************************************/
+            if (Outflow_half == 1) {
+                if (ThickOutflow <= fabs(Delta_z) || Layer_i == surfLayer) {
+                    DeltaTop = ThickOutflow;
+                    if (DeltaTop > (Lake[surfLayer].Height-HeightOfOutflow))
+                        DeltaTop = Lake[surfLayer].Height - HeightOfOutflow;
+                    Outflow_half = -1;
+                    Layer_i = Outflow_LayerNum-1;
                 } else {
                     ILP = FALSE;
-                    NX++;
+                    Layer_i++;
                 }
-            } else if (DEL <= fabs(DZ) || NX == botmLayer) {
-                DELB = DEL;
-                if (DELB > HeightOfOutflow) DELB = HeightOfOutflow;
+            } else if (ThickOutflow <= fabs(Delta_z) || Layer_i == botmLayer) {
+                DeltaBot = ThickOutflow;
+                if (DeltaBot > HeightOfOutflow) DeltaBot = HeightOfOutflow;
                 break;
             } else
-                NX--;
+                Layer_i--;
         }
 
-        //# Calculate top and bottom of w.l., and distance above
-        //# W.L. from which fluid is drawn.
-        zTop = HeightOfOutflow + DELT;
-        zBot = HeightOfOutflow - DELB;
-        TEL = DELT + DELB;
-        DASNK = flow / WidthAtOutflow / LenAtOutflow * thsnd;
-        AVDEL = TEL / two;
+        /**********************************************************************
+         * Calculate top and bottom of w.l., and distance above               *
+         * W.L. from which fluid is drawn.                                    *
+         **********************************************************************/
+        zTop = HeightOfOutflow + DeltaTop;
+        zBot = HeightOfOutflow - DeltaBot;
+        TEL = DeltaTop + DeltaBot;
+        DASNK = flow / WidthAtOutflow / LenAtOutflow * 1000.0;
+        AVDEL = TEL / 2.0;
         zTop += DASNK;
         if (zTop >  Lake[surfLayer].Height) zTop = Lake[surfLayer].Height;
 
@@ -255,16 +294,16 @@ void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *out
 
         //# if all drawn from one layer.
         if (iBot == iTop)
-            dv[Outflow_LayerNum] = flow;
+            Delta_V[Outflow_LayerNum] = flow;
         else {
-            //# Calculate the dv[i), the portion of fluid drawn from the ith layer.
+            //# Calculate the Delta_V[i), the portion of fluid drawn from the ith layer.
             for (i = iBot; i <= iTop; i++) {
-                db = zero;
+                AED_REAL db = zero;
                 if (i != botmLayer) db = Lake[i-1].Height;
                 if (i == iBot) db = zBot;
                 DT = Lake[i].Height;
                 if (i == iTop) DT = zTop;
-                dv[i] = dv_1(db, DT, DASNK, AVDEL, HeightOfOutflow, DELT, DELB);
+                Delta_V[i] = delta_volume(db, DT, DASNK, AVDEL, HeightOfOutflow, DeltaTop, DeltaBot);
             }
 
             //# Proportion drawn from each layer is known. match the
@@ -272,24 +311,24 @@ void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *out
 
             QSTAR = zero;
             for (i = botmLayer; i <= surfLayer; i++)
-                QSTAR += dv[i];
+                QSTAR += Delta_V[i];
 
             for (i = botmLayer; i <= surfLayer; i++)
-                dv[i] = (flow / QSTAR) * dv[i];
+                Delta_V[i] = (flow / QSTAR) * Delta_V[i];
         }
 
         //# Correction if any layer should be emptied.
         for (i = botmLayer; i < surfLayer; i++) {
-            if (dv[i] >= Lake[i].LayerVol) {
-                dv[i+1] = dv[i+1] + dv[i] - Lake[i].LayerVol + one;
-                dv[i] = Lake[i].LayerVol - one;
+            if (Delta_V[i] >= Lake[i].LayerVol) {
+                Delta_V[i+1] = Delta_V[i+1] + Delta_V[i] - Lake[i].LayerVol + 1.0;
+                Delta_V[i] = Lake[i].LayerVol - 1.0;
             }
         }
     }
 
-    //# Now have dv[i] for all layers and can remove it.
+    //# Now have Delta_V[i] for all layers and can remove it.
     for (i = botmLayer; i <= surfLayer; i++)
-         if (dv[i] >= 1E-5) Lake[i].LayerVol -= dv[i];
+         if (Delta_V[i] >= 1E-5) Lake[i].LayerVol -= Delta_V[i];
 
     Lake[botmLayer].Vol1 = Lake[botmLayer].LayerVol;
     for (i = (botmLayer+1); i <= surfLayer; i++)
@@ -304,22 +343,27 @@ void do_an_outflow(REALTYPE HeightOfOutflow, REALTYPE flow, OutflowDataType *out
  * Loop through all outflows and process - return the difference between      *
  *  total volume before and after.                                            *
  ******************************************************************************/
-REALTYPE do_outflows(int jday)
+AED_REAL do_outflows(int jday)
 {
     int i;
-    REALTYPE DrawHeight;
-    REALTYPE VolSum = Lake[surfLayer].Vol1;
+    AED_REAL DrawHeight; //# Height of withdraw [m]
+    AED_REAL VolSum = Lake[surfLayer].Vol1; //# Lake volume prior to outflows [Ml]
+    AED_REAL SeepDraw = 0.0; //# Seepage volume [Ml]
 
-    if ( dv == NULL ) dv = malloc(sizeof(REALTYPE) * MaxLayers);
+    if ( Delta_V == NULL ) Delta_V = malloc(sizeof(AED_REAL) * MaxLayers);
 
-    //# Do withdrawal for each offtake
-    //# Include water quality and particles
-    //# offtake type is switch controlled by FloatOff
+    /**************************************************************************
+     * Do withdrawal for each offtake                                         *
+     * Include water quality and particles                                    *
+     * offtake type is switch controlled by FloatOff                          *
+     **************************************************************************/
     for (i = 0; i < NumOut; i++) {
-        REALTYPE tVolSum = Lake[surfLayer].Vol1;
+        AED_REAL tVolSum = Lake[surfLayer].Vol1;
 
-        //# Floating offtake.
-        //# OLev(i) is distance below surface level for the offtake
+        /**********************************************************************
+         * Floating offtake.                                                  *
+         * OLev(i) is distance below surface level for the offtake            *
+         **********************************************************************/
         if (Outflows[i].FloatOff) {
             DrawHeight = Lake[surfLayer].Height - Outflows[i].OLev;
             //# Let it sit on the bottom if the lake has drained
@@ -329,9 +373,13 @@ REALTYPE do_outflows(int jday)
 
         Outflows[i].Draw *= Outflows[i].Factor;
 
-        do_an_outflow(DrawHeight, Outflows[i].Draw, &Outflows[i]);
+        do_single_outflow(DrawHeight, Outflows[i].Draw, &Outflows[i]);
 
         write_outflow(i, jday, tVolSum - Lake[surfLayer].Vol1);
+    }
+    if (seepage) {
+        SeepDraw = (seepage_rate / Lake[botmLayer].Height) * Lake[botmLayer].LayerVol;
+        do_single_outflow(0., SeepDraw, NULL);
     }
 
     return VolSum - Lake[surfLayer].Vol1;
@@ -345,12 +393,12 @@ REALTYPE do_outflows(int jday)
  * level.  Add in stack volumes when calculating overflow.                    *
  * After overflow, delete stack volumes from the structure.                   *
  ******************************************************************************/
-REALTYPE do_overflow(int jday)
+AED_REAL do_overflow(int jday)
 {
-    REALTYPE VolSum = Lake[surfLayer].Vol1;
+    AED_REAL VolSum = Lake[surfLayer].Vol1;
 
     if (VolSum > VolAtCrest)
-        do_an_outflow(CrestLevel, VolSum - VolAtCrest, NULL);
+        do_single_outflow(CrestLevel, VolSum - VolAtCrest, NULL);
 
     write_outflow(MaxOut, jday, VolSum - Lake[surfLayer].Vol1);
 
@@ -358,93 +406,303 @@ REALTYPE do_overflow(int jday)
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+static int insert_inflow(int k, //#Inflow element count
+    int iRiver,                 //# River number
+    AED_REAL Depth_t0,          //# Depth of lake before inflows [m]
+    AED_REAL Alpha,             //# Stream half angle in radians
+    AED_REAL Phi,               //# Stream slope in radians
+    AED_REAL EntrainmentCoeff,  //# Entrainment coefficient [-]
+    AED_REAL Ri)                //# Bulk Richardson number of the inflow [-]
+{
+    AED_REAL Inflow_Energy;    //# Energy of inflow
+    AED_REAL Inflow_time;      //# Time taken for inflow to reach neutral buoyancy or bottom of lake [days]
+    int Layer;                 //# Layer number adjacent to underflow, entrainment layer
+    int Layer_t0;              //# Layer number at which inflow starts the day
+    int kk;
+    int flag;
+    int wqidx;
+
+    AED_REAL Delta_Q;          //# Delta Q the rate of entrainment of inflow aliquot [ML/day]
+    AED_REAL Delta_t;          //# Delta t the time taken for downflow [days]
+    AED_REAL Downflow_Depth;   //# Depth of downflow [m]
+    AED_REAL Inflow_Density;   //# Density of the inflow
+    AED_REAL Inflow_dx;        //# Distance travelled by inflow [m]
+    AED_REAL Inflow_gprime;    //# Reduced gravity (gprime) between inflow and layer densities [-]
+    AED_REAL Inflow_height_prev; //# Thickness of inflow from previous layer [m]
+    AED_REAL Inflow_height;    //# Thickness of inflow post entrainment [m]
+    AED_REAL Inflow_Flowrate;  //# Inflow flowrate [ML/day]
+    AED_REAL Inflow_Salinity;  //# Inflow salinity [psu]
+    AED_REAL Inflow_Temp;      //# Inflow temperature [oC]
+    AED_REAL Inflow_Velocity;  //# Inflow velocity [m/s]
+
+/*----------------------------------------------------------------------------*/
+//BEGIN
+
+    //# Check to see if have reached the number of inflows for this day.
+    if (k >= Inflows[iRiver].iCnt) return FALSE;
+
+    Inflow_Energy = zero;
+
+    //# If fresh inflow for that day set depth as lake height
+    if (Inflows[iRiver].DDown[k] == 1000.0) {
+        Inflows[iRiver].TotIn += Inflows[iRiver].QDown[k];
+        Inflows[iRiver].DDown[k] = Depth_t0;
+    }
+
+    //# Initialise inflow time
+    Inflow_time = zero;
+    //# Set depth inflow aliquot reached on previous day (DOld)
+    Inflows[iRiver].DOld[k] = Inflows[iRiver].DDown[k];
+    //# Calculate inflow density for this inflow aliquot
+    Inflow_Density = calculate_density(Inflows[iRiver].TDown[k], Inflows[iRiver].SDown[k]);
+
+    //# Calculate the layer in which this element starts the day.
+    for (Layer_t0 = botmLayer; Layer_t0 <= surfLayer; Layer_t0++)
+        if (Lake[Layer_t0].Height >= Inflows[iRiver].DDown[k]) break;
+
+    if (Layer_t0 > surfLayer) Layer_t0 = surfLayer; //# Limit to surface layer
+    Layer = Layer_t0;
+
+    //# Loop for progression of an element through the next layer down.
+    Inflow_Flowrate = Inflows[iRiver].QDown[k];
+
+    Inflow_Temp = Inflows[iRiver].TDown[k];
+    Inflow_Salinity = Inflows[iRiver].SDown[k];
+
+    for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+        WQ_VarsS[wqidx] = Inflows[iRiver].WQDown[k][wqidx];
+
+    Downflow_Depth = Inflows[iRiver].DDown[k];
+
+    //# Check if this element lies below level of neutral buoyancy.
+    //# If it is then add to insertion queue and renumber the stack elements.
+    if (Inflow_Density <= Lake[Layer].SPDensity){
+        Inflows[iRiver].InPar[Inflows[iRiver].NoIns] = k;
+        Inflows[iRiver].TIns[Inflows[iRiver].NoIns]  = Inflow_Temp;
+        Inflows[iRiver].SIns[Inflows[iRiver].NoIns]  = Inflow_Salinity;
+        Inflows[iRiver].DIIns[Inflows[iRiver].NoIns] = Inflow_Density;
+        Inflows[iRiver].QIns[Inflows[iRiver].NoIns]  = Inflow_Flowrate;
+
+        for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+            Inflows[iRiver].WQIns[Inflows[iRiver].NoIns][wqidx] = WQ_VarsS[wqidx];
+
+        Inflows[iRiver].NoIns++;
+
+        return TRUE;
+    }
+
+    //# Calculate the velocity of the inflow and hence the entrainment.
+    while(1) {
+        //# Reduced gravity of downflow (Eq. x in GLM manual)
+        Inflow_gprime = g*(Inflow_Density-Lake[Layer].SPDensity)/(1000.0+Lake[Layer].SPDensity);
+
+        //# Initial height of inflow plunge (Eq. x in GLM manual)
+        Inflow_height_prev = pow((2.0*Ri*pow((Inflow_Flowrate*cos(Alpha)/(sin(Alpha)*SecsPerDay/1000)), 2) / Inflow_gprime), 0.2);
+
+        //# Distance travelled by inflow aliquot (Eq. x in GLM manual)
+        if (Layer == botmLayer) Inflow_dx = Downflow_Depth/sin(Phi);
+        else                    Inflow_dx = (Downflow_Depth-Lake[Layer-1].Height)/sin(Phi);
+
+        //# New inflow thickness due to entrainment (Eq. x in GLM manual)
+        Inflow_height = 1.2 * EntrainmentCoeff * Inflow_dx  +  Inflow_height_prev;
+
+        //# Inflow velocity in m/day (Eq. x in GLM manual)
+        Inflow_Velocity = Inflow_Flowrate * 1000.0 * cos(Alpha) / (pow(Inflow_height, 2) * sin(Alpha));
+
+        //# Time taken for inflow aliquot to travel in this day
+        Delta_t = Inflow_dx/Inflow_Velocity;
+
+        //# If time is greater than one day then carry on to next day and only increment this day's entrainment
+        //# to calculation of new inflow layer thickness
+        if ((Inflow_time + Delta_t) > 1.0) {
+            Inflow_dx = Inflow_dx * (1.0-Inflow_time) / Delta_t;
+            Delta_t = 1.0-Inflow_time;
+            Inflow_height = 1.2 * EntrainmentCoeff * Inflow_dx  +  Inflow_height_prev;
+        }
+
+        Inflow_time += Delta_t;
+
+        //# Estimate increase in flow rate due to entrainment for this day (Eq. x in GLM manual)
+        Delta_Q = 0.2 * Inflow_Flowrate * (pow((Inflow_height/Inflow_height_prev), (5.0/3.0)) - 1.0);
+
+        //# Check for negative inflow layer volume
+        if (Lake[Layer].LayerVol < 0.0)
+            fprintf(stderr, "vol(layer) is negative - layer no. %d surfLayer = %d\n", Layer, surfLayer);
+
+        //# Check that the entrainment is less than 90% of the layer volumne
+        if (Delta_Q > 0.9*Lake[Layer].LayerVol) Delta_Q = 0.9 * Lake[Layer].LayerVol;
+
+        //# Determine physical properties of inflow aliquot once water from adjacent layer has been entrained
+        Inflow_Salinity = combine(Inflow_Salinity, Inflow_Flowrate, Inflow_Density, Lake[Layer].Salinity, Delta_Q, Lake[Layer].SPDensity);
+        Inflow_Temp = combine(Inflow_Temp, Inflow_Flowrate, Inflow_Density, Lake[Layer].Temp, Delta_Q, Lake[Layer].SPDensity);
+        Inflow_Density = calculate_density(Inflow_Temp, Inflow_Salinity);
+
+        //# Add entrained water to inflow aliquot and take from adjacent layer
+        Inflow_Flowrate += Delta_Q;
+        Lake[Layer].LayerVol -= Delta_Q;
+
+        for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+            WQ_VarsS[wqidx] = combine_vol(WQ_VarsS[wqidx], Inflow_Flowrate, _WQ_Vars(wqidx, Layer), Delta_Q);
+
+        //# Calculate energy of inflowing streams.
+        if (Layer == botmLayer)
+            Inflow_Energy += (Inflow_Density - Lake[Layer].SPDensity) * Downflow_Depth * g * Inflow_Flowrate / SecsPerDay * 1000;
+        else
+            Inflow_Energy += (Inflow_Density - Lake[Layer].SPDensity) * (Downflow_Depth - Lake[Layer-1].Height) * g * Inflow_Flowrate / SecsPerDay * 1000;
+
+        //# Reset the downflow stacks.
+        Inflows[iRiver].QDown[k] = Inflow_Flowrate;
+        Inflows[iRiver].TDown[k] = Inflow_Temp;
+        Inflows[iRiver].SDown[k] = Inflow_Salinity;
+
+        for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+             Inflows[iRiver].WQDown[k][wqidx] = WQ_VarsS[wqidx];
+
+        Inflows[iRiver].TotIn = Inflows[iRiver].TotIn + Delta_Q;
+        Inflows[iRiver].DDown[k] = Downflow_Depth - Inflow_dx * sin(Phi);
+        Downflow_Depth = Inflows[iRiver].DDown[k];
+
+        if (Inflows[iRiver].DDown[k] < Inflows[iRiver].Dlwst)
+            Inflows[iRiver].Dlwst = Inflows[iRiver].DDown[k];
+
+        //# If the inflow parcel has ended it's days travel, reached the
+        //# level of neutral buoyancy or has reached the bottom, put it in
+        //# the insertion queue.
+        flag = TRUE;
+        if (Layer != botmLayer)
+            if (Inflow_Density > Lake[Layer-1].SPDensity) flag = FALSE;
+        if (Inflow_time >= 1.0)  flag = TRUE ;
+
+        if ( flag ) {
+            Inflows[iRiver].InPar[Inflows[iRiver].NoIns] = k;
+            Inflows[iRiver].TIns[Inflows[iRiver].NoIns]  = Inflow_Temp;
+            Inflows[iRiver].SIns[Inflows[iRiver].NoIns]  = Inflow_Salinity;
+            Inflows[iRiver].DIIns[Inflows[iRiver].NoIns] = Inflow_Density;
+            Inflows[iRiver].QIns[Inflows[iRiver].NoIns]  = Inflow_Flowrate;
+
+            for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+                Inflows[iRiver].WQIns[Inflows[iRiver].NoIns][wqidx] = WQ_VarsS[wqidx];
+
+            Inflows[iRiver].NoIns++;
+        }
+
+        //# If the inflow parcel has ended its days travel, reached its level of
+        //# Neutral buoyancy or the bottom of the reservoir go to the next parcel
+
+        flag = FALSE;
+        if (Layer == botmLayer)
+            flag = TRUE;
+        else if (Inflow_time >= 1.0)
+            flag = TRUE;
+        else if (Inflow_Density <= Lake[Layer-1].SPDensity)
+            flag = TRUE;
+
+        if ( flag ) { //#Insert inflow parcel and re-calculate cumulative volumes return to do_inflows
+            einff += Inflow_Energy/Inflow_time;
+            if (Layer == botmLayer) Lake[botmLayer].Vol1 = Lake[botmLayer].LayerVol;
+            if (Layer != botmLayer) Lake[Layer].Vol1 = Lake[Layer-1].Vol1 + Lake[Layer].LayerVol;
+            for (kk = Layer+1; kk <= surfLayer; kk++)
+                 Lake[kk].Vol1 = Lake[kk-1].Vol1 + Lake[kk].LayerVol;
+
+            return TRUE;;
+        }
+        Layer--;
+    }
+    return FALSE;
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
 
 /******************************************************************************
  * Inserts the inflow at the level of neutral buoyancy, after calculating the *
  * entrainment                                                                *
- * Return the difference between total volume before and after.
+ * Return the difference between total volume before and after.               *
  ******************************************************************************/
-REALTYPE do_inflows()
+AED_REAL do_inflows()
 {
-    REALTYPE pt1 = 0.1, pt2 = 0.2, pt21 = 0.21, pt4 = 0.4, onept2 = 1.2,
-             pt9 = 0.9, onept5 = 1.5, cwnsq2 = 39.48, TSecDay = 86.4;
+    const AED_REAL cwnsq2 = 39.48;
 
-   REALTYPE Alpha; //# Stream half angle in radians
-   REALTYPE Phi;   //# Stream slope in radians
-   REALTYPE DragCoeff;  //# Stream drag coefficient
-   REALTYPE Delta_Q;    //# Delta Q the rate of entrainment of inflow aliquot [ML/day]
-   REALTYPE Delta_t;    //# Delta t the time taken for downflow [days]
-   REALTYPE Downflow_Depth;  //#Depth of downflow [m]
-   REALTYPE Inflow_Height_t0;  //#Inflow thickness at beginning of the day [m]
-   REALTYPE Inflow_Density; //# Density of the inflow
-   REALTYPE Depth_t0;  //#Depth of lake before inflows [m]
-   REALTYPE Inflow_dx;  //#Distance travelled by inflow [m]
-   REALTYPE EntrainmentCoeff;  //# Entrainment coefficient
-   REALTYPE Inflow_Energy; //# Energy of inflow
-   REALTYPE Inflow_gprime;     //# Reduced gravity (gprime) between inflow and layer densities
-   REALTYPE Inflow_gprime_t0;  //# Reduced gravity (gprime) given surface and inflow densities
-   REALTYPE Inflow_height_prev;  //# Thickness of inflow from previous layer [m]
-   REALTYPE Inflow_height;       //# Thickness of inflow post entrainment [m]
-   REALTYPE Inflow_Flowrate; //# Inflow flowrate [ML/day]
-   REALTYPE Ri;              //# Bulk Richardson number of the inflow [-]
-   REALTYPE Inflow_Salinity; //# Inflow salinity [psu]
-   REALTYPE Inflow_Temp; //# Inflow temperature [oC]
-   REALTYPE Inflow_time;      //# Time taken for inflow to reach neutral buoyancy or bottom of lake [days]
-   REALTYPE Inflow_Velocity; //# Inflow velocity [m/s]
-   REALTYPE Inflow_width;    //# Width of inflow [m]
+    AED_REAL Alpha;             //# Stream half angle in radians
+    AED_REAL Phi;               //# Stream slope in radians
+    AED_REAL DragCoeff;         //# Stream drag coefficient
+    AED_REAL EntrainmentCoeff;  //# Entrainment coefficient
+    AED_REAL Ri;                //# Bulk Richardson number of the inflow [-]
+    AED_REAL Inflow_Density;    //# Density of the inflow
+    AED_REAL Inflow_Height_t0;  //# Initial inflow plunge point [m]
+    AED_REAL Inflow_gprime_t0;  //# Reduced gravity (gprime) given surface and inflow densities
 
-   int j, k, ll;
-   int iRiv, ntims;
-   int jk;
-   int kk;
-   int Layer;  //# Layer number adjacent to underflow, entrainment layer
-   int Layer_t0;  //# Layer number at which inflow starts the day
-   int iRiver;
+    int j, k, ll;
+    int iRiv;
+    int jk;
+    int iRiver;
+    int Layer_subm;             //# Layer number to insert submerged inflow
 
-   int flag;
-   int wqidx;
+    int wqidx;
 
-   REALTYPE VolSum = Lake[surfLayer].Vol1;
+    AED_REAL Inflow_width;    //# Width of inflow [m]
+    AED_REAL VolSum = Lake[surfLayer].Vol1; //# Total lake volume before inflows
 
 /*----------------------------------------------------------------------------*/
 //BEGIN
-    if ( ! WQ_VarsS )   WQ_VarsS = malloc(Num_WQ_Vars * sizeof(REALTYPE));
+    if ( ! WQ_VarsS )   WQ_VarsS = malloc(Num_WQ_Vars * sizeof(AED_REAL));
     if ( ! WQ_VarsTmp ) WQ_VarsTmp = malloc(NumInf*sizeof(wq_partic_t));
-    memset(WQ_VarsS, 0, (Num_WQ_Vars * sizeof(REALTYPE)));
+    memset(WQ_VarsS, 0, (Num_WQ_Vars * sizeof(AED_REAL)));
 
-    //# calculate WaveNumSquared and vel for use by sub DIFUSE; they're used to calculate
-    //# the dispersion coefficient.
-    //# Count down from smallest river, overwriting each time, in case river
-    //# has zero inflow.
+    /**************************************************************************
+     * Initially:                                                             *
+     * 1) Calculate initial reduced gravity and plunge point of the inflow.   *
+     * 2) Calculate WaveNumSquared and vel for use in the calculation of deep *
+     * water mixing. See do_deep_mixing where they're used to calculate the   *
+     * dispersion coefficient, Epsilon.                                       *
+     * Count down from smallest river, overwriting each time, in case river   *
+     * has zero inflow.                                                       *
+     **************************************************************************/
     WaveNumSquared = zero;
     vel = zero;
     for (iRiver = NumInf-1; iRiver >= 0; iRiver--) {
-        if (Inflows[iRiver].FlowRate*Inflows[iRiver].Factor != zero) {
+        if (Inflows[iRiver].FlowRate*Inflows[iRiver].Factor != zero && !Inflows[iRiver].SubmFlag) {
             Alpha = Inflows[iRiver].Alpha;
             Phi = Inflows[iRiver].Phi;
             Inflow_Density = calculate_density(Inflows[iRiver].TemInf,Inflows[iRiver].SalInf);
-            Inflow_gprime_t0 = gprime(Lake[surfLayer].Density,Inflow_Density);
-            Inflow_Height_t0 = Lake[surfLayer].Height-Lake[surfLayer-1].Height;
-            if (Inflow_gprime_t0 > zero)
-                Inflow_Height_t0 = pow((Inflows[iRiver].FlowRate * Inflows[iRiver].Factor / TSecDay), pt4)/pow(Inflow_gprime_t0, pt2);
-            if (Inflow_Height_t0 > Lake[surfLayer].Height)
+            //# Reduced gravity of inflow (Eq. X in GLM manual)
+            Inflow_gprime_t0 = gprime(Lake[surfLayer].SPDensity,Inflow_Density);
+
+            if (Inflow_gprime_t0 > zero) //#inflow density > surface
+                //# Initial plunge point (Eq. x in GLM manual)
+                Inflow_Height_t0 = pow(Inflows[iRiver].FlowRate * Inflows[iRiver].Factor / SecsPerDay * 1000, 0.4)/
+                                   pow(Inflow_gprime_t0, 0.2);
+            else //#inflow density < surface inflow thickness so plunge to depth of surface layer
+                Inflow_Height_t0 = Lake[surfLayer].Height-Lake[surfLayer-1].Height;
+
+            if (Inflow_Height_t0 > Lake[surfLayer].Height) //#Minimum limit = depth of the surface layer
                 Inflow_Height_t0 = Lake[surfLayer].Height;
+
+            //# Wave number squared (Eq. y in GLM manual)
             WaveNumSquared = cwnsq2/sqr(Inflow_Height_t0);
-            vel = pt1 * Inflows[iRiver].FlowRate*Inflows[iRiver].Factor / (TSecDay*sqr(Inflow_Height_t0)*sin(Alpha)/cos(Alpha));
+            //# Velocity of the plunging inflow (Eq. y in GLM manual)
+            vel = 0.1 * Inflows[iRiver].FlowRate*Inflows[iRiver].Factor / SecsPerDay * 1000 /
+                                          (sqr(Inflow_Height_t0)*sin(Alpha)/cos(Alpha));
         }
     }
 
-    Depth_t0 = Lake[surfLayer].Height;
+    /**************************************************************************
+     * Here the integer iCnt is an inflow count of the number of inflows      *
+     * associated with iRiver for that day including any inflows from         *
+     * previous days.                                                         *
+     * iCnt is initialised at the beginning of the simulation as zero and     *
+     * incremented  each day that the inflow > 0.                             *
+     * Once inflow has been inserted, iCnt = iCnt - 1.                        *
+     **************************************************************************/
+
     for (iRiver = 0; iRiver < NumInf; iRiver++) {
-        if (Inflows[iRiver].FlowRate * Inflows[iRiver].Factor > zero) {
-            //if (Inflows[iRiver].iCnt >= MaxPar) {
-            //    fprintf(stderr, "Downflow stack limit too small will give incorrect results.  In river %d\n",iRiver);
-            //    exit(1);
-            //}
+        if (Inflows[iRiver].FlowRate * Inflows[iRiver].Factor > zero && !Inflows[iRiver].SubmFlag) {
             Inflows[iRiver].QDown[Inflows[iRiver].iCnt] = Inflows[iRiver].FlowRate * Inflows[iRiver].Factor;
             Inflows[iRiver].TDown[Inflows[iRiver].iCnt] = Inflows[iRiver].TemInf;
             Inflows[iRiver].SDown[Inflows[iRiver].iCnt] = Inflows[iRiver].SalInf;
-            Inflows[iRiver].DDown[Inflows[iRiver].iCnt] = thsnd;
+            Inflows[iRiver].DDown[Inflows[iRiver].iCnt] = 1000.0;
 
             for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
                 Inflows[iRiver].WQDown[Inflows[iRiver].iCnt][wqidx] = Inflows[iRiver].WQInf[wqidx];
@@ -453,217 +711,99 @@ REALTYPE do_inflows()
         }
     }
 
-    //# Work through each element in the downflow stacks and calculate the
-    //# travel distance and entrainment for the present day, and whether or not
-    //# it reaches its level of neutral buoyancy and hence can be inserted.
-    einff = zero;
-    iRiver = 0;
+    /**************************************************************************
+     * Work through each element in the downflow stacks and calculate the     *
+     * travel distance and entrainment for the present day, and whether or    *
+     * not it reaches its level of neutral buoyancy and hence can be inserted.*
+     **************************************************************************/
+    einff = zero; //# At the start of the day initialise the deltaPE to zero
+    iRiver = 0;   //# Start with first inflow
     while(1) {
         while (iRiver < NumInf) {
-            Alpha = Inflows[iRiver].Alpha;
-            Phi = Inflows[iRiver].Phi;
-            DragCoeff = Inflows[iRiver].DragCoeff;
-            Ri = DragCoeff * ( one + pt21 * sqrt(DragCoeff) * sin(Alpha) ) / (sin(Alpha) * sin(Phi) / cos(Phi));
+            if  (!Inflows[iRiver].SubmFlag) {
+               Alpha = Inflows[iRiver].Alpha;
+               Phi = Inflows[iRiver].Phi;
+               DragCoeff = Inflows[iRiver].DragCoeff;
+               //# Bulk Richardson's number of the inflow (Eq. x in GLM manual)
+               Ri = DragCoeff * ( 1.0 + 0.21 * sqrt(DragCoeff) * sin(Alpha) ) / (sin(Alpha) * sin(Phi) / cos(Phi));
 
-            //# entrainment
-            EntrainmentCoeff = 1.6 * pow(DragCoeff, onept5) / Ri;
+               //# Entrainment coefficient
+               EntrainmentCoeff = 1.6 * pow(DragCoeff, 1.5) / Ri;
 
-            Inflows[iRiver].NoIns = 0;  //# Initialise number of insertions as zero
+               Inflows[iRiver].NoIns = 0;  //# Initialise number of insertions as zero
 
-            k = -1;
-
-            //# Loop for calculation of each separate inflow element.
-labl30:
-            k++;
-            Inflow_Energy = zero;
-            if (k < Inflows[iRiver].iCnt) {
-                if (Inflows[iRiver].DDown[k] == thsnd) {
-                    Inflows[iRiver].TotIn += Inflows[iRiver].QDown[k];
-                    Inflows[iRiver].DDown[k] = Depth_t0;
-                }
-                Inflow_time = zero;
-                Inflows[iRiver].DOld[k] = Inflows[iRiver].DDown[k];
-                Inflow_Density = calculate_density(Inflows[iRiver].TDown[k], Inflows[iRiver].SDown[k]);
-
-                //# Calculate the layer in which this element starts the day.
-                for (Layer_t0 = botmLayer; Layer_t0 <= surfLayer; Layer_t0++)
-                    if (Lake[Layer_t0].Height >= Inflows[iRiver].DDown[k]) break;
-
-                if (Layer_t0 > surfLayer) Layer_t0 = surfLayer;
-                Layer = Layer_t0;
-
-                //# Loop for progression of an element through the next layer down.
-                Inflow_Flowrate = Inflows[iRiver].QDown[k];
-
-                Inflow_Temp = Inflows[iRiver].TDown[k];
-                Inflow_Salinity = Inflows[iRiver].SDown[k];
-
-                for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                    WQ_VarsS[wqidx] = Inflows[iRiver].WQDown[k][wqidx];
-
-                Downflow_Depth = Inflows[iRiver].DDown[k];
-
-                //# Check if this element lies below level of neutral buoyancy.
-                //# If it is insert it and renumber the stack elements.
-                if (Inflow_Density <= Lake[Layer].Density){
-                    Inflows[iRiver].InPar[Inflows[iRiver].NoIns] = k;
-                    Inflows[iRiver].TIns[Inflows[iRiver].NoIns]  = Inflow_Temp;
-                    Inflows[iRiver].SIns[Inflows[iRiver].NoIns]  = Inflow_Salinity;
-                    Inflows[iRiver].DIIns[Inflows[iRiver].NoIns] = Inflow_Density;
-                    Inflows[iRiver].QIns[Inflows[iRiver].NoIns]  = Inflow_Flowrate;
-
-                    for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                        Inflows[iRiver].WQIns[Inflows[iRiver].NoIns][wqidx] = WQ_VarsS[wqidx];
-
-                    Inflows[iRiver].NoIns++;
-
-                    goto labl30;
-                }
-
-                //# Calculate the velocity of the inflow and hence the entrainment.
-                while(1) {
-                    Inflow_gprime = g*(Inflow_Density-Lake[Layer].Density)/(thsnd+Lake[Layer].Density);
-                    Inflow_height_prev = pow((two*Ri*pow((Inflow_Flowrate*cos(Alpha)/(sin(Alpha)*TSecDay)), 2) / Inflow_gprime), pt2);
-                    if (Layer == botmLayer) Inflow_dx = Downflow_Depth/sin(Phi);
-                    else                    Inflow_dx = (Downflow_Depth-Lake[Layer-1].Height)/sin(Phi);
-                    Inflow_height = onept2 * EntrainmentCoeff * Inflow_dx  +  Inflow_height_prev;
-                    Inflow_Velocity = Inflow_Flowrate * thsnd * cos(Alpha) / (pow(Inflow_height, 2) * sin(Alpha));
-
-                    Delta_t = Inflow_dx/Inflow_Velocity;
-                    if ((Inflow_time + Delta_t) > one) {
-                        Inflow_dx = Inflow_dx * (one-Inflow_time) / Delta_t;
-                        Delta_t = one-Inflow_time;
-                        Inflow_height = onept2 * EntrainmentCoeff * Inflow_dx  +  Inflow_height_prev;
-                    }
-
-                    Inflow_time += Delta_t;
-
-                    Delta_Q = 0.2 * Inflow_Flowrate * (pow((Inflow_height/Inflow_height_prev), (five/three)) - one);
-
-                    //# Check for negative inflow layer volume
-                    if (Lake[Layer].LayerVol < 0.0)
-                        fprintf(stderr, "vol(layer) is negative - layer no. %d surfLayer = %d\n", Layer, surfLayer);
-
-                    //# Check that the entrainment is less than 90% of the layer volumne
-                    if (Delta_Q > pt9*Lake[Layer].LayerVol) Delta_Q = pt9 * Lake[Layer].LayerVol;
-
-                    Inflow_Salinity = combine(Inflow_Salinity, Inflow_Flowrate, Inflow_Density, Lake[Layer].Salinity, Delta_Q, Lake[Layer].Density);
-                    Inflow_Temp = combine(Inflow_Temp, Inflow_Flowrate, Inflow_Density, Lake[Layer].Temp, Delta_Q, Lake[Layer].Density);
-                    Inflow_Density = calculate_density(Inflow_Temp, Inflow_Salinity);
-
-                    //# Add entrained water to inflow aliquot and take from adjacent layer
-                    Inflow_Flowrate += Delta_Q;
-                    Lake[Layer].LayerVol -= Delta_Q;
-
-                    for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                        WQ_VarsS[wqidx] = combine_vol(WQ_VarsS[wqidx], Inflow_Flowrate, _WQ_Vars(wqidx, Layer), Delta_Q);
-
-                    //# Calculate energy of inflowing streams.
-                    if (Layer == botmLayer)
-                        Inflow_Energy += (Inflow_Density - Lake[Layer].Density) * Downflow_Depth * g * Inflow_Flowrate / TSecDay;
-                    else
-                        Inflow_Energy += (Inflow_Density - Lake[Layer].Density) * (Downflow_Depth - Lake[Layer-1].Height) * g * Inflow_Flowrate / TSecDay;
-
-                    //# Reset the downflow stacks.
-                    Inflows[iRiver].QDown[k] = Inflow_Flowrate;
-                    Inflows[iRiver].TDown[k] = Inflow_Temp;
-                    Inflows[iRiver].SDown[k] = Inflow_Salinity;
-
-                    for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                         Inflows[iRiver].WQDown[k][wqidx] = WQ_VarsS[wqidx];
-
-                    Inflows[iRiver].TotIn = Inflows[iRiver].TotIn + Delta_Q;
-                    Inflows[iRiver].DDown[k] = Downflow_Depth - Inflow_dx * sin(Phi);
-                    Downflow_Depth = Inflows[iRiver].DDown[k];
-
-                    if (Inflows[iRiver].DDown[k] < Inflows[iRiver].Dlwst)
-                        Inflows[iRiver].Dlwst = Inflows[iRiver].DDown[k];
-
-                    //# If the inflow parcel has ended it's days travel, reached the
-                    //# level of neutral buoyancy or has reached the bottom, put it in
-                    //# the insertion queue.
-                    flag = TRUE;
-                    if (Layer != botmLayer)
-                        if (Inflow_Density > Lake[Layer-1].Density) flag = FALSE;
-                    if (Inflow_time >= one)  flag = TRUE ;
-
-                    if ( flag ) {
-                        Inflows[iRiver].InPar[Inflows[iRiver].NoIns] = k;
-                        Inflows[iRiver].TIns[Inflows[iRiver].NoIns]  = Inflow_Temp;
-                        Inflows[iRiver].SIns[Inflows[iRiver].NoIns]  = Inflow_Salinity;
-                        Inflows[iRiver].DIIns[Inflows[iRiver].NoIns] = Inflow_Density;
-                        Inflows[iRiver].QIns[Inflows[iRiver].NoIns]  = Inflow_Flowrate;
-
-                        for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                            Inflows[iRiver].WQIns[Inflows[iRiver].NoIns][wqidx] = WQ_VarsS[wqidx];
-
-                        Inflows[iRiver].NoIns++;
-                    }
-
-                    //# If the inflow parcel has ended its days travel, reached its level of
-                    //# Neutral buoyancy or the bottom of the reservoir go to the next parcel
-
-                    flag = FALSE;
-                    if (Layer == botmLayer)
-                        flag = TRUE;
-                    else if (Inflow_time >= one)
-                        flag = TRUE;
-                    else if (Inflow_Density <= Lake[Layer-1].Density)
-                        flag = TRUE;
-
-                    if ( flag ) {
-                        einff += Inflow_Energy/Inflow_time;
-                        if (Layer == botmLayer) Lake[botmLayer].Vol1 = Lake[botmLayer].LayerVol;
-                        if (Layer != botmLayer) Lake[Layer].Vol1 = Lake[Layer-1].Vol1 + Lake[Layer].LayerVol;
-                        for (kk = Layer+1; kk <= surfLayer; kk++)
-                             Lake[kk].Vol1 = Lake[kk-1].Vol1 + Lake[kk].LayerVol;
-
-                        goto labl30;
-                    }
-                    Layer--;
-                }
+               k = -1;
+               //# Loop for calculation of each separate inflow element.
+               do  {
+                   k++;
+               } while (insert_inflow(k, iRiver, Lake[surfLayer].Height,
+                                           Alpha, Phi, EntrainmentCoeff, Ri));
             }
             iRiver++;
-        }
+         }
 
+        /**********************************************************************
+         * Insert all of the parcels which reached their level of NB on this  *
+         * day.  Adjust the stacking to note the removal.                     *
+         **********************************************************************/
 
-        //# Insert all of the parcels which reached their level of NB on this day
-        //# Adjust the stacking to note the removal.
-        //#X Note that ntims should be nosecs if the timestep is variable
-
-        ntims = 86400;
         Inflow_width = 0.0;
         for (iRiver = 0; iRiver < NumInf; iRiver++) {
-            Phi = Inflows[iRiver].Phi;
-            iRiv = iRiver;
+            if  (Inflows[iRiver].SubmFlag) {
+               //# Submerged inflows have no momentum, simply insert at specified level and
+               //# adjust layer properties including water quality variables
+               //# Get layer number at submerged inflow level
+               for (Layer_subm = botmLayer; Layer_subm <= surfLayer; Layer_subm++)
+                  if (Lake[Layer_subm].Height >=  Inflows[iRiver].DragCoeff) break;
+               Lake[Layer_subm].Temp = combine(Lake[Layer_subm].Temp,Lake[Layer_subm].LayerVol,Lake[Layer_subm].SPDensity,
+                                               Inflows[iRiver].TemInf,Inflows[iRiver].FlowRate,calculate_density(Inflows[iRiver].TemInf,Inflows[iRiver].SalInf));
+               Lake[Layer_subm].Salinity = combine(Lake[Layer_subm].Salinity,Lake[Layer_subm].LayerVol,Lake[Layer_subm].SPDensity,
+                                               Inflows[iRiver].SalInf,Inflows[iRiver].FlowRate,calculate_density(Inflows[iRiver].TemInf,Inflows[iRiver].SalInf));
 
-            for (j = 0; j < Inflows[iRiver].NoIns; j++) {
-                for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                    WQ_VarsTmp[iRiv][j][wqidx] = Inflows[iRiv].WQIns[j][wqidx];
+               for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+                   _WQ_Vars(wqidx,Layer_subm) = combine_vol(_WQ_Vars(wqidx,Layer_subm),Lake[Layer_subm].LayerVol,Inflows[iRiver].WQInf[wqidx],Inflows[iRiver].FlowRate);
 
-                insert(Inflows[iRiv].QIns[j], Inflows[iRiv].DIIns[j], Phi,
-                           Inflows[iRiv].TIns[j], Inflows[iRiv].SIns[j],
-                                      WQ_VarsTmp[iRiv][j], ntims, &Inflow_width, &ll);
+               Lake[Layer_subm].SPDensity=calculate_density(Lake[Layer_subm].Temp,Lake[Layer_subm].Salinity);
+               Lake[Layer_subm].LayerVol=Lake[Layer_subm].LayerVol+Inflows[iRiver].FlowRate;
 
-                for (jk = Inflows[iRiv].InPar[j]-1; jk < Inflows[iRiv].iCnt-1; jk++) {
-                    Inflows[iRiv].QDown[jk] = Inflows[iRiv].QDown[jk+1];
-                    Inflows[iRiv].TDown[jk] = Inflows[iRiv].TDown[jk+1];
-                    Inflows[iRiv].SDown[jk] = Inflows[iRiv].SDown[jk+1];
-
-                    for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-                        Inflows[iRiv].WQDown[jk][wqidx] = Inflows[iRiv].WQDown[jk+1][wqidx];
-
-                    Inflows[iRiv].DDown[jk] = Inflows[iRiv].DDown[jk+1];
-                    Inflows[iRiv].DOld[jk] = Inflows[iRiv].DOld[jk+1];
+               Lake[botmLayer].Vol1 = Lake[botmLayer].LayerVol;
+               if (surfLayer != botmLayer) {
+                    for (j = (botmLayer+1); j <= surfLayer; j++)
+                        Lake[j].Vol1 = Lake[j-1].Vol1 + Lake[j].LayerVol;
                 }
-                Inflows[iRiv].TotIn -= Inflows[iRiv].QIns[j];
-                Inflows[iRiv].iCnt--;
-                if (Inflows[iRiv].iCnt == 0) {
-                    Inflows[iRiv].TotIn = zero;
-                    Inflows[iRiv].Dlwst = thsnd;
-                }
-                for (k = j; k < Inflows[iRiver].NoIns; k++)
-                    Inflows[iRiver].InPar[k]--;
+            }
+            else {
+               Phi = Inflows[iRiver].Phi;
+               iRiv = iRiver;
+
+               for (j = 0; j < Inflows[iRiver].NoIns; j++) {
+                   for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+                       WQ_VarsTmp[iRiv][j][wqidx] = Inflows[iRiv].WQIns[j][wqidx];
+
+                   insert(Inflows[iRiv].QIns[j], Inflows[iRiv].DIIns[j], Phi,
+                              Inflows[iRiv].TIns[j], Inflows[iRiv].SIns[j],
+                                         WQ_VarsTmp[iRiv][j], SecsPerDay, &Inflow_width, &ll);
+
+                   for (jk = Inflows[iRiv].InPar[j]-1; jk < Inflows[iRiv].iCnt-1; jk++) {
+                       Inflows[iRiv].QDown[jk] = Inflows[iRiv].QDown[jk+1];
+                       Inflows[iRiv].TDown[jk] = Inflows[iRiv].TDown[jk+1];
+                       Inflows[iRiv].SDown[jk] = Inflows[iRiv].SDown[jk+1];
+
+                       for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
+                           Inflows[iRiv].WQDown[jk][wqidx] = Inflows[iRiv].WQDown[jk+1][wqidx];
+
+                       Inflows[iRiv].DDown[jk] = Inflows[iRiv].DDown[jk+1];
+                       Inflows[iRiv].DOld[jk] = Inflows[iRiv].DOld[jk+1];
+                   }
+                   Inflows[iRiv].TotIn -= Inflows[iRiv].QIns[j];
+                   Inflows[iRiv].iCnt--;
+                   if (Inflows[iRiv].iCnt == 0) {
+                       Inflows[iRiv].TotIn = zero;
+                       Inflows[iRiv].Dlwst = 1000.0;
+                   }
+                   for (k = j; k < Inflows[iRiver].NoIns; k++)
+                       Inflows[iRiver].InPar[k]--;
+                  }
             }
         }
 
@@ -672,7 +812,7 @@ labl30:
 
         //# Calculate the front of the downflow for each river.
         for (iRiver = 0; iRiver < NumInf; iRiver++) {
-            Inflows[iRiver].Dlwst = thsnd;
+            Inflows[iRiver].Dlwst = 1000.0;
             for (j = 0; j < Inflows[iRiver].iCnt; j++) {
                 if (Inflows[iRiver].DDown[j] < Inflows[iRiver].Dlwst)
                     Inflows[iRiver].Dlwst = Inflows[iRiver].DDown[j];
@@ -681,8 +821,10 @@ labl30:
 
         iRiv = -1;
 
-        //# If a flow fit error has occured, go back and reroute first inflow for
-        //# the river of concern - iRiv.
+        /**********************************************************************
+         * If a flow fit error has occured, go back and reroute first inflow  *
+         * for the river of concern - iRiv.                                   *
+         **********************************************************************/
         if ( new_storage(&iRiv) ) break;
 
         iRiver = iRiv;
@@ -700,12 +842,10 @@ labl30:
 /******************************************************************************
  * Solve the cubic for flowing depth in a triangular river valley.            *
  ******************************************************************************/
-static int flowing_depth(REALTYPE *HF, REALTYPE *DL, REALTYPE Volume,
-                                   REALTYPE DEPTH, REALTYPE Phi, REALTYPE Alpha)
+static int flowing_depth(AED_REAL *HF, AED_REAL *DL, AED_REAL Volume,
+                                   AED_REAL DEPTH, AED_REAL Phi, AED_REAL Alpha)
 {
-    REALTYPE pt25 = 0.25;
-
-    REALTYPE Theta, H, TAG, CON;
+    AED_REAL Theta, H, TAG, CON;
     int all_ok = TRUE;
 
 /*----------------------------------------------------------------------------*/
@@ -717,16 +857,16 @@ static int flowing_depth(REALTYPE *HF, REALTYPE *DL, REALTYPE Volume,
 
         while(1) {
             CON = DEPTH - *DL;
-            if (fabs(one - six * Volume * thsnd / TAG / pow(CON, 3)) <= one) {
-                Theta = acos(one - six * Volume * thsnd / TAG / pow(CON, 3));
-                H = (two * cos(Theta / three) + one) * CON / two;
+            if (fabs(1.0 - 6.0 * Volume * 1000.0 / TAG / pow(CON, 3)) <= 1.0) {
+                Theta = acos(1.0 - 6.0 * Volume * 1000.0 / TAG / pow(CON, 3));
+                H = (2.0 * cos(Theta / 3.0) + 1.0) * CON / 2.0;
                 if (H > zero && H < CON) break;
-                H = (two * cos(Theta / three + two * Pi / three) + one) * CON / two;
+                H = (2.0 * cos(Theta / 3.0 + 2.0 * Pi / 3.0) + 1.0) * CON / 2.0;
                 if (H > zero && H < CON) break;
-                H = (two * cos(Theta / three + four * Pi / three) + one) * CON / two;
+                H = (2.0 * cos(Theta / 3.0 + 4.0 * Pi / 3.0) + 1.0) * CON / 2.0;
                 if (H > zero && H < CON) break;
             }
-            *DL -= pt25;
+            *DL -= 0.25;
 
             if (*DL <= zero) {
                 all_ok = FALSE;
@@ -747,19 +887,17 @@ static int flowing_depth(REALTYPE *HF, REALTYPE *DL, REALTYPE Volume,
  ******************************************************************************/
 static int new_storage(int *iRiv)
 {
-   REALTYPE pt1 = 0.1;
-
    int iTop,j,k;
 
-   REALTYPE D;
-   REALTYPE DLOW;
-   REALTYPE DOL;
-   REALTYPE EXTRA;
-   REALTYPE LAYPRO;
-   REALTYPE LayerVol;
-   REALTYPE VlSum;
-   REALTYPE VOLSUM;
-   REALTYPE MphLevelVoltemp;
+   AED_REAL D;
+   AED_REAL DLOW;
+   AED_REAL DOL;
+   AED_REAL EXTRA;
+   AED_REAL LAYPRO;
+   AED_REAL LayerVol;
+   AED_REAL VlSum;
+   AED_REAL VOLSUM;
+   AED_REAL MphLevelVoltemp;
 
 /*----------------------------------------------------------------------------*/
 
@@ -778,11 +916,11 @@ static int new_storage(int *iRiv)
         j++;
     }
     if (j >= Nmorph) j = Nmorph - 1;
-    Lake[surfLayer].Height = ((j+1) + (VOLSUM - MphLevelVol[j])/dMphLevelVol[j]) * pt1;
+    Lake[surfLayer].Height = ((j+1) + (VOLSUM - MphLevelVol[j])/dMphLevelVol[j]) * 0.1;
 
     //# Calculate the flowing depths of the inflowing streams.
     //#
-    DLOW = thsnd;
+    DLOW = 1000.0;
     for (k = 0; k < NumInf; k++) {
         if (!flowing_depth(&Inflows[k].HFlow, &Inflows[k].Dlwst, Inflows[k].TotIn,
                          Lake[surfLayer].Height, Inflows[k].Phi, Inflows[k].Alpha) ) {
@@ -798,13 +936,13 @@ static int new_storage(int *iRiv)
     }
 
     //# Account for the extra volumes of the downflows.
-    iTop = round(Lake[surfLayer].Height * ten) - 1;
+    iTop = round(Lake[surfLayer].Height * 10.0) - 1;
     if ( iTop >= Nmorph ) iTop = Nmorph - 1;
     EXTRA = zero;
     DOL = zero;
 
     for (j = botmLayer; j <= iTop; j++) {
-        D = (j+1) / ten;
+        D = (j+1) / 10.0;
         EXTRA = extra_volume(DOL, D, Lake[surfLayer].Height, Inflows);
         if (j == botmLayer)
             LayerVol = MphLevelVol[j];
@@ -816,8 +954,8 @@ static int new_storage(int *iRiv)
         MphLevelVoltemp = zero;
         if (j != botmLayer) MphLevelVoltemp = MphLevelVoldash[j-1];
         MphLevelVoldash[j] = MphLevelVol[j] - EXTRA;
-        if (MphLevelVoldash[j] < (MphLevelVoltemp + (one - LAYPRO) * LayerVol))
-            MphLevelVoldash[j] =  MphLevelVoltemp + (one - LAYPRO) * LayerVol;
+        if (MphLevelVoldash[j] < (MphLevelVoltemp + (1.0 - LAYPRO) * LayerVol))
+            MphLevelVoldash[j] =  MphLevelVoltemp + (1.0 - LAYPRO) * LayerVol;
     }
 
     for (j = iTop+1; j < Nmorph; j++)
@@ -836,10 +974,10 @@ static int new_storage(int *iRiv)
 /******************************************************************************
  * Compute the volume in inflow stacks which lies between depths d1 and d2.   *
  ******************************************************************************/
-static REALTYPE extra_volume(REALTYPE d1, REALTYPE d2,
-                                  REALTYPE SurfaceHeight, InflowDataType *Inflow)
+static AED_REAL extra_volume(AED_REAL d1, AED_REAL d2,
+                                  AED_REAL SurfaceHeight, InflowDataType *Inflow)
 {
-    REALTYPE DTOP, DBOT, SUM, TAG, ZB;
+    AED_REAL DTOP, DBOT, SUM, TAG, ZB;
     int k;
 
     SUM = zero;
@@ -853,15 +991,15 @@ static REALTYPE extra_volume(REALTYPE d1, REALTYPE d2,
             if (d2 > SurfaceHeight) DTOP=SurfaceHeight;
 
             if (DTOP < Inflow[k].Dlwst+Inflow[k].HFlow)
-                SUM += TAG*(pow(DTOP-ZB,3)-pow(DBOT-ZB,3))/three;
+                SUM += TAG*(pow(DTOP-ZB,3)-pow(DBOT-ZB,3))/3.0;
             else if (DBOT > Inflow[k].Dlwst + Inflow[k].HFlow)
                 SUM += TAG*pow(Inflow[k].HFlow,2)*(DTOP-DBOT);
             else
-                SUM += TAG*(pow(Inflow[k].HFlow,3)-pow(DBOT-ZB,3))/three +
+                SUM += TAG*(pow(Inflow[k].HFlow,3)-pow(DBOT-ZB,3))/3.0 +
                                 TAG*pow(Inflow[k].HFlow,2) *
                                    (DTOP-Inflow[k].Dlwst-Inflow[k].HFlow);
         }
     }
-    return SUM / thsnd;
+    return SUM / 1000.0;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/

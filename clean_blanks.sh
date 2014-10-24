@@ -5,7 +5,7 @@
 CWD=`pwd`
 OSTYPE=`uname -s`
 
-for k in fabm-git/src/models/aed fabm-git/src/drivers/glm glm-aed libplot libutil ; do
+for k in fabm-git/src/models/aed fabm-git/src/drivers/glm glm-aed libplot libutil libaed2 ; do
    if [ -d $k ] ; then
       cd $k
       for j in 'F90' 'c' 'h' 'sln' 'vfproj' 'vcproj' 'vcxproj' 'icproj' 'vcxproj.filters' ; do
@@ -34,7 +34,6 @@ for k in fabm-git/src/models/aed fabm-git/src/drivers/glm glm-aed libplot libuti
    fi
 done
 
-if [ 0 = 1 ] ; then
 tr -d '\r' < fabm-git/compilers/vs2008/fabm-glm.vfproj > .tmpx
 \diff fabm-git/compilers/vs2008/fabm-glm.vfproj .tmpx > /dev/null 2>&1
 if [ $? != 0 ] ; then
@@ -53,6 +52,5 @@ if [ $? != 0 ] ; then
     /bin/mv .tmpx fabm-git/compilers/vs2010/fabm-glm.vfproj
 else
     /bin/rm .tmpx
-fi
 fi
 

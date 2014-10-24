@@ -35,32 +35,34 @@
 
 #include "glm.h"
 
-//#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
-#define dbgprt(...) /* __VA_ARGS__ */
-
-
-#define _ONE_ 1.
-
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 #include "glm_csv.h"
 #include "glm_input.h"
-#include "aed_time.h"
 #include "glm_util.h"
 #include "glm_layers.h"
 #include "glm_wqual.h"
 #include "glm_lnum.h"
+#include "glm_bird.h"
 
-#include "namelist.h"
+#include <aed_time.h>
+#include <namelist.h>
+
+//#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
+#define dbgprt(...) /* __VA_ARGS__ */
 
 
 extern int *WQ_VarsIdx;
 
-static REALTYPE        base_elev;
-static REALTYPE        crest_elev;
+static AED_REAL        base_elev;
+static AED_REAL        crest_elev;
 static int             crest_sto_idx;
+extern LOGICAL    seepage;
+extern AED_REAL   seepage_rate;
 
-char glm_nml_file[256] = "glm.nml";
+char glm_nml_file[256] = "glm2.nml";
+char           *wq_lib = "aed2";
 
 static void create_lake(int namlst);
 static void initialise_lake(int namlst);
@@ -80,18 +82,18 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
      *-------------------------------------------*/
     char           *sim_name;
     int             max_layers;
-    REALTYPE        min_layer_vol;
-    REALTYPE        min_layer_thick;
-    REALTYPE        max_layer_thick;
-//  REALTYPE        Kw;
-    extern REALTYPE Benthic_Imin;
-    REALTYPE        coef_inf_entrain;
-//  REALTYPE        coef_mix_conv;
-//  REALTYPE        coef_mix_eta;
-//  REALTYPE        coef_mix_ct;
-//  REALTYPE        coef_mix_cs;
-//  REALTYPE        coef_mix_kh;
-//  REALTYPE        coef_mix_hyp;
+    AED_REAL        min_layer_vol;
+    AED_REAL        min_layer_thick;
+    AED_REAL        max_layer_thick;
+//  AED_REAL        Kw;
+    extern AED_REAL Benthic_Imin;
+    AED_REAL        coef_inf_entrain;
+//  AED_REAL        coef_mix_conv;
+//  AED_REAL        coef_mix_eta;
+//  AED_REAL        coef_mix_ct;
+//  AED_REAL        coef_mix_cs;
+//  AED_REAL        coef_mix_kh;
+//  AED_REAL        coef_mix_hyp;
 //  CLOGICAL        mobility_off;
 //  CLOGICAL        non_avg;
 //  int             deep_mixing;
@@ -100,11 +102,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     /*---------------------------------------------
      * wq setup
      *-------------------------------------------*/
+//  char           *wq_lib = "aed2";
 //  int             ode_method;
 //  int             split_factor;
 //  LOGICAL         bioshade_feedback;
 //  LOGICAL         repair_state;
-    char           *wq_nml_file = "fabm.nml";
+    char           *wq_nml_file = "aed2.nml";
 //  LOGICAL         multi_ben;
     /*-------------------------------------------*/
 
@@ -114,8 +117,9 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     int             timefmt;
     char           *start = NULL;
     char           *stop  = NULL;
-    REALTYPE        dt;        // timestep
+    AED_REAL        dt;        // timestep
     int             num_days;  // number of days to run the sim
+//  AED_REAL        timezone;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
@@ -127,7 +131,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 //  int             nsave;
     int             csv_point_nlevs  = 0;
     char           *csv_point_fname  = NULL;
-    REALTYPE       *csv_point_at     = NULL;
+    AED_REAL       *csv_point_at     = NULL;
     int             csv_point_nvars  = 0;
     char          **csv_point_vars   = NULL;
     char           *csv_lake_fname   = NULL;
@@ -141,39 +145,45 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     /*---------------------------------------------
      * meteorology
      *-------------------------------------------*/
-    LOGICAL         met_sw;        // Include surface meteorological forcing
-    char           *lw_type;       // Type LW measurement (LW_IN/LW_CC/LW_NET)
-    LOGICAL         rain_sw;       // Rainfall composition
-    LOGICAL         snow_sw;       // Snowfall
-    LOGICAL         atm_stab;      // Account for non-neutral atmospheric stability
-    char           *meteo_fl;      // Name of meteorology input file
-//  int             lw_ind;        // type of longwave radiation - now in glm_input
-//  LOGICAL         subdaily;      //
-//  REALTYPE        coef_wind_drag;
-//  REALTYPE        CE;
-//  REALTYPE        CH;
-    extern REALTYPE wind_factor;
-    extern REALTYPE sw_factor;
-    extern REALTYPE lw_factor;
-    extern REALTYPE at_factor;
-    extern REALTYPE rh_factor;
-    extern REALTYPE rain_factor;
+    LOGICAL         met_sw;          // Include surface meteorological forcing
+    char           *lw_type = NULL;  // Type LW measurement (LW_IN/LW_CC/LW_NET)
+    LOGICAL         rain_sw;         // Rainfall composition
+    LOGICAL         snow_sw;         // Snowfall
+    char           *meteo_fl = NULL; // Name of meteorology input file
+//  int             lw_ind;          // type of longwave radiation - now in glm_input
+//  LOGICAL         atm_stab;        // Account for non-neutral atmospheric stability
+//  LOGICAL         subdaily;        //
+//  AED_REAL        CD;
+//  AED_REAL        CE;
+//  AED_REAL        CH;
+    extern AED_REAL wind_factor;
+    extern AED_REAL sw_factor;
+    extern AED_REAL lw_factor;
+    extern AED_REAL at_factor;
+    extern AED_REAL rh_factor;
+    extern AED_REAL rain_factor;
+    extern int      rad_mode;
+    extern int      albedo_mode;
+    extern int      cloud_mode;
     char           *timefmt_m = NULL;
+    extern AED_REAL timezone_m;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
      * inflow
      *-------------------------------------------*/
     int             num_inflows;
+    LOGICAL        *subm_flag      = NULL;
     char          **names_of_strms = NULL;
-    REALTYPE       *strm_hf_angle  = NULL;
-    REALTYPE       *strmbd_slope   = NULL;
-    REALTYPE       *strmbd_drag    = NULL;
-    REALTYPE       *inflow_factor  = NULL;
+    AED_REAL       *strm_hf_angle  = NULL;
+    AED_REAL       *strmbd_slope   = NULL;
+    AED_REAL       *strmbd_drag    = NULL;
+    AED_REAL       *inflow_factor  = NULL;
     char          **inflow_fl      = NULL;
     int             inflow_varnum;
     char          **inflow_vars    = NULL;
     char           *timefmt_i      = NULL;
+    extern AED_REAL timezone_i;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
@@ -181,12 +191,13 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
      *-------------------------------------------*/
     int             num_outlet;
     LOGICAL        *flt_off_sw   = NULL;
-    REALTYPE       *outl_elvs    = NULL;
-    REALTYPE       *bsn_len_outl = NULL;
-    REALTYPE       *bsn_wid_outl = NULL;
+    AED_REAL       *outl_elvs    = NULL;
+    AED_REAL       *bsn_len_outl = NULL;
+    AED_REAL       *bsn_wid_outl = NULL;
     char          **outflow_fl   = NULL;
-    REALTYPE       *outflow_factor;
+    AED_REAL       *outflow_factor;
     char           *timefmt_o    = NULL;
+    extern AED_REAL timezone_o;
     /*-------------------------------------------*/
 
     int i, j, k;
@@ -217,6 +228,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     };
     NAMELIST wq_setup[] = {
           { "wq_setup",          TYPE_START,            NULL               },
+          { "wq_lib",            TYPE_STR,              &wq_lib            },
           { "ode_method",        TYPE_INT,              &ode_method        },
           { "split_factor",      TYPE_INT,              &split_factor      },
           { "bioshade_feedback", TYPE_BOOL,             &bioshade_feedback },
@@ -232,6 +244,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "stop",              TYPE_STR,              &stop              },
           { "dt",                TYPE_DOUBLE,           &dt                },
           { "num_days",          TYPE_INT,              &num_days          },
+          { "timezone",          TYPE_DOUBLE,           &timezone          },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST output[] = {
@@ -259,24 +272,32 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "lw_type",           TYPE_STR,              &lw_type           },
           { "rain_sw",           TYPE_BOOL,             &rain_sw           },
           { "snow_sw",           TYPE_BOOL,             &snow_sw           },
-          { "atm_stab",          TYPE_BOOL,             &atm_stab          },
           { "meteo_fl",          TYPE_STR,              &meteo_fl          },
           { "subdaily",          TYPE_BOOL,             &subdaily          },
+          { "atm_stab",          TYPE_BOOL,             &atm_stab          },
+          { "rad_mode",          TYPE_INT,              &rad_mode          },
+          { "albedo_mode",       TYPE_INT,              &albedo_mode       },
+          { "cloud_mode",        TYPE_INT,              &cloud_mode        },
           { "wind_factor",       TYPE_DOUBLE,           &wind_factor       },
           { "sw_factor",         TYPE_DOUBLE,           &sw_factor         },
           { "lw_factor",         TYPE_DOUBLE,           &lw_factor         },
           { "at_factor",         TYPE_DOUBLE,           &at_factor         },
           { "rh_factor",         TYPE_DOUBLE,           &rh_factor         },
           { "rain_factor",       TYPE_DOUBLE,           &rain_factor       },
-          { "coef_wind_drag",    TYPE_DOUBLE,           &coef_wind_drag    },
+          { "CD",                TYPE_DOUBLE,           &CD                },
           { "CE",                TYPE_DOUBLE,           &CE                },
           { "CH",                TYPE_DOUBLE,           &CH                },
+          { "catchrain",         TYPE_BOOL,             &catchrain         },
+          { "rain_threshold",    TYPE_DOUBLE,           &rain_threshold    },
+          { "runoff_coef",       TYPE_DOUBLE,           &runoff_coef       },
           { "time_fmt",          TYPE_STR,              &timefmt_m         },
+          { "timezone",          TYPE_DOUBLE,           &timezone_m        },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST inflow[] = {
           { "inflow",            TYPE_START,            NULL               },
           { "num_inflows",       TYPE_INT,              &num_inflows       },
+          { "subm_flag",         TYPE_BOOL|MASK_LIST,   &subm_flag         },
           { "names_of_strms",    TYPE_STR|MASK_LIST,    &names_of_strms    },
           { "strm_hf_angle",     TYPE_DOUBLE|MASK_LIST, &strm_hf_angle     },
           { "strmbd_slope",      TYPE_DOUBLE|MASK_LIST, &strmbd_slope      },
@@ -286,6 +307,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "inflow_varnum",     TYPE_INT,              &inflow_varnum     },
           { "inflow_vars",       TYPE_STR|MASK_LIST,    &inflow_vars       },
           { "time_fmt",          TYPE_STR,              &timefmt_i         },
+          { "timezone",          TYPE_DOUBLE,           &timezone_i        },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST outflow[] = {
@@ -298,6 +320,13 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "outflow_fl",        TYPE_STR|MASK_LIST,    &outflow_fl        },
           { "outflow_factor",    TYPE_DOUBLE|MASK_LIST, &outflow_factor    },
           { "time_fmt",          TYPE_STR,              &timefmt_o         },
+          { "timezone",          TYPE_DOUBLE,           &timezone_o        },
+          { NULL,                TYPE_END,              NULL               }
+    };
+    NAMELIST seepage_nml[] = {
+          { "seepage",           TYPE_START,            NULL               },
+          { "seepage",           TYPE_BOOL,             &seepage           },
+          { "seepage_rate",      TYPE_DOUBLE,           &seepage_rate      },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST diffuser[] = {
@@ -336,18 +365,30 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     VMin = min_layer_vol;
     DMin = min_layer_thick;
     DMax = max_layer_thick;
+    NumLayers = 0;
 
     einff = coef_inf_entrain;
 
     wq_calc   = TRUE;
 
+    fprintf(stderr,
+        "0) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
+                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
     if ( get_namelist(namlst, wq_setup) ) {
         fprintf(stderr, "No WQ config\n");
+        wq_lib            = "aed2";
         wq_calc           = FALSE;
         ode_method        = 1;
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
+    } else {
+        fprintf(stderr, "WQ Config :\n  wq_lib   = '%s'\n  wq_nml_file = '%s'\n",
+             wq_lib,
+             wq_nml_file);
+    fprintf(stderr,
+        "1) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
+                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
     }
 
     //-------------------------------------------------
@@ -355,6 +396,10 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         fprintf(stderr,"Error reading the 'time' namelist from %s\n", glm_nml_file);
         exit(1);
     }
+    // set met, inflow and outflow data file timezones to be the default value.
+    timezone_m = timezone;
+    timezone_i = timezone;
+    timezone_o = timezone;
 
     nDays = num_days;
     timestep = dt;
@@ -428,7 +473,9 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         exit(1);
     }
 
-    if ( strcmp(lw_type, "LW_CC") == 0 )
+    if ( lw_type == NULL )
+        lw_ind = LW_CC;
+    else if ( strcmp(lw_type, "LW_CC") == 0 )
         lw_ind = LW_CC;
     else if ( strcmp(lw_type, "LW_IN") == 0 )
         lw_ind = LW_IN;
@@ -438,8 +485,10 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         fprintf(stderr," Error in long wave type : '%s' unknown\n", lw_type);
         exit(1);
     }
+    coef_wind_drag = CD;
 
     open_met_file(meteo_fl, snow_sw, rain_sw, timefmt_m);
+    config_bird(namlst);
 
     //-------------------------------------------------
     for (i = 0; i < MaxInf; i++) {
@@ -487,6 +536,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         NumInf = num_inflows;
 
         for (i = 0; i < NumInf; i++) {
+            Inflows[i].SubmFlag = (subm_flag == NULL)?FALSE:subm_flag[i];
             Inflows[i].Alpha = strm_hf_angle[i] * Pi/PiDeg;
             Inflows[i].Phi = strmbd_slope[i] * Pi/PiDeg;
             Inflows[i].DragCoeff = strmbd_drag[i];
@@ -538,6 +588,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     }
 
     //-------------------------------------------------
+    if ( get_namelist(namlst, seepage_nml) ) {
+        seepage = FALSE;
+        seepage_rate = 0.0;
+    }
+
+    //-------------------------------------------------
     for (i = 1; i < MaxDif; i++) mol_diffusivity[i] = 1.25E-09;
     mol_diffusivity[0] = 0.00000014;
     NumDif = 2;
@@ -578,7 +634,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
     if ( wq_calc ) {
         int l = strlen(wq_nml_file);
-        init_glm_wq(wq_nml_file, &l, &MaxLayers, &Num_WQ_Vars, &Kw); // Reads WQ namelist file
+
+    fprintf(stderr,
+        "2) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
+                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
+        prime_glm_wq(wq_lib);
+        wq_init_glm(wq_nml_file, &l, &MaxLayers, &Num_WQ_Vars, &Kw); // Reads WQ namelist file
     }
     NumDif = Num_WQ_Vars + 2;
 
@@ -594,10 +655,10 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         /* The first 3 vars are flow, temp and salt */
         for (j = 3; j < inflow_varnum; j++) {
             int k =  strlen(inflow_vars[j]);
-            WQ_VarsIdx[j-3] = wqvar_index_c(inflow_vars[j], &k);
+            WQ_VarsIdx[j-3] = wq_var_index_c(inflow_vars[j], &k);
         }
 
-        set_glm_wq_data(Lake, &MaxLayers, &NumLayers, &MetData, &SurfData, &dt);
+        wq_set_glm_data(Lake, &MaxLayers, &NumLayers, &MetData, &SurfData, &dt);
     }
 
     get_namelist(namlst, debugging);
@@ -620,32 +681,32 @@ void create_lake(int namlst)
      * morphometry
      *-------------------------------------------*/
     char           *lake_name;
-//  REALTYPE        Latitude;      // global variable
-//  REALTYPE        Longitude;     // global variable
-//  REALTYPE        base_elev;     // module variable
-//  REALTYPE        crest_elev;    // module variable
-    REALTYPE        bsn_len;
-    REALTYPE        bsn_wid;
+//  AED_REAL        Latitude;      // global variable
+//  AED_REAL        Longitude;     // global variable
+//  AED_REAL        base_elev;     // module variable
+//  AED_REAL        crest_elev;    // module variable
+    AED_REAL        bsn_len;
+    AED_REAL        bsn_wid;
     int             bsn_vals;
-    REALTYPE       *H = NULL;
-    REALTYPE       *A = NULL;
-    REALTYPE       *V = NULL;
+    AED_REAL       *H = NULL;
+    AED_REAL       *A = NULL;
+    AED_REAL       *V = NULL;
     /*-------------------------------------------*/
 
 
     int kar;                // first layer with a positive area
     int ksto;               // first layer with a positive storage
 #ifndef _VISUAL_C_
-    // The dumb compiler on windows doesn't like this so must malloc manually
-    REALTYPE alpha_b[MaxLayers]; // interpolation coefficient for volume
-    REALTYPE beta_b[MaxLayers];  // interpolation coefficient for area
+    // The visual c compiler doesn't like this so must malloc manually
+    AED_REAL alpha_b[MaxLayers]; // interpolation coefficient for volume
+    AED_REAL beta_b[MaxLayers];  // interpolation coefficient for area
 #else
-    REALTYPE *alpha_b;           // interpolation coefficient for volume
-    REALTYPE *beta_b;            // interpolation coefficient for area
+    AED_REAL *alpha_b;           // interpolation coefficient for volume
+    AED_REAL *beta_b;            // interpolation coefficient for area
 #endif
     int lanext;             // temporary variable for interpolating area
     int lvnext;             // temporary variable for interpolating volume
-    REALTYPE x, y;
+    AED_REAL x, y;
     int i,j;
     int ij;
 
@@ -664,7 +725,7 @@ void create_lake(int namlst)
           { "V",                 TYPE_DOUBLE|MASK_LIST, &V                 },
           { NULL,                TYPE_END,              NULL               }
     };
-    REALTYPE h_z = 0.;
+    AED_REAL h_z = 0.;
 
 /*----------------------------------------------------------------------------*/
 
@@ -686,8 +747,10 @@ void create_lake(int namlst)
 
     base_elev = H[0]; crest_elev = H[bsn_vals-1];
 
+    printf("Maximum lake depth is %f\n", crest_elev - base_elev);
+
     if ( (MaxLayers * DMax) < (crest_elev - base_elev) ) {
-        fprintf(stderr, "Configuration Error. MaxLayers * max_layer_height < depth of the lake");
+        fprintf(stderr, "Configuration Error. MaxLayers * max_layer_height < depth of the lake\n");
         exit(1);
     }
 
@@ -699,7 +762,7 @@ void create_lake(int namlst)
     ksto = 0;
     kar = 0;
 
-    if ( V == NULL ) V = malloc(sizeof(REALTYPE)*bsn_vals);
+    if ( V == NULL ) V = malloc(sizeof(AED_REAL)*bsn_vals);
     V[0] = 0.;
     for (i = 1; i < bsn_vals; i++) {
         if ( (A[i] < A[i-1]) || (H[i] < H[i-1]) ) {
@@ -718,6 +781,7 @@ void create_lake(int namlst)
         if (A[i] <= 0.0 ) kar++;
         if (H[i] <= 0.0 ) ksto++;
     }
+    MaxArea = A[bsn_vals-1];
 
     /**************************************************************************
      * The model creates a refined lookup-table of depth-area-volume for later*
@@ -737,8 +801,8 @@ void create_lake(int namlst)
     WidAtCrest = bsn_wid;
 
 #ifdef _VISUAL_C_
-    alpha_b = malloc(sizeof(REALTYPE) * MaxLayers);
-    beta_b = malloc(sizeof(REALTYPE) * MaxLayers);
+    alpha_b = malloc(sizeof(AED_REAL) * MaxLayers);
+    beta_b = malloc(sizeof(AED_REAL) * MaxLayers);
 #endif
     // Loop from the bottom to top of the provided depth points given in
     // &morphometry to calculate the bathymetric interpolation coefficients,
@@ -819,7 +883,7 @@ void create_lake(int namlst)
 
     // Calculate storage at crest level, VolAtCrest
     x = CrestLevel * 10.0;
-    y = AMOD(x,one);
+    y = AMOD(x, 1.0);
     ij = x-y;
     if (ij >= Nmorph) {
         y =+ (ij - Nmorph);
@@ -830,8 +894,8 @@ void create_lake(int namlst)
     crest_sto_idx = ij;
 
 
-    memcpy(MphLevelVoldash, MphLevelVol, sizeof(REALTYPE) * Nmorph);    // MphLevelVoldash = MphLevelVol;
-    memcpy(dMphLevelVolda, dMphLevelVol, sizeof(REALTYPE) * Nmorph);    // dMphLevelVolda = dMphLevelVol;
+    memcpy(MphLevelVoldash, MphLevelVol, sizeof(AED_REAL) * Nmorph);    // MphLevelVoldash = MphLevelVol;
+    memcpy(dMphLevelVolda, dMphLevelVol, sizeof(AED_REAL) * Nmorph);    // dMphLevelVolda = dMphLevelVol;
     if ( V != NULL ) free(V);
     if ( A != NULL ) free(A);
     if ( H != NULL ) free(H);
@@ -850,16 +914,16 @@ void initialise_lake(int namlst)
     /*---------------------------------------------
      * init_profiles
      *-------------------------------------------*/
-    REALTYPE        lake_depth;
+    AED_REAL        lake_depth;
     int             num_heights; // support the old way
-    REALTYPE       *the_heights; // support the old way
+    AED_REAL       *the_heights; // support the old way
     int             num_depths;
-    REALTYPE       *the_depths;
-    REALTYPE       *the_temps;
-    REALTYPE       *the_sals;
+    AED_REAL       *the_depths;
+    AED_REAL       *the_temps;
+    AED_REAL       *the_sals;
     int             num_wq_vars;
     char          **wq_names;
-    REALTYPE       *wq_init_vals;
+    AED_REAL       *wq_init_vals;
     /*-------------------------------------------*/
 
     NAMELIST init_profiles[] = {
@@ -877,7 +941,7 @@ void initialise_lake(int namlst)
           { NULL,                TYPE_END,              NULL               }
     };
 
-    int i, j;
+    int i, j, min_layers;
     int nx, np, nz;
     int *idx = NULL;
 
@@ -933,7 +997,7 @@ void initialise_lake(int namlst)
         idx = malloc(sizeof(int)*num_wq_vars);
         for (j = 0; j < num_wq_vars; j++) {
             int k =  strlen(wq_names[j]);
-            if ((idx[j] = wqvar_index_c(wq_names[j], &k)) < 0)
+            if ((idx[j] = wq_var_index_c(wq_names[j], &k)) < 0)
                 fprintf(stderr, "Cannot find \"%s\" for initial value\n", wq_names[j]);
         }
     }
@@ -949,8 +1013,13 @@ void initialise_lake(int namlst)
         }
     }
 
-    // Now interpolate into at least 50 layers
-    while (NumLayers <= 50) {
+    min_layers = (lake_depth / DMin) - 1;
+    if (min_layers > (MaxLayers-1)/2 ) min_layers = (MaxLayers-1)/2;
+    if ( min_layers > 50 ) min_layers = 50;
+    if ( min_layers < 3 ) min_layers = 3;
+
+    // Now interpolate into at least min_layers
+    while (NumLayers <= min_layers) {
         for (i = botmLayer; i < NumLayers; i++) {
             nx = 2 * (surfLayer - i);
             np = surfLayer - i;
@@ -971,6 +1040,7 @@ void initialise_lake(int namlst)
                 if ( idx[j] >= 0 ) _WQ_Vars(idx[j],nx) = (_WQ_Vars(idx[j],np) + _WQ_Vars(idx[j],nz)) / 2.0;
         }
         NumLayers = 2*NumLayers - 1;
+        if ( NumLayers * 2 >= MaxLayers ) break;
     }
 
     // And free the temporary index map
@@ -978,7 +1048,7 @@ void initialise_lake(int namlst)
 
     // calculate the density from the temp and salinity just read in
     for (i = botmLayer; i < NumLayers; i++)
-        Lake[i].Density = calculate_density(Lake[i].Temp, Lake[i].Salinity);
+        Lake[i].SPDensity = calculate_density(Lake[i].Temp, Lake[i].Salinity);
 
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/

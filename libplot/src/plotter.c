@@ -107,16 +107,16 @@ char *progname = "Plot Window";
 int init_plotter_(int *maxx, int *maxy);
 /* the final int is the length of the title string that fortran adds */
 int create_plot_(int *posx, int *posy, int *maxx, int *maxy, const char *title, int *sl);
-void set_plot_x_limits_(int *plot, REALTYPE *min, REALTYPE *max);
-void set_plot_y_limits_(int *plot, REALTYPE *min, REALTYPE *max);
-void set_plot_z_limits_(int *plot, REALTYPE *min, REALTYPE *max);
-void plot_value_(int *plot, REALTYPE *x, REALTYPE *y, REALTYPE *z);
+void set_plot_x_limits_(int *plot, AED_REAL *min, AED_REAL *max);
+void set_plot_y_limits_(int *plot, AED_REAL *min, AED_REAL *max);
+void set_plot_z_limits_(int *plot, AED_REAL *min, AED_REAL *max);
+void plot_value_(int *plot, AED_REAL *x, AED_REAL *y, AED_REAL *z);
 void save_plot_(int *plot);
 void flush_plot_(int *plot);
 void do_cleanup_(int *saveall);
-void set_plot_x_step_(int *plot, REALTYPE *xstep);
-void set_plot_y_step_(int *plot, REALTYPE *ystep);
-void set_plot_z_step_(int *plot, REALTYPE *zstep);
+void set_plot_x_step_(int *plot, AED_REAL *xstep);
+void set_plot_y_step_(int *plot, AED_REAL *ystep);
+void set_plot_z_step_(int *plot, AED_REAL *zstep);
 
 /******************************************************************************/
 static void calendar_date(int julian, int *yyyy, int *mm, int *dd);
@@ -199,7 +199,7 @@ int init_plotter(int *maxx, int *maxy)
 void drawText(gdImagePtr im, int left, int right, int top, int bottom,
                                                     int flags, const char *txt)
 {
-    int x, y, w, h, sz, u, d;
+    int x = 0, y = 0, w, h, sz, u, d;
     char *f = NULL;
     gdFontPtr gf = NULL;
     int brect[8];
@@ -446,7 +446,7 @@ void set_plot_z_label(int plot, const char *label)
 
 
 /******************************************************************************/
-void set_plot_x_limits_(int *plot, REALTYPE *min, REALTYPE *max)
+void set_plot_x_limits_(int *plot, AED_REAL *min, AED_REAL *max)
 { set_plot_x_limits(*plot, *min, *max); }
 /*----------------------------------------------------------------------------*/
 void set_plot_x_limits(int plot, double min, double max)
@@ -493,7 +493,7 @@ void set_plot_x_limits(int plot, double min, double max)
 
 
 /******************************************************************************/
-void set_plot_y_limits_(int *plot, REALTYPE *min, REALTYPE *max)
+void set_plot_y_limits_(int *plot, AED_REAL *min, AED_REAL *max)
 { set_plot_y_limits(*plot, *min, *max); }
 /*----------------------------------------------------------------------------*/
 void set_plot_y_limits(int plot, double min, double max)
@@ -548,7 +548,7 @@ void set_plot_y_limits(int plot, double min, double max)
 
 
 /******************************************************************************/
-void set_plot_z_limits_(int *plot, REALTYPE *min, REALTYPE *max)
+void set_plot_z_limits_(int *plot, AED_REAL *min, AED_REAL *max)
 { set_plot_z_limits(*plot, *min, *max); }
 /*----------------------------------------------------------------------------*/
 void set_plot_z_limits(int plot, double min, double max)
@@ -605,22 +605,22 @@ void set_plot_z_limits(int plot, double min, double max)
 
 
 /******************************************************************************/
-void set_plot_x_step_(int *plot, REALTYPE *xstep)
+void set_plot_x_step_(int *plot, AED_REAL *xstep)
 { set_plot_x_step(*plot, *xstep); }
 /*----------------------------------------------------------------------------*/
-void set_plot_x_step(int plot, REALTYPE xstep)
+void set_plot_x_step(int plot, AED_REAL xstep)
 { _plots[plot].xstep = xstep * _plots[plot].xscale; }
 /******************************************************************************/
-void set_plot_y_step_(int *plot, REALTYPE *ystep)
+void set_plot_y_step_(int *plot, AED_REAL *ystep)
 { set_plot_y_step(*plot, *ystep); }
 /*----------------------------------------------------------------------------*/
-void set_plot_y_step(int plot, REALTYPE ystep)
+void set_plot_y_step(int plot, AED_REAL ystep)
 { _plots[plot].ystep = ystep * _plots[plot].zscale; }
 /******************************************************************************/
-void set_plot_z_step_(int *plot, REALTYPE *zstep)
+void set_plot_z_step_(int *plot, AED_REAL *zstep)
 { set_plot_z_step(*plot, *zstep); }
 /*----------------------------------------------------------------------------*/
-void set_plot_z_step(int plot, REALTYPE zstep)
+void set_plot_z_step(int plot, AED_REAL zstep)
 { _plots[plot].zstep = zstep * _plots[plot].zscale; }
 
 
@@ -634,13 +634,24 @@ void set_plot_version(int plot, const char *version)
     gdImageString(_plots[plot].im, gdFontGetSmall(), 5, _plots[plot].maxy+44,
                                                (unsigned char *)version, grey);
 }
+/*----------------------------------------------------------------------------*/
+void set_plot_varname(int plot, const char *varname)
+{
+    int w;
+
+    w = strlen(varname) * (gdFontGetSmall()->w);
+    gdImageString(_plots[plot].im, gdFontGetSmall(),
+                                      _plots[plot].maxx + 25 - w,
+                                      _plots[plot].maxy + 44,
+                                               (unsigned char *)varname, grey);
+}
 
 
 /******************************************************************************/
-void x_plot_value_(int *plot, int *x, REALTYPE *y, REALTYPE *z)
+void x_plot_value_(int *plot, int *x, AED_REAL *y, AED_REAL *z)
 { plot_value(*plot, *x, *y, *z); }
 /*----------------------------------------------------------------------------*/
-void plot_value_(int *plot, REALTYPE *x, REALTYPE *y, REALTYPE *z)
+void plot_value_(int *plot, AED_REAL *x, AED_REAL *y, AED_REAL *z)
 { plot_value(*plot, *x, *y, *z); }
 /*----------------------------------------------------------------------------*/
 void plot_value(int plot, double x, double y, double z)

@@ -30,31 +30,6 @@
 #ifndef _GLM_INIT_H_
 #define _GLM_INIT_H_
 
-#ifdef _FORTRAN_VERSION_
-
-  INTERFACE
-
-     SUBROUTINE init_glm(jstart,outp_dir,dln,outp_fn,fln,nsave) BIND(C, name="init_glm_")
-        USE ISO_C_BINDING
-        CINTEGER,INTENT(out)   :: jstart
-        CCHARACTER,INTENT(out) :: outp_dir(*)
-        CINTEGER,INTENT(out)   :: dln
-        CCHARACTER,INTENT(out) :: outp_fn(*)
-        CINTEGER,INTENT(out)   :: fln
-        CINTEGER,INTENT(out)   :: nsave
-     END SUBROUTINE init_glm
-
-  END INTERFACE
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#else
-/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-/******************************************************************************
- *                                                                            *
- ******************************************************************************/
 void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave);
-/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-#endif
 
 #endif

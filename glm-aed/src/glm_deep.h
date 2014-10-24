@@ -30,31 +30,8 @@
 #ifndef _GLM_DEEP_MIX_H_
 #define _GLM_DEEP_MIX_H_
 
-
-#if _FORTRAN_VERSION_
-
-INTERFACE
-
-   SUBROUTINE do_diffusion() BIND(C, name="do_diffusion")
-   END SUBROUTINE do_diffusion
-
-   SUBROUTINE do_energy() BIND(C, name="do_dissipation_")
-        USE ISO_C_BINDING
-   END SUBROUTINE do_energy
-
-   SUBROUTINE check_layer_stability() BIND(C, name="check_layer_stability")
-   END SUBROUTINE check_layer_stability
-
-END INTERFACE
-
-#else
-
-void do_diffusion(void);
+void do_deep_mixing(void);
 void do_dissipation(void);
-void do_dissipation_(void);
 void check_layer_stability(void);
-
-#endif
-
 
 #endif

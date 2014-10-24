@@ -32,35 +32,8 @@
 
 #include "glm.h"
 
-#ifdef _FORTRAN_VERSION_
-!###############################################################################
-
-  INTERFACE
-
-     REALTYPE FUNCTION do_outflows(jday) BIND(C, name="do_outflows_")
-        USE ISO_C_BINDING
-        CINTEGER,INTENT(in) :: jday
-     END FUNCTION do_outflows
-
-     REALTYPE FUNCTION do_overflow(jday) BIND(C, name="do_overflow_")
-        USE ISO_C_BINDING
-        CINTEGER,INTENT(in) :: jday
-     END FUNCTION do_overflow
-
-     REALTYPE FUNCTION do_inflows() BIND(C, name="do_inflows_")
-        USE ISO_C_BINDING
-     END FUNCTION do_inflows
-
-  END INTERFACE
-
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-#else
-/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-  REALTYPE do_outflows(int jday);
-  REALTYPE do_overflow(int jday);
-  REALTYPE do_inflows(void);
-
-#endif
+AED_REAL do_outflows(int jday);
+AED_REAL do_overflow(int jday);
+AED_REAL do_inflows(void);
 
 #endif

@@ -17,12 +17,20 @@ fetch_it () {
    else
       git  clone git@${GITHOST}:$src $dst
    fi
+
+   if [ "$3" != "" ] ; then
+      cd $dst
+      git checkout $3
+      cd ..
+   fi
 }
 
 fetch_it glm glm-aed
-for src in libplot libutil glm-egs glm-manual ; do
+for src in libplot libutil libaed2 ; do
    fetch_it $src
 done
-fetch_it fabm-aed fabm-git
+for src in glm-egs glm-manual glm-tests ; do
+   fetch_it $src $src
+done
 
 exit 0

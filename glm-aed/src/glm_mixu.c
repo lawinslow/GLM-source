@@ -42,16 +42,18 @@
 #include "glm_mixu.h"
 
 
-/******************************************************************************/
-void add_this_layer(REALTYPE *VMbig, REALTYPE *VMsml, REALTYPE *Tbig, REALTYPE *Tsml,
-                    REALTYPE *Sbig, REALTYPE *Ssml, REALTYPE *VMLOC, REALTYPE *TMLOC,
-                    REALTYPE *SMLOC, REALTYPE *DFLOC, int idx)
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void add_this_layer(AED_REAL *VMbig, AED_REAL *VMsml, AED_REAL *Tbig, AED_REAL *Tsml,
+                    AED_REAL *Sbig, AED_REAL *Ssml, AED_REAL *VMLOC, AED_REAL *TMLOC,
+                    AED_REAL *SMLOC, AED_REAL *DFLOC, int idx)
 {
-    REALTYPE WTbig;
-    REALTYPE WTsml;
+    AED_REAL WTbig;
+    AED_REAL WTsml;
 
-    WTbig = thsnd * Lake[idx].LayerVol;
-    WTsml = Lake[idx].Density * Lake[idx].LayerVol;
+    WTbig = 1000.0 * Lake[idx].LayerVol;
+    WTsml = Lake[idx].SPDensity * Lake[idx].LayerVol;
 
     *VMbig += WTbig;
     *VMsml += WTsml;
@@ -71,34 +73,36 @@ void add_this_layer(REALTYPE *VMbig, REALTYPE *VMsml, REALTYPE *Tbig, REALTYPE *
 
 /******************************************************************************
  * This routine assigns the mean mixed layer properties to all of the         *
- * layers in the epilimnion and increments the layer pointers j1,k1           *
- *----------------------------------------------------------------------------*/
-void average_layer(int *j1, int *k1,
-                            REALTYPE MeanTemp, REALTYPE MeanSalt, REALTYPE Dens)
+ * layers in the epilimnion and increments the layer pointers j, k            *
+ ******************************************************************************/
+void average_layer(int *j, int *k,
+                            AED_REAL MeanTemp, AED_REAL MeanSalt, AED_REAL Dens)
 {
-    int i, jl = *j1;
+    int i, jl = *j;
 
     for (i = jl; i < NumLayers; i++) {
         Lake[i].Temp = MeanTemp;
         Lake[i].Salinity = MeanSalt;
-        Lake[i].Density = Dens;
+        Lake[i].SPDensity = Dens;
     }
 
-    (*j1) -= 1;
-    (*k1) -= 1;
+    (*j) -= 1;
+    (*k) -= 1;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/******************************************************************************/
-static void one_layer(int i, REALTYPE *xx, REALTYPE *dxx)
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+static void one_layer(int i, AED_REAL *xx, AED_REAL *dxx)
 {
-    REALTYPE x, y;
+    AED_REAL x, y;
 
     int ij;
 
-    x = Lake[i].Height * ten;
-    y = AMOD(x,one);
+    x = Lake[i].Height * 10.0;
+    y = AMOD(x, 1.0);
     ij = (x - y);
     if (ij > Nmorph) {
         y += (ij - Nmorph);
@@ -118,7 +122,7 @@ static void one_layer(int i, REALTYPE *xx, REALTYPE *dxx)
  ******************************************************************************/
 void resize_internals(int icode, int lnu)
 {
-   REALTYPE VolSum, x, y;
+   AED_REAL VolSum, x, y;
 
    int i, j, ij, k, l, ln;
 
@@ -136,7 +140,8 @@ void resize_internals(int icode, int lnu)
         for (k = 0; k < NumInf; k++)
             VolSum += Inflows[k].TotIn;
 
-        while(1) {
+ //     while(1) {
+        while(NumLayers > 1) { // stop at 1
             one_layer(surfLayer, MphLevelVol, dMphLevelVol);
 
             Lake[surfLayer].Vol1 -= VolSum;
@@ -153,12 +158,12 @@ void resize_internals(int icode, int lnu)
             Lake[surfLayer-1].LayerArea = Lake[surfLayer].LayerArea;
             Lake[surfLayer-1].Height = Lake[surfLayer].Height;
             Lake[surfLayer-1].Temp =
-                    combine(Lake[surfLayer-1].Temp, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].Density,
-                            Lake[surfLayer].Temp,   Lake[surfLayer].LayerVol,   Lake[surfLayer].Density);
+                    combine(Lake[surfLayer-1].Temp, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].SPDensity,
+                            Lake[surfLayer].Temp,   Lake[surfLayer].LayerVol,   Lake[surfLayer].SPDensity);
             Lake[surfLayer-1].Salinity =
-                    combine(Lake[surfLayer-1].Salinity, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].Density,
-                            Lake[surfLayer].Salinity,   Lake[surfLayer].LayerVol,   Lake[surfLayer].Density);
-            Lake[surfLayer-1].Density = calculate_density(Lake[surfLayer-1].Temp, Lake[surfLayer-1].Salinity);
+                    combine(Lake[surfLayer-1].Salinity, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].SPDensity,
+                            Lake[surfLayer].Salinity,   Lake[surfLayer].LayerVol,   Lake[surfLayer].SPDensity);
+            Lake[surfLayer-1].SPDensity = calculate_density(Lake[surfLayer-1].Temp, Lake[surfLayer-1].Salinity);
 
             NumLayers--;
             if (surfLayer < ln) {
@@ -199,7 +204,7 @@ void resize_internals(int icode, int lnu)
             }
         } else {
             x = Lake[lnu-1].Height * 10.;
-            y = AMOD(x,one);
+            y = AMOD(x, 1.0);
             j = (x - y) - 1;
             l = lnu;
         }
@@ -221,7 +226,7 @@ void resize_internals(int icode, int lnu)
         //# determine areas
         for (i = lnu; i <= surfLayer; i++) {
             x = Lake[i].Height * 10.;
-            y = AMOD(x,one);
+            y = AMOD(x, 1.0);
             ij = (x - y) - 1;
             if (ij >= Nmorph) ij = Nmorph - 1;
 

@@ -30,57 +30,11 @@
 #ifndef _GLM_MIXU_H_
 #define _GLM_MIXU_H_
 
-#if _FORTRAN_VERSION_
-
-INTERFACE
-
-     SUBROUTINE add_this_layer(VMbig,VMsml,Tbig,Tsml,Sbig,Ssml,VMLOC,TMLOC,SMLOC,DFLOC,idx) BIND(C, name="add_this_layer_")
-        USE ISO_C_BINDING
-        REALTYPE,intent(inout) :: VMbig
-        REALTYPE,intent(inout) :: VMsml
-        REALTYPE,intent(inout) :: Tbig
-        REALTYPE,intent(inout) :: Tsml
-        REALTYPE,intent(inout) :: Sbig
-        REALTYPE,intent(inout) :: Ssml
-        REALTYPE,intent(inout) :: VMLOC
-        REALTYPE,intent(inout) :: TMLOC
-        REALTYPE,intent(inout) :: SMLOC
-        REALTYPE,intent(inout) :: DFLOC
-        CINTEGER,intent(in)    :: idx
-     END SUBROUTINE add_this_layer
-
-     SUBROUTINE average_layer(j1,k1,MeanTemp,MeanSalt,Dens) BIND(C, name="average_layer_")
-        USE ISO_C_BINDING
-        CINTEGER,INTENT(inout) :: j1, k1
-        REALTYPE,INTENT(in)    :: MeanTemp,MeanSalt,Dens
-     END SUBROUTINE average_layer
-
-     SUBROUTINE resize_internals(icode,lnu) BIND(C, name="resize_internals_")
-        USE ISO_C_BINDING
-        CINTEGER,INTENT(in) :: icode, lnu
-     END SUBROUTINE resize_internals
-
-END INTERFACE
-
-#else
-
-/******************************************************************************/
-
-void add_this_layer(REALTYPE *VMbig, REALTYPE *VMsml, REALTYPE *Tbig, REALTYPE *Tsml,
-                    REALTYPE *Sbig, REALTYPE *Ssml, REALTYPE *VMLOC, REALTYPE *TMLOC,
-                    REALTYPE *SMLOC, REALTYPE *DFLOC, int idx);
+void add_this_layer(AED_REAL *VMbig, AED_REAL *VMsml, AED_REAL *Tbig, AED_REAL *Tsml,
+                    AED_REAL *Sbig, AED_REAL *Ssml, AED_REAL *VMLOC, AED_REAL *TMLOC,
+                    AED_REAL *SMLOC, AED_REAL *DFLOC, int idx);
 void average_layer(int *j1, int *k1,
-                           REALTYPE MeanTemp, REALTYPE MeanSalt, REALTYPE Dens);
+                           AED_REAL MeanTemp, AED_REAL MeanSalt, AED_REAL Dens);
 void resize_internals(int icode, int lnu);
-
-
-void add_this_layer_(REALTYPE *VMbig, REALTYPE *VMsml, REALTYPE *Tbig, REALTYPE *Tsml,
-                     REALTYPE *Sbig, REALTYPE *Ssml, REALTYPE *VMLOC, REALTYPE *TMLOC,
-                     REALTYPE *SMLOC, REALTYPE *DFLOC, int *idx);
-void average_layer_(int *j1, int *k1,
-                        REALTYPE *MeanTemp, REALTYPE *MeanSalt, REALTYPE *Dens);
-void resize_internals_(int *icode, int *lnu);
-
-#endif
 
 #endif

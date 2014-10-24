@@ -30,25 +30,9 @@
 #ifndef _GLM_MIXER_H_
 #define _GLM_MIXER_H_
 
-#if _FORTRAN_VERSION_
+void do_mixing(void);
+void do_mixing_(void);
 
-  INTERFACE
-
-     SUBROUTINE do_mixing() BIND(C, name="do_mixing_")
-        USE ISO_C_BINDING
-     END SUBROUTINE do_mixing
-
-  END INTERFACE
-
-! REALTYPE,PUBLIC,BIND(C, name="DepMX") :: DepMX
-
-#else
-
-  void do_mixing(void);
-  void do_mixing_(void);
-
-  extern REALTYPE DepMX;
-
-#endif
+extern AED_REAL DepMX;
 
 #endif

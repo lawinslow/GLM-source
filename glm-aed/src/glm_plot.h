@@ -44,20 +44,21 @@
      SUBROUTINE init_plots(jstart,ndays,crest) BIND(C,name="init_plots_")
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: jstart,ndays
-        REALTYPE,INTENT(in) :: crest
+        AED_REAL,INTENT(in) :: crest
      END SUBROUTINE init_plots
 
      SUBROUTINE put_xplot_val(name,len,wlev,val) BIND(C,name="put_xplot_val_")
+#       if defined( _WIN32 ) && USE_DL_LOADER
+        !DEC$ ATTRIBUTES DLLIMPORT :: put_xplot_val_
+#       endif
         USE ISO_C_BINDING
         CCHARACTER,INTENT(in):: name(*)
         CINTEGER,INTENT(in)  :: len, wlev
-        REALTYPE,INTENT(in)  :: val(*)
+        AED_REAL,INTENT(in)  :: val(*)
      END SUBROUTINE put_xplot_val
      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   END INTERFACE
-
-  CLOGICAL,PUBLIC,BIND(C,name="do_plots") :: do_plots
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #else
@@ -66,18 +67,18 @@
 #ifdef XPLOTS
     extern int xdisp;
 #endif
-    extern int do_plots,saveall;
+    extern CLOGICAL do_plots, saveall;
     extern int nplots, theplots[MAX_PLOTS+1];
     extern char **vars;
     extern int today;
 
 /******************************************************************************/
-void init_plots(int jstart, int ndays, REALTYPE crest);
-void put_xplot_val(char *name, int wlev, REALTYPE *val);
+void init_plots(int jstart, int ndays, AED_REAL crest);
+void put_xplot_val(char *name, int wlev, AED_REAL *val);
 
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-void init_plots_(int *jstart, int *ndays, REALTYPE *crest);
-void put_xplot_val_(char *name, int *len, int *wlev, REALTYPE *val);
+void init_plots_(int *jstart, int *ndays, AED_REAL *crest);
+void put_xplot_val_(char *name, int *len, int *wlev, AED_REAL *val);
 
 #endif
 

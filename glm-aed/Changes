@@ -1,3 +1,18 @@
+# 2014/09/22
+# Version 2.0.0
+#
+# Added layer stress, seepage and runoff
+# Selectable use of FABM-AED or AED2
+# Added support for libAED2 - this is the new default WQ method
+#
+# Since 1.4.0
+#
+# Added support for libaed2 :
+#  WQ is selectable from glm2.nml file or from command line as either fabm or aed2
+#
+# Added support for bottom stress
+#
+#
 # 2014/08/02
 # Version 1.4.0
 #

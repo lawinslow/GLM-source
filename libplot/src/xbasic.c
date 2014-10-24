@@ -765,7 +765,8 @@ static int _check_track_control()
 {
     XEvent ev;
 
-    while ( XCheckMaskEvent(display, -1L, &ev) ) {
+    ev.type = 0;
+    while ( XCheckMaskEvent(display, -1L, &ev) == True ) {
         if ( _process_event(&ev) != ButtonRelease ) {
             if ( _point_in_ctl(_trking_ctl, cur_x, cur_y) ) {
                 if ( !_trking_in ) {
@@ -1511,7 +1512,8 @@ static int _check_track_menu()
 {
     XEvent ev;
 
-    while ( XCheckMaskEvent(display, -1L, &ev) ) {
+    ev.type = 0;
+    while ( XCheckMaskEvent(display, -1L, &ev) == True ) {
         if ( _process_event(&ev) != ButtonRelease ) {
             if ( _point_in_menu(_trking_menu, cur_x, cur_y) ) {
                 if ( !_trk_menu_in ) {
@@ -1641,7 +1643,8 @@ static int _check_event()
     }
 #endif
 
-    while ( XCheckMaskEvent(display, -1L, &ev) ) {
+    ev.type = 0;
+    while ( XCheckMaskEvent(display, -1L, &ev) == True ) {
         ret = _process_event(&ev);
         if ( ret == ButtonPress ) {
             WindowItem *itm = _which_item(cur_x, cur_y);

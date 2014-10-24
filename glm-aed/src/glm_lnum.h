@@ -34,27 +34,6 @@
 
 #include "glm.h"
 
-#ifdef _FORTRAN_VERSION_
-!###############################################################################
-
-
-  INTERFACE
-
-
-    REALTYPE FUNCTION calculate_lake_number() BIND(C, name="calculate_lake_number")
-       USE ISO_C_BINDING
-    END FUNCTION calculate_lake_number
-
-  END INTERFACE
-
-  CLOGICAL,BIND(C),PUBLIC :: lkn
-
-!===============================================================================
-#else
-/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-  REALTYPE calculate_lake_number(void);
-
-#endif
+AED_REAL calculate_lake_number(void);
 
 #endif

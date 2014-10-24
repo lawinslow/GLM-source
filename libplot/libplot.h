@@ -28,16 +28,16 @@
 #ifndef _LIB_PLOT_H_
 #define _LIB_PLOT_H_
 
-#define LIB_PLOT_VERSION "1.0.7"
+#define LIB_PLOT_VERSION "1.0.9"
 
 #define PF_TITLE  1
 #define PF_LABEL  2
 
 #ifdef _FORTRAN_VERSION_
 # if SINGLE
-#   define REALTYPE real
+#   define AED_REAL real
 # else
-#   define REALTYPE double precision
+#   define AED_REAL double precision
 #endif
 
   INTERFACE
@@ -83,17 +83,17 @@
      SUBROUTINE set_plot_x_limits(plot, min, max) BIND(C, name="set_plot_x_limits_")
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: plot
-        REALTYPE,INTENT(in) :: min, max
+        AED_REAL,INTENT(in) :: min, max
      END SUBROUTINE
      SUBROUTINE set_plot_y_limits(plot, min, max) BIND(C, name="set_plot_y_limits_")
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: plot
-        REALTYPE,INTENT(in) :: min, max
+        AED_REAL,INTENT(in) :: min, max
      END SUBROUTINE
      SUBROUTINE set_plot_z_limits(plot, min, max) BIND(C, name="set_plot_z_limits_")
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: plot
-        REALTYPE,INTENT(in) :: min, max
+        AED_REAL,INTENT(in) :: min, max
      END SUBROUTINE
      SUBROUTINE set_plot_version(plot, version, len) BIND(C, name="set_plot_version_")
         USE ISO_C_BINDING
@@ -104,12 +104,12 @@
      SUBROUTINE x_plot_value(plot, x, y, z) BIND(C, name="x_plot_value_")
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: plot, x
-        REALTYPE,INTENT(in) :: y, z
+        AED_REAL,INTENT(in) :: y, z
      END SUBROUTINE
      SUBROUTINE plot_value(plot, x, y, z) BIND(C, name="plot_value_")
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: plot
-        REALTYPE,INTENT(in) :: x, y, z
+        AED_REAL,INTENT(in) :: x, y, z
      END SUBROUTINE
 #  ifdef XPLOTS
      SUBROUTINE flush_plot(plot) BIND(C, name="flush_plot_")
@@ -126,9 +126,9 @@
 #else
 
    #if SINGLE
-     #define REALTYPE float
+     #define AED_REAL float
    #else
-     #define REALTYPE double
+     #define AED_REAL double
    #endif
 
 
@@ -145,9 +145,10 @@
    void set_plot_y_limits(int plot, double min, double max);
    void set_plot_z_limits(int plot, double min, double max);
    void set_plot_version(int plot, const char *version);
-   void set_plot_x_step(int plot, REALTYPE xstep);
-   void set_plot_y_step(int plot, REALTYPE ystep);
-   void set_plot_z_step(int plot, REALTYPE zstep);
+   void set_plot_varname(int plot, const char *varname);
+   void set_plot_x_step(int plot, AED_REAL xstep);
+   void set_plot_y_step(int plot, AED_REAL ystep);
+   void set_plot_z_step(int plot, AED_REAL zstep);
    void plot_value(int plot, double x, double y, double z);
 #  ifdef XPLOTS
    void flush_plot(int plot);

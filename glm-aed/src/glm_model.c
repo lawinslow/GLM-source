@@ -42,18 +42,13 @@
 
 #include "glm.h"
 
-//#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
-#define dbgprt(...) /* __VA_ARGS__ */
-
-/******************************************************************************/
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "glm_util.h"
-#include "aed_csv.h"
 #include "glm_input.h"
 #include "glm_output.h"
-#include "aed_time.h"
 #include "glm_deep.h"
 #include "glm_mixu.h"
 #include "glm_mixer.h"
@@ -63,11 +58,20 @@
 #include "glm_init.h"
 #include "glm_lnum.h"
 #include "glm_wqual.h"
+#include "glm_stress.h"
+#include "glm_bubbler.h"
+
+#include "aed_time.h"
+#include "aed_csv.h"
+
+/******************************************************************************/
+//#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
+#define dbgprt(...) /* __VA_ARGS__ */
 
 
 #if PLOTS
  extern int xdisp, today, plotstep;
- extern REALTYPE psubday;
+ extern AED_REAL psubday;
 #endif
 
 extern int lw_ind;
@@ -80,7 +84,7 @@ static char EOLN = '\r';
 void init_model(int *jstart, int *nsave);
 void do_model(int jstart, int nsave);
 void do_model_non_avg(int jstart, int nsave);
-int do_subdaily_loop(int stepnum, int jday, int nsave, REALTYPE SWold, REALTYPE SWnew);
+int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL SWnew);
 void end_model(void);
 
 /******************************************************************************
@@ -138,7 +142,7 @@ void init_model(int *jstart, int *nsave)
 
     DepMX = Lake[surfLayer-1].Height;
 
-    Latitude = 2*Pi+Latitude*Pi/180; //# Convert latitude from degrees to radians
+    Latitude = two_Pi + Latitude * deg2rad; //# Convert latitude from degrees to radians
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -146,7 +150,7 @@ void init_model(int *jstart, int *nsave)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-static void fix_radiation(REALTYPE Light_Surface)
+static void fix_radiation(AED_REAL Light_Surface)
 {
     int i;
 
@@ -161,10 +165,10 @@ static void fix_radiation(REALTYPE Light_Surface)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-static REALTYPE calc_benthic_light()
+static AED_REAL calc_benthic_light()
 {
     int i;
-    REALTYPE Benthic_Light_Area;
+    AED_REAL Benthic_Light_Area;
 
     //# Calculate the percent benthic area where the light level is greater
     //# than the minimum level required for production
@@ -186,20 +190,20 @@ static REALTYPE calc_benthic_light()
  ******************************************************************************/
 void do_model(int jstart, int nsave)
 {
-    REALTYPE FlowNew[MaxInf], DrawNew[MaxOut];
-    REALTYPE FlowOld[MaxInf], DrawOld[MaxOut];
+    AED_REAL FlowNew[MaxInf], DrawNew[MaxOut];
+    AED_REAL FlowOld[MaxInf], DrawOld[MaxOut];
 
     MetDataType MetOld, MetNew;
-    REALTYPE    SWold, SWnew;
+    AED_REAL    SWold, SWnew;
 
    /***************************************************************************
     *CAB Note: these WQ arrays should be sized to Num_WQ_Vars not MaxVars,    *
     *           look into that later ....                                     *
     ***************************************************************************/
-    REALTYPE SaltNew[MaxInf], TempNew[MaxInf], WQNew[MaxInf * MaxVars];
-    REALTYPE SaltOld[MaxInf], TempOld[MaxInf], WQOld[MaxInf * MaxVars];
+    AED_REAL SaltNew[MaxInf], TempNew[MaxInf], WQNew[MaxInf * MaxVars];
+    AED_REAL SaltOld[MaxInf], TempOld[MaxInf], WQOld[MaxInf * MaxVars];
 
-    REALTYPE LakeNum = missing;
+    AED_REAL LakeNum = missing;
 
     int jday, ntot, stepnum;
 
@@ -207,8 +211,8 @@ void do_model(int jstart, int nsave)
 
 /*----------------------------------------------------------------------------*/
 
-    memset(WQNew, 0, sizeof(REALTYPE)*MaxInf*MaxVars);
-    memset(WQOld, 0, sizeof(REALTYPE)*MaxInf*MaxVars);
+    memset(WQNew, 0, sizeof(AED_REAL)*MaxInf*MaxVars);
+    memset(WQOld, 0, sizeof(AED_REAL)*MaxInf*MaxVars);
 
     /*------------------------------------------------------------------------*
      *  Start Simulation                                                      *
@@ -308,9 +312,7 @@ void do_model(int jstart, int nsave)
 
         write_diags(jday, LakeNum);
     }   //# do while (ntot < ndays)
-    /*------------------------------------------------------------------------*
-     *         ########### End of main daily loop ################            *
-     *------------------------------------------------------------------------*/
+    /*----------########### End of main daily loop ################-----------*/
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -320,29 +322,26 @@ void do_model(int jstart, int nsave)
  ******************************************************************************/
 void do_model_non_avg(int jstart, int nsave)
 {
-    REALTYPE FlowNew[MaxInf], DrawNew[MaxOut];
+    AED_REAL FlowNew[MaxInf], DrawNew[MaxOut];
 
-    REALTYPE    SWold, SWnew;
+    AED_REAL    SWold, SWnew;
 
    /***************************************************************************
     *CAB Note: these WQ arrays should be sized to Num_WQ_Vars not MaxVars,    *
     *           look into that later ....                                     *
     ***************************************************************************/
-    REALTYPE SaltNew[MaxInf], TempNew[MaxInf], WQNew[MaxInf * MaxVars];
+    AED_REAL SaltNew[MaxInf], TempNew[MaxInf], WQNew[MaxInf * MaxVars];
 
-    REALTYPE LakeNum = missing;
+    AED_REAL LakeNum = missing;
 
     int jday, ntot, stepnum;
 
     int i, j;
 
 /*----------------------------------------------------------------------------*/
-    memset(WQNew, 0, sizeof(REALTYPE)*MaxInf*MaxVars);
+    memset(WQNew, 0, sizeof(AED_REAL)*MaxInf*MaxVars);
 
-    /*------------------------------------------------------------------------*
-     *  Start Simulation                                                      *
-     *------------------------------------------------------------------------*/
-
+    /**************************** Start Simulation ****************************/
     fputs("Simulation begins...\n", stdout);
 
     ntot = 0;
@@ -351,9 +350,9 @@ void do_model_non_avg(int jstart, int nsave)
 
     jday = jstart - 1;
 
-    /*------------------------------------------------------------------------*
+    /**************************************************************************
      * Loop over all days                                                     *
-     *------------------------------------------------------------------------*/
+     **************************************************************************/
     while (ntot < nDays) {
         ntot++;
         jday++;
@@ -396,9 +395,9 @@ void do_model_non_avg(int jstart, int nsave)
 
         check_layer_thickness();
 
-        /*--------------------------------------------------------------------*
-         * End of daily calculations, Prepare for next day and return.        *
-         *--------------------------------------------------------------------*/
+        /*************************************************************************
+         * End of daily calculations, Prepare for next day and return.           *
+         *************************************************************************/
         SWold = SWnew;
 
 #ifdef XPLOTS
@@ -410,9 +409,7 @@ void do_model_non_avg(int jstart, int nsave)
 
         write_diags(jday, LakeNum);
     }   //# do while (ntot < ndays)
-    /*------------------------------------------------------------------------*
-     *         ########### End of main daily loop ################            *
-     *------------------------------------------------------------------------*/
+    /*----------########### End of main daily loop ################-----------*/
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -422,17 +419,17 @@ void do_model_non_avg(int jstart, int nsave)
  ******************************************************************************/
 void calc_mass_temp(const char *msg)
 {
-    REALTYPE Lake_Mass; //# Total mass of lake [kg]
-    REALTYPE Lake_Temp; //# Mass averaged lake temperature [oC]
+    AED_REAL Lake_Mass; //# Total mass of lake [kg]
+    AED_REAL Lake_Temp; //# Mass averaged lake temperature [oC]
     int i;
 
     Lake_Mass = zero;
     for (i = surfLayer; i >= botmLayer; i-- )
-        Lake_Mass += (1000 + Lake[i].Density) * Lake[i].LayerVol;
+        Lake_Mass += (1000 + Lake[i].SPDensity) * Lake[i].LayerVol;
 
     Lake_Temp = zero;
     for (i = surfLayer; i >= botmLayer; i-- )
-        Lake_Temp += Lake[i].Temp * (1000 + Lake[i].Density) * Lake[i].LayerVol;
+        Lake_Temp += Lake[i].Temp * (1000 + Lake[i].SPDensity) * Lake[i].LayerVol;
     Lake_Temp = Lake_Temp / Lake_Mass;
 
     printf("%s Lake_Mass = %10.5f\t, Lake_Temp = %10.5f\n", msg, Lake_Mass/1e6, Lake_Temp);
@@ -443,18 +440,19 @@ void calc_mass_temp(const char *msg)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-int do_subdaily_loop(int stepnum, int jday, int nsave, REALTYPE SWold, REALTYPE SWnew)
+int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL SWnew)
 {
     int iclock = 0;  //# The seconds counter during a day
-    REALTYPE Light_Surface; //# Light at the surface of the lake after do_surface
+    AED_REAL Light_Surface; //# Light at the surface of the lake after do_surface
 
 //  calc_mass_temp("Beg Day");
 
     noSecs = timestep;
+    coef_wind_drag = CD;
 
-    /*------------------------------------------------------------------------*
+    /**************************************************************************
      *  Loop for each second in a day (86400 = #seconds in a day)             *
-     *------------------------------------------------------------------------*/
+     **************************************************************************/
     iclock = 0;
     Benthic_Light_pcArea = 0.;
     while (iclock < 86400) { //# iclock = seconds counter
@@ -495,9 +493,9 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, REALTYPE SWold, REALTYPE 
 
 //          calc_mass_temp("After do_dissipation");
 
-            //# Do diffusion integrations
-            //# If reservoir is completely mixed (NumLayers=1) then skip diffusion
-            if (NumLayers > 1) do_diffusion();
+            //# Do deep mixing integrations
+            //# If reservoir is completely mixed (NumLayers=1) then skip deep mixing
+            if (NumLayers > 1) do_deep_mixing();
 
             //# Check mixed layers for volume
             check_layer_thickness();
@@ -508,10 +506,13 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, REALTYPE SWold, REALTYPE 
         //# than the minimum level required for production
         Benthic_Light_pcArea += calc_benthic_light();
 
-        /*--------------------------------------------------------------------*
+        calc_layer_stress(MetData.WindSpeed,
+                      sqrt( (Lake[surfLayer].LayerArea * AreaFactor)/Pi ) * 2 );
+
+        /**********************************************************************
          *## Start Water Quality calls                                        *
-         *--------------------------------------------------------------------*/
-        if (wq_calc) do_glm_wq(&NumLayers, &ice);
+         **********************************************************************/
+        if (wq_calc) wq_do_glm(&NumLayers, &ice);
 
         if ( mod(stepnum, nsave) == 0 ) {
 #if PLOTS
@@ -531,9 +532,9 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, REALTYPE SWold, REALTYPE 
 
         iclock += noSecs;
     }   //# do while (iclock < 86400)
-    /*------------------------------------------------------------------------*
+    /**************************************************************************
      * End of sub-daily loop                                                  *
-     *------------------------------------------------------------------------*/
+     **************************************************************************/
 
 #if PLOTS
     plotstep = 0;
@@ -555,10 +556,8 @@ void end_model()
     close_inflow_files();
     close_outflow_files();
 
-    if (wq_calc) clean_glm_wq();    //# deallocataes wq stuff
+    if (wq_calc) wq_clean_glm();    //# deallocataes wq stuff
+
     close_output();
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-
-/*============================================================================*/

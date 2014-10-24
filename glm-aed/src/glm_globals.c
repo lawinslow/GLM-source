@@ -43,30 +43,30 @@ int NumLayers;   //# current number of layers
 LakeDataType *Lake = NULL;
 
 
-REALTYPE Latitude, Longitude;
+AED_REAL Latitude, Longitude;
 
-REALTYPE DMin;    //# minimum layer thickness
-REALTYPE DMax;    //# maximum layer thickness
-REALTYPE VMin;    //# minimum layer volume
-REALTYPE VMax;    //# maximum layer volume
+AED_REAL DMin;    //# minimum layer thickness
+AED_REAL DMax;    //# maximum layer thickness
+AED_REAL VMin;    //# minimum layer volume
+AED_REAL VMax;    //# maximum layer volume
 
 int wq_calc = FALSE;
 
-REALTYPE Kw;             //# background light attenuation (m**-1)
+AED_REAL Kw;             //# background light attenuation (m**-1)
 
 int Num_WQ_Vars;         //# number of water quality variables
-
-REALTYPE *dz = NULL;     //# layer thickness
+CLOGICAL atm_stab = FALSE;   // Account for non-neutral atmospheric stability
 
 //------------------------------------------------------------------------------
 
-REALTYPE CrestLevel; //# crest elevation of reservoir
-REALTYPE LenAtCrest; //# length of reservoir at crest
-REALTYPE WidAtCrest; //# width of reservoir at crest
-REALTYPE VolAtCrest; //# volume at crest level
-REALTYPE Base;       //# bottom elevation of reservoir
-REALTYPE Benthic_Light_pcArea;
-REALTYPE Benthic_Imin = 0.;
+AED_REAL CrestLevel; //# crest elevation of reservoir
+AED_REAL LenAtCrest; //# length of reservoir at crest
+AED_REAL WidAtCrest; //# width of reservoir at crest
+AED_REAL VolAtCrest; //# volume at crest level
+AED_REAL Base;       //# bottom elevation of reservoir
+AED_REAL Benthic_Light_pcArea;
+AED_REAL Benthic_Imin = 0.;
+AED_REAL MaxArea;
 
 //------------------------------------------------------------------------------
 
@@ -79,10 +79,11 @@ OutflowDataType Outflows[MaxOut];  //# Array of Outflows
 //------------------------------------------------------------------------------
 
 int NumDif;
-REALTYPE mol_diffusivity[MaxDif];
-REALTYPE coef_wind_drag = 0.0013;
-REALTYPE CE = 0.0013;
-REALTYPE CH = 0.0013;
+AED_REAL mol_diffusivity[MaxDif];
+AED_REAL coef_wind_drag = 0.0013;
+AED_REAL CD = 0.0013;
+AED_REAL CE = 0.0013;
+AED_REAL CH = 0.0013;
 
 //------------------------------------------------------------------------------
 
@@ -95,51 +96,61 @@ int subdaily = FALSE;
 
 int Nmorph = 0;             //# Number of data points in internal morphometry vector
 
-REALTYPE *MphLevelArea    = NULL; //# area at each internal levels determined by linear interpolation
-REALTYPE *dMphLevelArea   = NULL; //# gradients of area between 0.1m levels
-REALTYPE *dMphLevelVol    = NULL; //# gradients of volume between 0.1m levels
-REALTYPE *dMphLevelVolda  = NULL; //#
-REALTYPE *MphLevelVol     = NULL; //# volume at each level determined by linear interpolation
-REALTYPE *MphLevelVoldash = NULL; //#
+AED_REAL *MphLevelArea    = NULL; //# area at each internal levels determined by linear interpolation
+AED_REAL *dMphLevelArea   = NULL; //# gradients of area between 0.1m levels
+AED_REAL *dMphLevelVol    = NULL; //# gradients of volume between 0.1m levels
+AED_REAL *dMphLevelVolda  = NULL; //#
+AED_REAL *MphLevelVol     = NULL; //# volume at each level determined by linear interpolation
+AED_REAL *MphLevelVoldash = NULL; //#
 
 //------------------------------------------------------------------------------
-REALTYPE vel;
-REALTYPE WaveNumSquared;
-REALTYPE XMoment1;
+AED_REAL vel;
+AED_REAL WaveNumSquared;
+AED_REAL XMoment1;
 
 //------------------------------------------------------------------------------
 
-REALTYPE einff;   //# change in potential energy (see do_inflows)
-REALTYPE coef_mix_KH = 0.3;     //# Kelvin-Helmholtz billowing effects
-REALTYPE coef_mix_conv = 0.125; //# convective overturn
-REALTYPE coef_mix_shear = 0.2;  //# shear efficiency
-REALTYPE coef_mix_turb = 0.51;  //# unsteady effects
-REALTYPE coef_wind_stir = 0.23; //# wind stirring
-REALTYPE coef_mix_hyp = 0.5;    //# efficiency of hypolimnetic mixing
+AED_REAL einff;   //# change in potential energy (see do_inflows)
+AED_REAL coef_mix_KH = 0.3;     //# Kelvin-Helmholtz billowing effects
+AED_REAL coef_mix_conv = 0.125; //# convective overturn
+AED_REAL coef_mix_shear = 0.2;  //# shear efficiency
+AED_REAL coef_mix_turb = 0.51;  //# unsteady effects
+AED_REAL coef_wind_stir = 0.23; //# wind stirring
+AED_REAL coef_mix_hyp = 0.5;    //# efficiency of hypolimnetic mixing
 
 CLOGICAL non_avg = FALSE;
 int deep_mixing = 1;
 
+//
+CLOGICAL catchrain = FALSE;
+AED_REAL rain_threshold = 0.04;
+AED_REAL runoff_coef = 0.3;
+
+int      rad_mode = 0;
+int      albedo_mode = 1;
+int      cloud_mode = 1;
+
+
 //------------------------------------------------------------------------------
 
-REALTYPE db = 0.;
+AED_REAL timezone = 0.0, timezone_m = 0.0, timezone_i = 0.0, timezone_o = 0.0;
 
 //------------------------------------------------------------------------------
 
 int nDays;          //# number of days to simulate
-REALTYPE timestep;
+AED_REAL timestep;
 int noSecs;
 
 //------------------------------------------------------------------------------
 
-REALTYPE *WQ_Vars = NULL;  //# water quality array, nlayers, nvars
+AED_REAL *WQ_Vars = NULL;  //# water quality array, nlayers, nvars
 
 //------------------------------------------------------------------------------
 //  These for debugging
 //------------------------------------------------------------------------------
 CLOGICAL no_evap = FALSE;
 
-void set_c_wqvars_ptr(REALTYPE *iwqv) { WQ_Vars = iwqv; }
+void set_c_wqvars_ptr(AED_REAL *iwqv) { WQ_Vars = iwqv; }
 
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -147,19 +158,19 @@ void set_c_wqvars_ptr(REALTYPE *iwqv) { WQ_Vars = iwqv; }
 /******************************************************************************/
 void allocate_storage()
 {
-    MphLevelArea =    malloc(sizeof(REALTYPE) * Nmorph);
-    dMphLevelArea =   malloc(sizeof(REALTYPE) * Nmorph);
-    dMphLevelVol =    malloc(sizeof(REALTYPE) * Nmorph);
-    dMphLevelVolda =  malloc(sizeof(REALTYPE) * Nmorph);
-    MphLevelVol =     malloc(sizeof(REALTYPE) * Nmorph);
-    MphLevelVoldash = malloc(sizeof(REALTYPE) * Nmorph);
+    MphLevelArea =    malloc(sizeof(AED_REAL) * Nmorph);
+    dMphLevelArea =   malloc(sizeof(AED_REAL) * Nmorph);
+    dMphLevelVol =    malloc(sizeof(AED_REAL) * Nmorph);
+    dMphLevelVolda =  malloc(sizeof(AED_REAL) * Nmorph);
+    MphLevelVol =     malloc(sizeof(AED_REAL) * Nmorph);
+    MphLevelVoldash = malloc(sizeof(AED_REAL) * Nmorph);
 
-    memset(MphLevelArea,    0, sizeof(REALTYPE) * Nmorph);
-    memset(dMphLevelArea,   0, sizeof(REALTYPE) * Nmorph);
-    memset(dMphLevelVol,    0, sizeof(REALTYPE) * Nmorph);
-    memset(dMphLevelVolda,  0, sizeof(REALTYPE) * Nmorph);
-    memset(MphLevelVol,     0, sizeof(REALTYPE) * Nmorph);
-    memset(MphLevelVoldash, 0, sizeof(REALTYPE) * Nmorph);
+    memset(MphLevelArea,    0, sizeof(AED_REAL) * Nmorph);
+    memset(dMphLevelArea,   0, sizeof(AED_REAL) * Nmorph);
+    memset(dMphLevelVol,    0, sizeof(AED_REAL) * Nmorph);
+    memset(dMphLevelVolda,  0, sizeof(AED_REAL) * Nmorph);
+    memset(MphLevelVol,     0, sizeof(AED_REAL) * Nmorph);
+    memset(MphLevelVoldash, 0, sizeof(AED_REAL) * Nmorph);
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -173,13 +184,13 @@ void _debug_print_lake(FILE *of) {
     fprintf(of, "----------DEPTH----------------TEMP-----------------SALT-----------------DENS-----------------LVol------\n");
     for (i = 0; i < NumLayers; i++)
         fprintf(of, "%3d %16.11f %20.11f %20.11f %20.11f %20.11f %16.10f\n",
-                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].Density, Lake[i].LayerVol,Lake[i].Vol1);
+                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].SPDensity, Lake[i].LayerVol,Lake[i].Vol1);
 */
     fprintf(of, "MaxLayers %d NumLayers %d\n", MaxLayers, NumLayers);
     fprintf(of, "----------DEPTH----------------TEMP-----------------SALT-----------------DENS-----------------LVol--------------LArea----\n");
     for (i = 0; i < NumLayers; i++)
         fprintf(of, "%3d %16.11f %20.11f %20.11f %20.11f %20.11f %16.10f\n",
-                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].Density, Lake[i].LayerVol, Lake[i].LayerArea);
+                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].SPDensity, Lake[i].LayerVol, Lake[i].LayerArea);
     fprintf(of, "-------------------------------------------------------------------------------------------------------------------------\n\n");
 }
 void debug_print_lake() { _debug_print_lake(stderr); }

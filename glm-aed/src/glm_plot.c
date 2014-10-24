@@ -48,26 +48,26 @@
     int xdisp = 0;
 #endif
 
-int do_plots, saveall = 0;
+CLOGICAL do_plots, saveall = 0;
 int nplots, theplots[MAX_PLOTS+1];
 char **vars = NULL;
 int today = 0;
 int plotstep = 0;
-REALTYPE psubday = 1;
+AED_REAL psubday = 1;
 char * plots_nml_name = "plots.nml";
 
 
 /******************************************************************************/
-void init_plots(int jstart, int ndays, REALTYPE crest)
+void init_plots(int jstart, int ndays, AED_REAL crest)
 {
     int        maxx, maxy, width, height,i,w,h,acrs;
     int        plot_width, plot_height;
     int        namlst;
     char     **title;
-    REALTYPE  *min_z;
-    REALTYPE  *max_z;
-    REALTYPE   min_x, max_x;
-    REALTYPE   min_y, max_y;
+    AED_REAL  *min_z;
+    AED_REAL  *max_z;
+    AED_REAL   min_x, max_x;
+    AED_REAL   min_y, max_y;
     char      *glm_vers = NULL;
     char      *title_font = NULL;
     char      *label_font = NULL;
@@ -158,6 +158,7 @@ void init_plots(int jstart, int ndays, REALTYPE crest)
         set_plot_y_limits(theplots[i], min_y, max_y);
         set_plot_z_limits(theplots[i], min_z[i], max_z[i]);
         set_plot_version(theplots[i], glm_vers);
+        set_plot_varname(theplots[i], vars[i]);
     }
     free(glm_vers);
 }
@@ -165,10 +166,10 @@ void init_plots(int jstart, int ndays, REALTYPE crest)
 
 
 /******************************************************************************/
-void put_xplot_val(char *name, int wlev, REALTYPE *val)
+void put_xplot_val(char *name, int wlev, AED_REAL *val)
 {
     int i, j, which = 0;
-    REALTYPE todayish;
+    AED_REAL todayish;
 
 /*----------------------------------------------------------------------------*/
     if ( ! do_plots ) return;
@@ -191,6 +192,8 @@ void put_xplot_val(char *name, int wlev, REALTYPE *val)
             else if (strcasecmp(name, "rad") == 0) which = 3;
             else if (strcasecmp(name, "extc") == 0) which = 4;
             else if (strcasecmp(name, "dens") == 0) which = 5;
+            else if (strcasecmp(name, "uorb") == 0) which = 6;
+            else if (strcasecmp(name, "taub") == 0) which = 7;
 
             for (i = 0; i < NumLayers; i++) {
                 switch (which) {
@@ -210,7 +213,13 @@ void put_xplot_val(char *name, int wlev, REALTYPE *val)
                         plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].ExtcCoefSW);
                         break;
                     case 5:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Density);
+                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].SPDensity);
+                        break;
+                    case 6:
+                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Uorb);
+                        break;
+                    case 7:
+                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].LayerStress);
                         break;
                 }
             }
@@ -221,10 +230,10 @@ void put_xplot_val(char *name, int wlev, REALTYPE *val)
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-/******************************************************************************/
-/* for Fortran */
-/******************************************************************************/
-void put_xplot_val_(char *name, int *len, int *wlev, REALTYPE *val)
+/******************************************************************************
+ * for Fortran                                                                *
+ ******************************************************************************/
+void put_xplot_val_(char *name, int *len, int *wlev, AED_REAL *val)
 {
     char *n = malloc(*len + 1);
     strncpy(n, name, *len); n[*len] = 0;

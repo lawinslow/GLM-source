@@ -37,7 +37,7 @@ OBJS=${objdir}/namelist.o \
      ${objdir}/aed_csv.o \
      ${objdir}/aed_time.o
 
-CFLAGS=
+CFLAGS=-Wall -O3 -fPIC
 INCLUDES=-I${incdir}
 
 all: libutil.a

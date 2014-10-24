@@ -7,6 +7,7 @@ CWD=`pwd`
 PLOTVRS=`grep LIB_PLOT_VERSION libplot/libplot.h | cut -f2 -d\"`
 UTILVRS=`grep LIB_UTIL_VERSION libutil/include/libutil.h | cut -f2 -d\"`
 GLM_VRS=`grep GLM_VERSION glm-aed/src/glm.h | cut -f2 -d\"`
+AED2VRS=`grep AED2_VERSION libaed2/include/aed2.h | cut -f2 -d\"`
 
 if [ -d tttt ] ; then
    /bin/rm -rf tttt
@@ -38,6 +39,7 @@ mkdir tttt
 do_tarball libplot ${PLOTVRS}
 do_tarball libutil ${UTILVRS}
 do_tarball glm-aed ${GLM_VRS}
+do_tarball libaed2 ${AED2VRS}
 
 rmdir tttt
 

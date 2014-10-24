@@ -41,42 +41,9 @@ MODULE glm_types
 !===============================================================================
 !GLOBAL CONSTANTS
    INTEGER,PARAMETER  :: MaxPar=37
-   INTEGER,PARAMETER  :: MaxOut=20     !# Maximum number of outflows
-   INTEGER,PARAMETER  :: MaxInf=20     !# Maximum number of inflows
-!  INTEGER,PARAMETER  :: MaxSto=2500   !# Maximum number of storage table layers
-!  INTEGER,PARAMETER  :: MaxLayers=100 !# Maximum number of layers in this sim
-!  INTEGER,PARAMETER  :: MaxVars=28    !# Maximum number of variables
    INTEGER,PARAMETER  :: MaxVars=60    !# Maximum number of variables
-   INTEGER,PARAMETER  :: MaxDif=MaxVars+2 !# Maximum number of diffusing substances
-                                          !# ie: temp, salt and wq vars
 
-   REALTYPE,PARAMETER :: Visc=0.00000114
-
-   REALTYPE,PARAMETER :: zero=0.0
-   REALTYPE,PARAMETER :: one=1.0
-   REALTYPE,PARAMETER :: two=2.0
-   REALTYPE,PARAMETER :: three=3.0
-   REALTYPE,PARAMETER :: four=4.0
-   REALTYPE,PARAMETER :: five=5.0
-   REALTYPE,PARAMETER :: six=6.0
-   REALTYPE,PARAMETER :: seven=7.0
-   REALTYPE,PARAMETER :: eight=8.0
-   REALTYPE,PARAMETER :: nine=9.0
-   REALTYPE,PARAMETER :: ten=10.0
-   REALTYPE,PARAMETER :: twenty=20.0
-   REALTYPE,PARAMETER :: sixty=60.0
-   REALTYPE,PARAMETER :: thsnd=1000.0
-
-   REALTYPE,PARAMETER :: tenM8=1.E-8
-   REALTYPE,PARAMETER :: tenM12=1.0E-12
-
-   REALTYPE,PARAMETER :: g=9.81
-   REALTYPE,PARAMETER :: Pi=3.14159265358979323846
-   REALTYPE,PARAMETER :: PiDeg=180.0
-
-   REALTYPE,PARAMETER :: SecsPerDay=86400
-
-   REALTYPE,PARAMETER :: missing = MISVAL
+   AED_REAL,PARAMETER :: missing = MISVAL
 
 !===============================================================================
 !TYPE DECLARATIONS
@@ -91,44 +58,47 @@ MODULE glm_types
    !# Structured type for inflow vars
    !# An inflow will be an allocated array of MaxInf of these
    TYPE,BIND(C) :: InflowDataType
-      REALTYPE :: Alpha             !# half angle of stream
-      REALTYPE :: DragCoeff         !# streambed drag coefficient
-      REALTYPE :: Phi               !# streambed slope
-      REALTYPE :: FlowRate          !# inflow flow rate
-      REALTYPE :: Factor            !# scaling factor for inflow
-      REALTYPE :: TemInf            !# inflow temperature
-      REALTYPE :: SalInf            !# inflow salinity
-      REALTYPE :: Dlwst
-      REALTYPE :: HFlow
-      REALTYPE :: TotIn
-      REALTYPE :: DIIns(MaxPar)     !# inflow density
-      REALTYPE :: DDown(MaxPar)     !# downflow density
-      REALTYPE :: QIns(MaxPar)      !# inflow volume
-      REALTYPE :: QDown(MaxPar)     !# downflow volume
-      REALTYPE :: TIns(MaxPar)      !# inflow temperature
-      REALTYPE :: TDown(MaxPar)     !# downflow temperature
-      REALTYPE :: SIns(MaxPar)      !# inflow salinity
-      REALTYPE :: SDown(MaxPar)     !# downflow salinity
-      REALTYPE :: DOld(MaxPar)
+      AED_REAL :: Alpha             !# half angle of stream
+      AED_REAL :: DragCoeff         !# streambed drag coefficient
+      AED_REAL :: Phi               !# streambed slope
+      AED_REAL :: FlowRate          !# inflow flow rate
+      AED_REAL :: Factor            !# scaling factor for inflow
+      AED_REAL :: TemInf            !# inflow temperature
+      AED_REAL :: SalInf            !# inflow salinity
+      AED_REAL :: Dlwst
+      AED_REAL :: HFlow
+      AED_REAL :: TotIn
+      AED_REAL :: DIIns(MaxPar)     !# inflow density
+      AED_REAL :: DDown(MaxPar)     !# downflow insertion depth
+      AED_REAL :: QIns(MaxPar)      !# inflow volume
+      AED_REAL :: QDown(MaxPar)     !# downflow volume
+      AED_REAL :: TIns(MaxPar)      !# inflow temperature
+      AED_REAL :: TDown(MaxPar)     !# downflow temperature
+      AED_REAL :: SIns(MaxPar)      !# inflow salinity
+      AED_REAL :: SDown(MaxPar)     !# downflow salinity
+      AED_REAL :: DOld(MaxPar)
 
-      REALTYPE :: WQIns(MaxVars,MaxPar)  !# inflow water quality
-      REALTYPE :: WQDown(MaxVars,MaxPar) !# downflow water quality
-      REALTYPE :: WQInf(MaxVars)
+      AED_REAL :: WQIns(MaxVars,MaxPar)  !# inflow water quality
+      AED_REAL :: WQDown(MaxVars,MaxPar) !# downflow water quality
+      AED_REAL :: WQInf(MaxVars)
 
       CINTEGER :: iCnt
       CINTEGER :: NoIns
       CINTEGER :: InPar(MaxPar)
+
+      CLOGICAL :: SubmFlag          !# is it a submerged inflow
+
    END TYPE InflowDataType
 
    !#===========================================================#!
    !# Structured type for outflow vars
    !# An outflow will be an allocated array of MaxOut of these
    TYPE,BIND(C) :: OutflowDataType
-      REALTYPE :: OLev        !# distance below surface level
-      REALTYPE :: OLen        !# basin length at the outlet
-      REALTYPE :: OWid        !# basin width at the outlet
-      REALTYPE :: Draw        !# outflow volumes
-      REALTYPE :: Factor      !# scaling factor for outflow
+      AED_REAL :: OLev        !# distance below surface level
+      AED_REAL :: OLen        !# basin length at the outlet
+      AED_REAL :: OWid        !# basin width at the outlet
+      AED_REAL :: Draw        !# outflow volumes
+      AED_REAL :: Factor      !# scaling factor for outflow
       CLOGICAL :: FloatOff    !#
    END TYPE OutflowDataType
 
@@ -136,57 +106,62 @@ MODULE glm_types
    !# Structured type for key global lake environmental vars
    !# A Lake will be an allocated array of MaxLayers of these
    TYPE,BIND(C) :: LakeDataType
-      REALTYPE :: Density          !# density
-      REALTYPE :: Temp             !# temperature
-      REALTYPE :: Salinity         !# salinity
-      REALTYPE :: Height           !# 1-D depth array
-      REALTYPE :: MeanHeight       !# Mean depth of a layer
-      REALTYPE :: LayerVol         !# volume of layer
-      REALTYPE :: LayerArea        !# area of layer
+      AED_REAL :: SPDensity        !# specific density
+      AED_REAL :: Temp             !# temperature
+      AED_REAL :: Salinity         !# salinity
+      AED_REAL :: Height           !# 1-D depth array
+      AED_REAL :: MeanHeight       !# Mean depth of a layer
+      AED_REAL :: LayerVol         !# volume of layer
+      AED_REAL :: LayerArea        !# area of layer
 
-      REALTYPE :: Light            !# solar radiation over water layer depths
-      REALTYPE :: ExtcCoefSW       !# light extinction coefficient
+      AED_REAL :: Light            !# solar radiation over water layer depths
+      AED_REAL :: ExtcCoefSW       !# light extinction coefficient
 
-      REALTYPE :: Vol1
-      REALTYPE :: Epsilon
+      AED_REAL :: Vol1
+      AED_REAL :: Epsilon
+
+      AED_REAL :: Umean            !# Mean velocity
+      AED_REAL :: Uorb             !# Orbital velocity
+      AED_REAL :: Ucur             !# Current velocity
+      AED_REAL :: LayerStress      !# Layer Stress
    END TYPE LakeDataType
 
    !#===========================================================#!
    !# Structured type for Met vars
    TYPE,BIND(C) :: MetDataType
-      REALTYPE :: Rain             !# rainfall
-      REALTYPE :: RelHum           !# relative humidty
-      REALTYPE :: SatVapDef        !# vapour pressure
-      REALTYPE :: LongWave         !# longwave radiation
-      REALTYPE :: ShortWave        !# shortwave radiation
-      REALTYPE :: AirTemp          !# temperature
-      REALTYPE :: WindSpeed        !# windspeed
-      REALTYPE :: Snow             !# snowfall
-      REALTYPE :: RainConcPO4      !# Concentration of PO4 in rain
-      REALTYPE :: RainConcTp       !# Concentration of TP in rain
-      REALTYPE :: RainConcNO3      !# Concentration of NO3 in rain
-      REALTYPE :: RainConcNH4      !# Concentration of NH4 in rain
-      REALTYPE :: RainConcTn       !# Concentration of TN in rain
-      REALTYPE :: RainConcSi       !# Concentration of SI in rain
+      AED_REAL :: Rain             !# rainfall
+      AED_REAL :: RelHum           !# relative humidty
+      AED_REAL :: SatVapDef        !# vapour pressure
+      AED_REAL :: LongWave         !# longwave radiation
+      AED_REAL :: ShortWave        !# shortwave radiation
+      AED_REAL :: AirTemp          !# temperature
+      AED_REAL :: WindSpeed        !# windspeed
+      AED_REAL :: Snow             !# snowfall
+      AED_REAL :: RainConcPO4      !# Concentration of PO4 in rain
+      AED_REAL :: RainConcTp       !# Concentration of TP in rain
+      AED_REAL :: RainConcNO3      !# Concentration of NO3 in rain
+      AED_REAL :: RainConcNH4      !# Concentration of NH4 in rain
+      AED_REAL :: RainConcTn       !# Concentration of TN in rain
+      AED_REAL :: RainConcSi       !# Concentration of SI in rain
    END TYPE MetDataType
 
    !#===========================================================#!
    !# Structured type for Surface Data vars
    TYPE,BIND(C) :: SurfaceDataType
-      REALTYPE :: Evap             !# Evaporation
-      REALTYPE :: HeightBlackIce   !# height of ice layer
-      REALTYPE :: HeightWhiteIce   !# height of white ice layer
-      REALTYPE :: HeightSnow       !# height of snow layer
-      REALTYPE :: dHt              !# change in thickness of either the snow or ice layer
-      REALTYPE :: dailyEvap        !# Daily Evaporation (ML/day)
-      REALTYPE :: dailyRain        !# Daily Rain (ML/day)
-      REALTYPE :: dailyQsw         !# Daily Short Wave Radiation (J/day)
-      REALTYPE :: dailyQe          !# Daily Latent Heat(J/day)
-      REALTYPE :: dailyQh          !# Daily Sensible Heat (J/day)
-      REALTYPE :: dailyQlw         !# Daily Long Wave Radiation (J/day)
-      REALTYPE :: dailyInflow      !# Total Daily Inflow (ML/day)
-      REALTYPE :: dailyOutflow     !# Total Daily Outflow (ML/day)
-      REALTYPE :: dailyOverflow    !# Total Daily Overflow (ML/day)
+      AED_REAL :: Evap             !# Evaporation
+      AED_REAL :: HeightBlackIce   !# height of ice layer
+      AED_REAL :: HeightWhiteIce   !# height of white ice layer
+      AED_REAL :: HeightSnow       !# height of snow layer
+      AED_REAL :: dHt              !# change in thickness of either the snow or ice layer
+      AED_REAL :: dailyEvap        !# Daily Evaporation (ML/day)
+      AED_REAL :: dailyRain        !# Daily Rain (ML/day)
+      AED_REAL :: dailyQsw         !# Daily Short Wave Radiation (J/day)
+      AED_REAL :: dailyQe          !# Daily Latent Heat(J/day)
+      AED_REAL :: dailyQh          !# Daily Sensible Heat (J/day)
+      AED_REAL :: dailyQlw         !# Daily Long Wave Radiation (J/day)
+      AED_REAL :: dailyInflow      !# Total Daily Inflow (ML/day)
+      AED_REAL :: dailyOutflow     !# Total Daily Outflow (ML/day)
+      AED_REAL :: dailyOverflow    !# Total Daily Overflow (ML/day)
    END TYPE SurfaceDataType
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

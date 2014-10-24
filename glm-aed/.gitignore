@@ -2,3 +2,10 @@
 *.mod
 glm
 ._*
+.DS*
+.*.swp
+build-stamp
+debian/files
+debian/glm.debhelper.log
+debian/glm.substvars
+

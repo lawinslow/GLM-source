@@ -33,22 +33,20 @@
 #                                                                             #
 ###############################################################################
 
-#ifeq ($(OSTYPE),’darwin13’)
-#  WITH_PLOTS=false
-#  WITH_XPLOTS=false
-#else
-#  WITH_PLOTS=true
-#  WITH_XPLOTS=true
-#endif
-WITH_PLOTS=false
-WITH_XPLOTS=false
+ifeq ($(OSTYPE),Darwin)
+  WITH_PLOTS=false
+  WITH_XPLOTS=false
+else
+  WITH_PLOTS=true
+  WITH_XPLOTS=true
+endif
 
 UTILDIR=../../libutil
 
+TARGETS=glm
 DEFINES=
 FINCLUDES=
 CINCLUDES=-I$(UTILDIR)/include
-CINCLUDES+=-I/opt/local/include
 LIBS=-L$(UTILDIR) -lutil
 ifeq ($(WITH_PLOTS),true)
   DEFINES+=-DPLOTS
@@ -72,9 +70,6 @@ endif
 ifeq ($(FORTRAN_COMPILER),IFORT12)
   F90=ifort
 endif
-ifeq ($(FORTRAN_COMPILER),IFORT15)
-  F90=ifort
-endif
 ifeq ($(FORTRAN_COMPILER),OPEN64)
   F90=open95
 endif
@@ -90,16 +85,55 @@ ifeq ($(FABM),true)
     FABMDIR=../../fabm-git
   endif
   DEFINES+=-DFABM
-  FINCLUDES+=-I$(FABMDIR)/include -I$(FABMDIR)/src/drivers/glm -I$(FABMDIR)/modules/glm/$(FORTRAN_COMPILER)
-  ifeq ($(COMPILATION_MODE),production)
-    FABMLIB=fabm_prod
-    WITH_CHECKS=false
+
+  ifeq ($(FABM_NEW_BUILD),true)
+    ifeq ($(COMPILATION_MODE),production)
+      FABMLIB=fabm
+      WITH_CHECKS=false
+    endif
+    ifeq ($(COMPILATION_MODE),debug)
+      FABMLIB=fabm_debug
+      WITH_CHECKS=true
+    endif
+
+    FINCLUDES+=-I$(FABMDIR)/include -I$(FABMDIR)/src/drivers/glm -I$(FABMDIR)/build/modules
+    FABMLIBS=-L$(FABMDIR)/build -l$(FABMLIB)
+  else
+    ifeq ($(COMPILATION_MODE),production)
+      FABMLIB=fabm_prod
+      WITH_CHECKS=false
+    endif
+    ifeq ($(COMPILATION_MODE),debug)
+      FABMLIB=fabm_debug
+      WITH_CHECKS=true
+    endif
+
+    FINCLUDES+=-I$(FABMDIR)/include -I$(FABMDIR)/src/drivers/glm -I$(FABMDIR)/modules/glm/$(FORTRAN_COMPILER)
+    FABMLIBS=-L$(FABMDIR)/lib/glm/$(FORTRAN_COMPILER) -l$(FABMLIB)
   endif
-  ifeq ($(COMPILATION_MODE),debug)
-    FABMLIB=fabm_debug
-    WITH_CHECKS=true
+
+  ifeq ($(USE_DL),true)
+    FABMTARGETS=libglm_wq_fabm.so
   endif
-  LIBS+=-L$(FABMDIR)/lib/glm/$(FORTRAN_COMPILER) -l$(FABMLIB)
+endif
+
+ifeq ($(AED2),true)
+  DEFINES+=-DAED2
+
+  ifeq ($(AED2DIR),)
+    AED2DIR=../../libaed2
+  endif
+
+  AED2LIB=aed2
+  AED2LIBS=-L$(AED2DIR) -l$(AED2LIB)
+
+  ifneq ($(USE_DL),true)
+    AED2TARGETS=libglm_wq_aed2.so
+  endif
+endif
+
+ifneq ($(USE_DL),true)
+  LIBS+=$(AED2LIBS) $(FABMLIBS)
 endif
 
 
@@ -113,12 +147,12 @@ ifeq ($(F90),ifort)
     FFLAGS+=-check
   endif
   #FFLAGS+=-real-size 64
+  LIBS+=-L/opt/intel/lib
   LIBS+=-lifcore -lsvml
   LIBS+=-limf -lintlc
-  LIBS+=-L/opt/intel/lib
-  ifeq ($(OSTYPE),Linux)
-    LIBS+=-Wl,-rpath=/opt/intel/lib
-  endif
+# ifeq ($(OSTYPE),Linux)
+#   LIBS+=-Wl,-rpath=/opt/intel/lib
+# endif
 else ifeq ($(F90),open95)
   FINCLUDES+=-I/opt/open64/include
   DEBUG_FFLAGS=-g -fbacktrace
@@ -154,8 +188,7 @@ else
   # OPT_FFLAGS=
 endif
 
-LIBS+=-lnetcdf #-lnetcdff
-LIBS+=-L/opt/local/lib
+LIBS+=-lnetcdf
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
@@ -163,23 +196,19 @@ ifeq ($(WITH_PLOTS),true)
   endif
 endif
 
-ifeq ($(WITH_PLOTS),false)
-  CFLAGS=-Wall -I$(UTILDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
-else
-  CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
+ifeq ($(PLOTDIR),)
+  PLOTDIR=../../libplot
 endif
-FFLAGS+=$(DEBUG_FFLAGS) $(OPT_FFLAGS)
 
-FORT_OBJS=ode_solvers.o \
-          glm_types.o   \
-          glm_fabm.o
+CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
+FFLAGS+=$(DEBUG_FFLAGS) $(OPT_FFLAGS)
 
 OBJS=glm_globals.o \
      glm_util.o \
      glm_csv.o \
      glm_mobl.o \
-     $(FORT_OBJS) \
      glm_mixu.o \
+     glm_wqual.o \
      glm_layers.o \
      glm_surface.o \
      glm_input.o \
@@ -191,34 +220,78 @@ OBJS=glm_globals.o \
      glm_flow.o \
      glm_mixer.o \
      glm_deep.o \
+     glm_bubbler.o \
+     glm_stress.o \
+     glm_bird.o \
      glm_model.o \
+     glm_types.o \
+     glm_const.o \
      glm_main.o
 
-all: glm
+ifeq ($(USE_DL),true)
+  LIBS+=-ldl
+  CFLAGS+=-DUSE_DL_LOADER=1
+  FFLAGS+=-DUSE_DL_LOADER=1
+  TARGETS+=$(AED2TARGETS) $(FABMTARGETS)
+else
+  ifeq ($(AED2),true)
+    OBJS+=glm_aed2.o
+  endif
+  ifeq ($(FABM),true)
+    OBJS+=glm_fabm.o ode_solvers.o
+  endif
+endif
 
-glm: $(OBJS)
-	$(CC) -o glm $(OBJS) $(LIBS)
+
+all: $(TARGETS)
+
+
+glm: $(OBJS) ../../libplot/libplot.a ../../libutil/libutil.a
+	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
+
+glm_test_bird: glm_test_bird.o glm_bird.o glm_util.o ../../libplot/libplot.a ../../libutil/libutil.a
+	$(CC) -o glm_test_bird -Wl,--export-dynamic glm_test_bird.o glm_bird.o glm_util.o $(LIBS)
 
 clean:
-	@touch 1.o 1.mod 1.t 1__genmod.f90 glm
-	@/bin/rm *.mod *.o *.t *__genmod.f90 glm
+	@touch 1.o 1.mod 1.t 1__genmod.f90 glm 1.so glm_test_bird
+	@/bin/rm *.mod *.o *.t *__genmod.f90 glm *.so glm_test_bird
 	@echo Made clean
 
 distclean: clean
 
 %.o: %.F90 glm.h
-	$(F90) $(FFLAGS) $(EXTRA_FFLAGS) -D_FORTRAN_VERSION_ -c $< -o $@
+	$(F90) -fPIC $(FFLAGS) $(EXTRA_FFLAGS) -D_FORTRAN_VERSION_ -c $< -o $@
 
 %.o: %.c glm.h
-	$(CC) $(CFLAGS) $(EXTRA_FLAGS) -D_C_VERSION_ -c $< -o $@
+	$(CC) -fPIC $(CFLAGS) $(EXTRA_FLAGS) -D_C_VERSION_ -c $< -o $@
+
+%.so:
+	$(LD) -shared $(LDFLAGS) \
+                        -o $@ $^ -L/opt/intel/lib/intel64/ $(LIBS)
+
+#                        -E -Bdynamic -undefined suppress -o $@ $^ -L/opt/intel/lib/intel64/ $(LIBS)
 
 # Dependancy rules
+
+libglm_wq_aed2.so: glm_aed2.o glm_plugin.o
+	$(LD) -shared $(LDFLAGS) \
+                        -o $@ $^ -L/opt/intel/lib/intel64/ $(LIBS) $(AED2LIBS)
+
+libglm_wq_fabm.so: glm_fabm.o ode_solvers.o glm_plugin.o
+	$(LD) -shared $(LDFLAGS) \
+                        -o $@ $^ -L/opt/intel/lib/intel64/ $(LIBS) $(FABMLIBS)
+
+glm_aed2.o: glm_aed2.F90 glm_types.o
+	$(F90) -fPIC $(FFLAGS) -I$(AED2DIR)/include -I$(AED2DIR) \
+                                      $(EXTRA_FFLAGS) -D_FORTRAN_VERSION_ -c $< -o $@
+
 
 glm_fabm.o: glm_fabm.F90 glm_types.o ode_solvers.o
 glm_types.o: glm_types.F90 glm.h
 ode_solvers.o: ode_solvers.F90
 
 glm_globals.o: glm_globals.c glm_globals.h glm.h
+glm_bubbler.o: glm_bubbler.c glm_globals.h glm.h
 glm_mobl.o: glm_mobl.c glm.h
 glm_util.o: glm_util.c glm.h
 glm_deep.o: glm_deep.c glm.h
@@ -236,4 +309,5 @@ glm_lnum.o: glm_lnum.c glm.h
 glm_init.o: glm_init.c glm.h
 glm_plot.o: glm_plot.c glm.h
 glm_model.o: glm_model.c glm.h
+glm_plugin.o: glm_plugin.c glm_plugin.h glm.h
 

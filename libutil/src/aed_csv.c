@@ -53,7 +53,7 @@ typedef struct _AED_CSV_OUT {
     char     time[20];
     int      n_cols;
     char   **header;
-    REALTYPE buff[MAX_OUT_VALUES+4];
+    AED_REAL buff[MAX_OUT_VALUES+4];
 } AED_CSV_OUT;
 
 static int _n_outf = 0;
@@ -63,7 +63,7 @@ typedef struct _AED_CSV_IN {
     FILE  *f;
     int    n_cols;
     char **header;
-    REALTYPE *curLine;
+    AED_REAL *curLine;
     timefmt  *tf;
 } AED_CSV_IN;
 
@@ -71,7 +71,7 @@ static int _n_inf = 0;
 static AED_CSV_IN csv_if[MAX_IN_FILES];
 
 
-static REALTYPE missing = MISVAL;
+static AED_REAL missing = MISVAL;
 
 #define BUFCHUNK	10240
 
@@ -186,7 +186,7 @@ int open_csv_input(const char *fname, const char *timefmt)
     csv_if[_n_inf].f = f;
     csv_if[_n_inf].header = break_line( read_line(f), &cols );
     csv_if[_n_inf].n_cols = cols;
-    csv_if[_n_inf].curLine = malloc(sizeof(REALTYPE)*cols);
+    csv_if[_n_inf].curLine = malloc(sizeof(AED_REAL)*cols);
     if (timefmt != NULL)
         csv_if[_n_inf].tf = decode_time_format(timefmt);
     else
@@ -330,7 +330,7 @@ int get_csv_val_i(int csv, int idx)
  *                                                                            *
  *                                                                            *
  ******************************************************************************/
-REALTYPE get_csv_val_r(int csv, int idx)
+AED_REAL get_csv_val_r(int csv, int idx)
 {
     if ( check_it(csv,idx) ) return csv_if[csv].curLine[idx];
     return 0.;
@@ -438,6 +438,13 @@ void csv_header_var(int f, const char *v)
     _add_header(&csv_of[f].header, &csv_of[f].n_cols, v);
 }
 /*----------------------------------------------------------------------------*/
+void csv_header_var2(int f, const char *v, const char *units)
+{
+    fprintf(csv_of[f].f, ",%s [%s]", v, units);
+    csv_of[f].buff[csv_of[f].n_cols] = missing;
+    _add_header(&csv_of[f].header, &csv_of[f].n_cols, v);
+}
+/*----------------------------------------------------------------------------*/
 void csv_header_end(int f)
 {
     fputc('\n', csv_of[f].f);
@@ -450,7 +457,7 @@ void csv_header_end(int f)
  *                                                                            *
  ******************************************************************************/
 void write_csv_start(int f, const char *cval) { fputs(cval, csv_of[f].f); }
-void write_csv_val(int f, REALTYPE val) { fprintf(csv_of[f].f, ",%15.6f", val); }
+void write_csv_val(int f, AED_REAL val) { fprintf(csv_of[f].f, ",%15.6f", val); }
 void write_csv_end(int f) { fputc('\n', csv_of[f].f); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -458,7 +465,7 @@ void write_csv_end(int f) { fputc('\n', csv_of[f].f); }
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void write_csv_var(int f, const char *name, REALTYPE val, const char *cval, int last)
+void write_csv_var(int f, const char *name, AED_REAL val, const char *cval, int last)
 {
     int i;
 
@@ -499,7 +506,7 @@ void write_csv_var(int f, const char *name, REALTYPE val, const char *cval, int 
 void find_day(int csv, int time_idx, int jday)
 {
     int y,m,d;
-    REALTYPE tr;
+    AED_REAL tr;
 
     if ( !check_it(csv, time_idx) ) {
         fprintf(stderr, "Fatal error in find_day: file %d index %d\n", csv, time_idx);

@@ -25,7 +25,7 @@
    coef_mix_shear = 0.20
    coef_mix_turb = 0.51
    coef_mix_kh = 0.30
-!  mobility_off = .false.
+!  mobility_off = .true.
 !  non_avg = .true.
 /
 
@@ -57,8 +57,8 @@
 &wq_setup
    ode_method = 1
    split_factor = 1
-   !bioshade_feedback = .true.
-   bioshade_feedback = .false.
+   bioshade_feedback = .true.
+   !bioshade_feedback = .false.
    repair_state = .true.
    wq_nml_file = 'fabm.nml'
    multi_ben = .false.
@@ -159,7 +159,7 @@
    out_lkn = .true.
    nsave = 24
 
-   csv_point_nlevs = 2
+   csv_point_nlevs = 0
    csv_point_fname = 'WQ_'
    csv_point_at = 15., 17.
    csv_point_nvars = 16
@@ -265,6 +265,9 @@
 !  coef_wind_drag = 0.0013
 !  CE          = 0.0013
 !  CH          = 0.0013
+!  catchrain   = .false.
+!  rain_threshold = 0.04
+!  runoff_coef = 0.3
 !  time_fmt = 'YYYY-MM-DD hh:mm:ss'
 /
 
@@ -330,4 +333,41 @@
    outflow_fl   = 'outflow.csv'
    outflow_factor = 1.0
 !  time_fmt = 'YYYY-MM-DD hh:mm:ss'
+/
+
+!-------------------------------------------------------------------------------
+! bubbler configuration
+!-------------------------------------------------------------------------------
+!
+!     logical               :: on
+!     character(len=20)     :: data_file
+!     REALTYPE              :: aflow
+!     integer               :: nports
+!     REALTYPE              :: bublen
+!     REALTYPE              :: bdepth
+!     logical               :: opopt
+!     REALTYPE              :: ton
+!     REALTYPE              :: toff
+!     logical               :: intopt
+!     character(len=20)     :: start
+!     character(len=20)     :: stop
+!     logical               :: eff
+!     character(len=20)     :: eff_file
+!
+!-------------------------------------------------------------------------------
+&bubbler
+   on = .false.,
+   data_file = 'bubbler.csv',
+   aflow = 1.0,
+   nports = 1,
+   bublen = 1.0,
+   bdepth = 1.0,
+   opopt = .false.,
+   ton = 1.0
+   toff = 1.0
+   intopt = .false.,
+   start = '1998-05-01',
+   stop = '2007-05-02',
+   eff = .false.
+   eff_file = 'bubleff.txt'
 /

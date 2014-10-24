@@ -57,18 +57,21 @@ static size_t start[4],edges[4];
 static int lon_id,lat_id,z_id,V_id,TV_id,NS_id,time_id;
 static int HICE_id,HSNOW_id,HWICE_id;
 static int precip_id,evap_id,rho_id,rad_id,extc_id,i0_id,wnd_id;
-static int temp_id, salt_id;
+static int temp_id, salt_id, umean_id, uorb_id;
 
 
 /*============================================================================*/
 static void check_nc_error(int err);
 
-/*############################################################################*/
-int init_glm_ncdf(const char *fn, const char *title, REALTYPE lat,
-                                REALTYPE lon, int nlev, const char *start_time)
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+int init_glm_ncdf(const char *fn, const char *title, AED_REAL lat,
+                                AED_REAL lon, int nlev, const char *start_time)
 {
     int ncid;
     char time_str[128], history[128];
+    extern char *wq_lib;
 
     int dims[4];
 /*----------------------------------------------------------------------------*/
@@ -76,7 +79,7 @@ int init_glm_ncdf(const char *fn, const char *title, REALTYPE lat,
     check_nc_error(nc_create(fn,NC_CLOBBER,&ncid));
 
     snprintf(time_str, 128, "hours since %s", start_time);
-    snprintf(history,  128, "Created by GLM/FABM v. %s", GLM_VERSION);
+    snprintf(history,  128, "Created by glm2/%s v. %s", wq_lib, GLM_VERSION);
 
     height_len = nlev;
 
@@ -130,6 +133,9 @@ int init_glm_ncdf(const char *fn, const char *title, REALTYPE lat,
     check_nc_error(nc_def_var(ncid, "rad",       NC_REALTYPE, 4, dims, &rad_id));
     check_nc_error(nc_def_var(ncid, "extc_coef", NC_REALTYPE, 4, dims, &extc_id));
 
+    check_nc_error(nc_def_var(ncid, "u_mean",    NC_REALTYPE, 4, dims, &umean_id));
+    check_nc_error(nc_def_var(ncid, "u_orb",     NC_REALTYPE, 4, dims, &uorb_id));
+
     /**************************************************************************
      * assign attributes                                                      *
      **************************************************************************/
@@ -156,6 +162,9 @@ int init_glm_ncdf(const char *fn, const char *title, REALTYPE lat,
     set_nc_attributes(ncid, rho_id,    "unknown", "density"         PARAM_FILLVALUE);
     set_nc_attributes(ncid, rad_id,    "unknown", "solar radiation" PARAM_FILLVALUE);
 
+    set_nc_attributes(ncid, umean_id,  "m/s",     "mean velocity"    PARAM_FILLVALUE);
+    set_nc_attributes(ncid, uorb_id,   "m/s",     "orbital velocity" PARAM_FILLVALUE);
+
     //# global attributes
     nc_put_att(ncid,NC_GLOBAL,"Title", NC_CHAR, strlen(title), title);
 
@@ -180,11 +189,14 @@ int init_glm_ncdf(const char *fn, const char *title, REALTYPE lat,
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
-void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, REALTYPE timestep)
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, AED_REAL timestep)
 {
-    REALTYPE temp_time, LakeVolume;
-    REALTYPE *heights, *vols, *salts, *temps, *dens, *qsw, *extc_coef;
+    AED_REAL temp_time, LakeVolume;
+    AED_REAL *heights, *vols, *salts, *temps, *dens, *qsw, *extc_coef;
+    AED_REAL *u_mean, *u_orb;
     int i;
 
     set_no++;
@@ -218,22 +230,26 @@ void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, REALTYPE timestep
     start[1] = 0;      edges[1] = height_len;
     start[0] = set_no; edges[0] = 1;
 
-    heights   = malloc(nlev*sizeof(REALTYPE));
-    vols      = malloc(nlev*sizeof(REALTYPE));
-    salts     = malloc(nlev*sizeof(REALTYPE));
-    temps     = malloc(nlev*sizeof(REALTYPE));
-    dens      = malloc(nlev*sizeof(REALTYPE));
-    qsw       = malloc(nlev*sizeof(REALTYPE));
-    extc_coef = malloc(nlev*sizeof(REALTYPE));
+    heights   = malloc(nlev*sizeof(AED_REAL));
+    vols      = malloc(nlev*sizeof(AED_REAL));
+    salts     = malloc(nlev*sizeof(AED_REAL));
+    temps     = malloc(nlev*sizeof(AED_REAL));
+    dens      = malloc(nlev*sizeof(AED_REAL));
+    qsw       = malloc(nlev*sizeof(AED_REAL));
+    extc_coef = malloc(nlev*sizeof(AED_REAL));
+    u_mean    = malloc(nlev*sizeof(AED_REAL));
+    u_orb     = malloc(nlev*sizeof(AED_REAL));
 
     for (i = 0; i < wlev; i++) {
         heights[i] = Lake[i].Height;
         vols[i] = Lake[i].LayerVol;
         salts[i] = Lake[i].Salinity;
         temps[i] = Lake[i].Temp;
-        dens[i] = Lake[i].Density;
+        dens[i] = Lake[i].SPDensity;
         qsw[i] = Lake[i].Light;
         extc_coef[i] = Lake[i].ExtcCoefSW;
+        u_mean[i] = Lake[i].Umean;
+        u_orb[i] = Lake[i].Uorb;
     }
     for (i = wlev; i < nlev; i++) {
         heights[i] = NC_FILLER;
@@ -243,25 +259,31 @@ void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, REALTYPE timestep
         dens[i] = NC_FILLER;
         qsw[i] = NC_FILLER;
         extc_coef[i] = NC_FILLER;
+        u_mean[i] = NC_FILLER;
+        u_orb[i] = NC_FILLER;
     }
-    check_nc_error(nc_put_vara(ncid,    z_id, start, edges, heights));
-    check_nc_error(nc_put_vara(ncid,    V_id, start, edges, vols));
-    check_nc_error(nc_put_vara(ncid, salt_id, start, edges, salts));
-    check_nc_error(nc_put_vara(ncid, temp_id, start, edges, temps));
-    check_nc_error(nc_put_vara(ncid,  rho_id, start, edges, dens));
-    check_nc_error(nc_put_vara(ncid,  rad_id, start, edges, qsw));
-    check_nc_error(nc_put_vara(ncid, extc_id, start, edges, extc_coef));
+    check_nc_error(nc_put_vara(ncid,     z_id, start, edges, heights));
+    check_nc_error(nc_put_vara(ncid,     V_id, start, edges, vols));
+    check_nc_error(nc_put_vara(ncid,  salt_id, start, edges, salts));
+    check_nc_error(nc_put_vara(ncid,  temp_id, start, edges, temps));
+    check_nc_error(nc_put_vara(ncid,   rho_id, start, edges, dens));
+    check_nc_error(nc_put_vara(ncid,   rad_id, start, edges, qsw));
+    check_nc_error(nc_put_vara(ncid,  extc_id, start, edges, extc_coef));
+    check_nc_error(nc_put_vara(ncid, umean_id, start, edges, u_mean));
+    check_nc_error(nc_put_vara(ncid,  uorb_id, start, edges, u_orb));
 
     free(heights); free(vols); free(salts);
     free(temps);  free(dens); free(qsw);
-    free(extc_coef);
+    free(extc_coef); free(u_mean); free(u_orb);
 
     check_nc_error(nc_sync(ncid));
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void close_glm_ncdf(int ncid)
 {
    if (ncid != -1)
@@ -272,7 +294,9 @@ void close_glm_ncdf(int ncid)
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 int new_nc_variable(int ncid, const char *name, int data_type,
                                                       int ndim, const int *dims)
 {
@@ -284,9 +308,11 @@ int new_nc_variable(int ncid, const char *name, int data_type,
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/******************************************************************************/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void set_nc_attributes(int ncid, int id, const char *units,
-                                      const char *long_name, REALTYPE FillValue)
+                                      const char *long_name, AED_REAL FillValue)
 {
     nc_put_att(ncid, id, "units", NC_CHAR, strlen(units), units);
     if ( long_name != NULL ) {
@@ -297,7 +323,9 @@ void set_nc_attributes(int ncid, int id, const char *units,
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void store_nc_integer(int ncid, int id, int var_shape, int iscalar)
 {
     int iret;
@@ -317,8 +345,10 @@ void store_nc_integer(int ncid, int id, int var_shape, int iscalar)
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
-void store_nc_scalar(int ncid, int id, int var_shape, REALTYPE scalar)
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void store_nc_scalar(int ncid, int id, int var_shape, AED_REAL scalar)
 {
     int iret;
 
@@ -343,12 +373,14 @@ void store_nc_scalar(int ncid, int id, int var_shape, REALTYPE scalar)
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void store_nc_array(int ncid, int id, int var_shape, int nvals,
-                                                   int maxvals, REALTYPE *array)
+                                                   int maxvals, AED_REAL *array)
 {
     int iret, i;
-    REALTYPE *tarr;
+    AED_REAL *tarr;
 
     /*------------------------------------------------------------------------*/
     if (var_shape == Z_SHAPE) {
@@ -362,7 +394,7 @@ void store_nc_array(int ncid, int id, int var_shape, int nvals,
         fprintf(stderr, "store_nc_array : non valid shape %d\n", var_shape);
         exit(1);
     }
-    tarr = malloc(maxvals*sizeof(REALTYPE));
+    tarr = malloc(maxvals*sizeof(AED_REAL));
     for (i = 0; i < nvals; i++) tarr[i] = array[i];
     for (i = nvals; i < maxvals; i++) tarr[i] = NC_FILLER;
     iret = nc_put_vara(ncid,id,start,edges,tarr);
@@ -374,7 +406,9 @@ void store_nc_array(int ncid, int id, int var_shape, int nvals,
 
 
 #undef DEBUG
-/*############################################################################*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void check_nc_error(int err)
 {
    if (err != NC_NOERR) {
@@ -410,14 +444,14 @@ int new_nc_variable_(int *ncid, const char *name, int *len, int *data_type,
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 void set_nc_attributes_(int *ncid, int *id, const char *units,
-                                     const char *long_name, REALTYPE *FillValue)
+                                     const char *long_name, AED_REAL *FillValue)
 { set_nc_attributes(*ncid, *id, units, long_name, *FillValue); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-void store_nc_scalar_(int *ncid, int *id, int *var_shape, REALTYPE *array)
+void store_nc_scalar_(int *ncid, int *id, int *var_shape, AED_REAL *array)
 { store_nc_scalar(*ncid, *id, *var_shape, *array); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 void store_nc_array_(int *ncid, int *id, int *var_shape, int *nvals,
-                                                  int *maxvals, REALTYPE *array)
+                                                  int *maxvals, AED_REAL *array)
 { store_nc_array(*ncid, *id, *var_shape, *nvals, *maxvals, array); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 

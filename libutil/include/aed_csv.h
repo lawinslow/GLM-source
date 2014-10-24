@@ -30,7 +30,7 @@
 
 #include "libutil.h"
 
-#define MAX_OUT_VALUES   20
+#define MAX_OUT_VALUES   40
 
 #define bufsize 2048
 
@@ -66,7 +66,7 @@
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: csv, idx
      END FUNCTION get_csv_val_i
-     REALTYPE FUNCTION get_csv_val_r(csv, idx)
+     AED_REAL FUNCTION get_csv_val_r(csv, idx)
         USE ISO_C_BINDING
         CINTEGER,INTENT(in) :: csv, idx
      END FUNCTION get_csv_val_r
@@ -94,7 +94,7 @@
   int load_csv_line(int csv);
   int get_csv_type(int csv, int idx);
   int get_csv_val_i(int csv, int idx);
-  REALTYPE get_csv_val_r(int csv, int idx);
+  AED_REAL get_csv_val_r(int csv, int idx);
   int get_csv_val_s(int csv, int idx, char *s);
 
   int close_csv_input(int csvf);
@@ -104,12 +104,13 @@
 
   void csv_header_start(int f);
   void csv_header_var(int f, const char *v);
+  void csv_header_var2(int f, const char *v, const char *units);
   void csv_header_end(int f);
 
   void write_csv_start(int f, const char *cval);
-  void write_csv_val(int f, REALTYPE val);
+  void write_csv_val(int f, AED_REAL val);
   void write_csv_end(int f);
-  void write_csv_var(int f, const char *name, REALTYPE val, const char *cval, int last);
+  void write_csv_var(int f, const char *name, AED_REAL val, const char *cval, int last);
 
   void find_day(int csv, int time_idx, int jday);
 

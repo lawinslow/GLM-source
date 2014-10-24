@@ -38,6 +38,7 @@ void set_plot_x_limits(int plot, double min, double max);
 void set_plot_y_limits(int plot, double min, double max);
 void set_plot_z_limits(int plot, double min, double max);
 void set_plot_version(int plot, const char *vers);
+void set_plot_varname(int plot, const char *varname);
 void plot_value(int plot, double x, double y, double z);
 void flush_plot(int plot);
 void do_cleanup(int saveall);

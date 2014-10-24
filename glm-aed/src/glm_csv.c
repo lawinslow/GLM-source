@@ -51,7 +51,7 @@ typedef char FILNAME[80];
 
 int csv_point_nlevs = 0;
 static int csv_points[MaxPointCSV];
-REALTYPE csv_point_at[MaxPointCSV];
+AED_REAL csv_point_at[MaxPointCSV];
 static char * csv_point_fname = NULL;
 int csv_point_nvars = 0;
 static VARNAME csv_point_vars[MaxCSVOutVars];
@@ -75,7 +75,7 @@ int ofl_wq_idx[MaxCSVOutVars];
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void configure_csv(int point_nlevs, REALTYPE *point_at, const char *point_fname,
+void configure_csv(int point_nlevs, AED_REAL *point_at, const char *point_fname,
                                         int point_nvars, const char *lake_fname)
 {
     int i;
@@ -158,28 +158,32 @@ void init_csv_output(const char *out_dir, int lkn)
         csv_lake_file = open_csv_output(out_dir, csv_lake_fname);
 
         csv_header_start(csv_lake_file);
-        csv_header_var(csv_lake_file, "Volume");
-        csv_header_var(csv_lake_file, "Tot Inflow Vol");
-        csv_header_var(csv_lake_file, "Tot Outflow Vol");
-        csv_header_var(csv_lake_file, "Overflow Vol");
-        csv_header_var(csv_lake_file, "Evapouration");
-        csv_header_var(csv_lake_file, "Rain");
-        csv_header_var(csv_lake_file, "Lake Level");
-        csv_header_var(csv_lake_file, "Surface Area");
-        csv_header_var(csv_lake_file, "Black Ice");
-        csv_header_var(csv_lake_file, "Snow");
-        csv_header_var(csv_lake_file, "White Ice");
-        csv_header_var(csv_lake_file, "Max Temp");
-        csv_header_var(csv_lake_file, "Min Temp");
-        csv_header_var(csv_lake_file, "Surface Temp");
-        csv_header_var(csv_lake_file, "Daily Qsw");
-        csv_header_var(csv_lake_file, "Daily Qe");
-        csv_header_var(csv_lake_file, "Daily Qh");
-        csv_header_var(csv_lake_file, "Daily Qlw");
-        csv_header_var(csv_lake_file, "Light");
-        csv_header_var(csv_lake_file, "Benthic Light");
+        csv_header_var2(csv_lake_file, "Volume", "m3");
+        csv_header_var2(csv_lake_file, "Tot Inflow Vol", "m3");
+        csv_header_var2(csv_lake_file, "Tot Outflow Vol", "m3");
+        csv_header_var2(csv_lake_file, "Overflow Vol", "m3");
+        csv_header_var2(csv_lake_file, "Evapouration", "m3");
+        csv_header_var2(csv_lake_file, "Rain", "m3");
+        csv_header_var2(csv_lake_file, "Lake Level", "m");
+        csv_header_var2(csv_lake_file, "Surface Area", "m2");
+        csv_header_var (csv_lake_file, "Black Ice");
+        csv_header_var (csv_lake_file, "Snow");
+        csv_header_var (csv_lake_file, "White Ice");
+        csv_header_var (csv_lake_file, "Max Temp");
+        csv_header_var (csv_lake_file, "Min Temp");
+        csv_header_var (csv_lake_file, "Surface Temp");
+        csv_header_var (csv_lake_file, "Daily Qsw");
+        csv_header_var (csv_lake_file, "Daily Qe");
+        csv_header_var (csv_lake_file, "Daily Qh");
+        csv_header_var (csv_lake_file, "Daily Qlw");
+        csv_header_var (csv_lake_file, "Light");
+        csv_header_var (csv_lake_file, "Benthic Light");
+        csv_header_var2(csv_lake_file, "H_s", "m");
+        csv_header_var (csv_lake_file, "L");
+        csv_header_var (csv_lake_file, "T");
         if (lkn) csv_header_var(csv_lake_file, "LakeNumber");
         csv_header_var(csv_lake_file, "Max dT/dz");
+        csv_header_var (csv_lake_file, "coef_wind_drag");
         csv_header_end(csv_lake_file);
     } else
         csv_lake_file = -1;
@@ -203,7 +207,7 @@ void init_csv_output(const char *out_dir, int lkn)
             int k = strlen(csv_outfl_vars[i]);
             if ( internal_var(csv_outfl_vars[i]) )
                 ofl_wq_idx[i] = -1;
-            else if ((ofl_wq_idx[i] = wqvar_index_c(csv_outfl_vars[i], &k)) < 0)
+            else if ((ofl_wq_idx[i] = wq_var_index_c(csv_outfl_vars[i], &k)) < 0)
                 fprintf(stderr, "Cannot find \"%s\" for outflow value\n", csv_outfl_vars[i]);
         }
     }
@@ -214,16 +218,16 @@ void init_csv_output(const char *out_dir, int lkn)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void write_csv_lake(const char *name, REALTYPE val, const char *cval, int last)
+void write_csv_lake(const char *name, AED_REAL val, const char *cval, int last)
 { write_csv_var(csv_lake_file, name, val, cval, last); }
 /*----------------------------------------------------------------------------*/
-void write_csv_point(int p, const char *name, REALTYPE val, const char *cval, int last)
+void write_csv_point(int p, const char *name, AED_REAL val, const char *cval, int last)
 { write_csv_var(csv_points[p], name, val, cval, last); }
 /*----------------------------------------------------------------------------*/
-void write_csv_outfl(int ofl, const char *name, REALTYPE val, const char *cval, int last)
+void write_csv_outfl(int ofl, const char *name, AED_REAL val, const char *cval, int last)
 { write_csv_var(csv_outfls[ofl], name, val, cval, last); }
 /*----------------------------------------------------------------------------*/
-void write_csv_outfl_idx(int ofl, int var, REALTYPE val, const char *cval, int last)
+void write_csv_outfl_idx(int ofl, int var, AED_REAL val, const char *cval, int last)
 { write_csv_var(csv_outfls[ofl], csv_outfl_vars[var], val, cval, last); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -265,7 +269,7 @@ static char *make_c_string(const char *in, int len)
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 /******************************************************************************/
-void write_csv_point_(int *f, const char *name, int *len, REALTYPE *val,
+void write_csv_point_(int *f, const char *name, int *len, AED_REAL *val,
                               const char *cval, int *vlen, int *last)
 {
     char *n = make_c_string(name, *len);

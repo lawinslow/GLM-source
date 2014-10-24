@@ -47,24 +47,26 @@
 
 
 /******************************************************************************/
-static REALTYPE Rising(REALTYPE *Y, REALTYPE *cc, REALTYPE *ww, REALTYPE *vols,
-                              REALTYPE *A,  REALTYPE *mins, REALTYPE dt,
+static AED_REAL Rising(AED_REAL *Y, AED_REAL *cc, AED_REAL *ww, AED_REAL *vols,
+                              AED_REAL *A,  AED_REAL *mins, AED_REAL dt,
                                                            int start, int end);
-static REALTYPE Sinking(REALTYPE *Y, REALTYPE *cc, REALTYPE *ww, REALTYPE *vols,
-                              REALTYPE *A,  REALTYPE *mins, REALTYPE dt,
+static AED_REAL Sinking(AED_REAL *Y, AED_REAL *cc, AED_REAL *ww, AED_REAL *vols,
+                              AED_REAL *A,  AED_REAL *mins, AED_REAL dt,
                                                            int start, int end);
 
 
 
 
-/*############################################################################*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void Mobility(int *N_in,          // number of vertical layers
-              REALTYPE *dt_in,    // time step (s)
-              REALTYPE *h,        // array of layer thicknesses (m)
-              REALTYPE *A,        // array of layer areas (m^2)
-              REALTYPE *ww,       // array of vertical mobility speeds (m/s)
-              REALTYPE *min_C_in, // minimum concentration (mmol/m^3)
-              REALTYPE *cc)       // array of cell concentrations (mmol/m^3)
+              AED_REAL *dt_in,    // time step (s)
+              AED_REAL *h,        // array of layer thicknesses (m)
+              AED_REAL *A,        // array of layer areas (m^2)
+              AED_REAL *ww,       // array of vertical mobility speeds (m/s)
+              AED_REAL *min_C_in, // minimum concentration (mmol/m^3)
+              AED_REAL *cc)       // array of cell concentrations (mmol/m^3)
 {
     /**************************************************************************
      * Since this routine is called only from the fortran the arguments are   *
@@ -72,28 +74,27 @@ void Mobility(int *N_in,          // number of vertical layers
      * dereferenced variables                                                 *
      **************************************************************************/
     int      N = *N_in;
-    REALTYPE dt = *dt_in;
-    REALTYPE min_C = *min_C_in;
+    AED_REAL dt = *dt_in;
+    AED_REAL min_C = *min_C_in;
 
     int      i;
 #ifndef _VISUAL_C_
-    REALTYPE vols[N];  // layer volume (m^3)
-    REALTYPE mins[N];  // minimum layer mass of variable (mmol)
-    REALTYPE Y[N];     // total mass of variable (mmol) in layer
+    AED_REAL vols[N];  // layer volume (m^3)
+    AED_REAL mins[N];  // minimum layer mass of variable (mmol)
+    AED_REAL Y[N];     // total mass of variable (mmol) in layer
 #else
-    REALTYPE *vols;  // layer volume (m^3)
-    REALTYPE *mins;  // minimum layer mass of variable (mmol)
-    REALTYPE *Y;     // total mass of variable (mmol) in layer
+    AED_REAL *vols;  // layer volume (m^3)
+    AED_REAL *mins;  // minimum layer mass of variable (mmol)
+    AED_REAL *Y;     // total mass of variable (mmol) in layer
 #endif
-    REALTYPE dtMax = dt, tdt, tmp;
+    AED_REAL dtMax = dt, tdt, tmp;
     int dirChng, sign;
 
 /*----------------------------------------------------------------------------*/
-/***|***|***|***|***|***|***|***|***|***|***|***|***|***|***|***|***|***|***|**/
 #ifdef _VISUAL_C_
-    vols = malloc(sizeof(REALTYPE) * N);
-    mins = malloc(sizeof(REALTYPE) * N);
-    Y = malloc(sizeof(REALTYPE) * N);
+    vols = malloc(sizeof(AED_REAL) * N);
+    mins = malloc(sizeof(AED_REAL) * N);
+    Y = malloc(sizeof(AED_REAL) * N);
 #endif
 
     /**************************************************************************
@@ -190,12 +191,12 @@ void Mobility(int *N_in,          // number of vertical layers
  *    1) add the amount moved from previous cell to current cell              *
  *    2) fix concentration                                                    *
  ******************************************************************************/
-REALTYPE Rising(REALTYPE *Y, REALTYPE *cc, REALTYPE *ww, REALTYPE *vols,
-                             REALTYPE *A,  REALTYPE *mins, REALTYPE dt,
+AED_REAL Rising(AED_REAL *Y, AED_REAL *cc, AED_REAL *ww, AED_REAL *vols,
+                             AED_REAL *A,  AED_REAL *mins, AED_REAL dt,
                                                            int start, int end)
 {
     int i;
-    REALTYPE mov = 0., moved = 0.;
+    AED_REAL mov = 0., moved = 0.;
 
     // go from start to one below end
     for (i = start; i < end; i++) {
@@ -225,14 +226,14 @@ REALTYPE Rising(REALTYPE *Y, REALTYPE *cc, REALTYPE *ww, REALTYPE *vols,
  *    4) fix concentration                                                    *
  *    5) compute the amount that will go to the next cell                     *
  ******************************************************************************/
-REALTYPE Sinking(REALTYPE *Y, REALTYPE *cc, REALTYPE *ww, REALTYPE *vols,
-                              REALTYPE *A,  REALTYPE *mins, REALTYPE dt,
+AED_REAL Sinking(AED_REAL *Y, AED_REAL *cc, AED_REAL *ww, AED_REAL *vols,
+                              AED_REAL *A,  AED_REAL *mins, AED_REAL dt,
                                                            int start, int end)
 {
     int i;
-    REALTYPE mov = 0., moved = 0.;
+    AED_REAL mov = 0., moved = 0.;
 
-    for (i = start; i >= end; i--) {
+    for (i = start; i > end; i--) {
         // speed times time (=h) time area * concen = mass to move
         mov = (fabs(ww[i]) * dt) * A[i] * cc[i];
         //  if removing that much would bring it below min conc

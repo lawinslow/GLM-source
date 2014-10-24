@@ -35,12 +35,54 @@
 
 #include "glm.h"
 #include "glm_types.h"
+#include "glm_const.h"
 
+/******************************************************************************
+ * Calculate the Zenith Angle in degrees.                                     *
+ * NB lat is in radians, lon in degrees [thats how they are in GLM]           *
+ ******************************************************************************/
+AED_REAL zenith_angle(AED_REAL lon, AED_REAL lat, int day, int iclock, AED_REAL TZ)
+{
+    AED_REAL Phi_day;          // Day Angle :- Position of the earth in sun's orbit
+    AED_REAL SolarDeclination; // Solar Declination
+    AED_REAL EquationOfTime;   // Equation of Time
+    AED_REAL Phi_hr;           // Hour Angle
+
+    /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+    AED_REAL Hour = iclock / 3600.;
+
+    /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+    // Day Angle :- Position of the earth in sun's orbit
+    Phi_day = (two_Pi*(day-1)/365);
+
+    // Solar Declination (in radians)
+    SolarDeclination = ( 0.006918 - 0.399912*cos(  Phi_day) +
+                                    0.070257*sin(  Phi_day) -
+                                    0.006758*cos(2*Phi_day) +
+                                    0.000907*sin(2*Phi_day) -
+                                    0.002697*cos(3*Phi_day) +
+                                    0.00148 *sin(3*Phi_day) );
+
+    // Equation of Time
+    EquationOfTime = ( 0.0000075 + 0.001868*cos(  Phi_day) -
+                                   0.032077*sin(  Phi_day) -
+                                   0.014615*cos(2*Phi_day) -
+                                   0.040849*sin(2*Phi_day) ) * 229.18;
+
+    // Hour Angle (in degrees)
+    Phi_hr = 15 * (Hour-12.5) + lon - TZ * 15 + (EquationOfTime/4);
+
+    // Zenith Angle
+    return acos( cos(SolarDeclination) * cos(lat) * cos(Phi_hr*deg2rad) +
+                 sin(SolarDeclination) * sin(lat) ) * rad2deg;
+}
 
 #ifndef sqr
 /******************************************************************************/
 // This function computes the square of the argument
-REALTYPE sqr(REALTYPE x) { return x*x; }
+AED_REAL sqr(AED_REAL x) { return x*x; }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 #endif
 
@@ -51,7 +93,7 @@ REALTYPE sqr(REALTYPE x) { return x*x; }
  * Note +2000.0 is since rho passed in is actually sigma (rho-1000)           *
  * and rho_ref = (rho1 + rho2)                                                *
  ******************************************************************************/
-REALTYPE gprime(REALTYPE rho1, REALTYPE rho2)
+AED_REAL gprime(AED_REAL rho1, AED_REAL rho2)
 { return ((rho2 - rho1) * 9.81 * 2.0) / ((rho1 + rho2) + 2000.0); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 #endif
@@ -63,78 +105,73 @@ REALTYPE gprime(REALTYPE rho1, REALTYPE rho2)
  * of fluid drawn in a given time to decide which set of withdrawal curves to *
  * use. If large withdrawal use first set, otherwise the 2nd.                 *
  ******************************************************************************/
-REALTYPE dv_1(REALTYPE z1, REALTYPE z2, REALTYPE da, REALTYPE avdel,
-              REALTYPE hh, REALTYPE delt, REALTYPE delb)
+AED_REAL delta_volume(AED_REAL z1, AED_REAL z2, AED_REAL da, AED_REAL avdel,
+              AED_REAL hh, AED_REAL DeltaTop, AED_REAL DeltaBot)
 {
-    REALTYPE pt25=0.25,pt5=0.5,pt75=0.75,pt9=0.9;
-
-    REALTYPE a, da4, da7, s1, s2, s3, temp1, temp2,
+    AED_REAL a, da4, da7, s1, s2, s3,
              tmp1, tmp2, tmp3, tmp4, tmp5, tmp6, tmp7, z3;
-    REALTYPE ret;
+    AED_REAL ret = 0.0;
 
 /*----------------------------------------------------------------------------*/
-    if (da >= pt9*avdel) {
+    if (da >= 0.9*avdel) {
         // Curves for large withdrawal.
         s1 = (z1 - hh) / avdel;
         s2 = (z2 - hh) / avdel;
         a = da / avdel;
-        ret = 0.0;
 
         // If top and bottom of layer fall within lower curve.
-        if (z1 <= pt25*a*avdel+hh) {
-            tmp1 = s1+two/a/(one+pt5*a*(delb/avdel+s1));
-            tmp2 = s2+two/a/(one+pt5*a*(delb/avdel+s2));
-            ret  = tmp1-tmp2;
-        } else if (z2 >= hh+pt25*avdel*a) {
+        if (z1 <= 0.25*a*avdel+hh) {
+            tmp1 = s1 + 2.0 / a / (1.0 + 0.5*a*(DeltaBot/avdel + s1));
+            tmp2 = s2 + 2.0 / a / (1.0 + 0.5*a*(DeltaBot/avdel + s2));
+            ret  = tmp1 - tmp2;
+        } else if (z2 >= hh+0.25*avdel*a) {
             //  If layer falls within upper curve.
-            tmp1 = exp(-1*sqrt(two)*(delt/avdel+pt75*a));
-            tmp2 = one+pt5*a*delb/avdel+sqr(a)/eight;
-            tmp3 = (1-one/sqr(tmp2))*sqr((1+tmp1)/(1-tmp1));
-            tmp4 = sqrt(two)*(s1-delt/avdel-a);
-            tmp5 = sqrt(two)*(s2-delt/avdel-a);
-            tmp6 = four/(1+exp(tmp4))+tmp4;
-            tmp7 = four/(1+exp(tmp5))+tmp5;
-            ret = (tmp6-tmp7)/sqrt(two)*tmp3;
+            tmp1 = exp(-1 * sqrt(2.0) * (DeltaTop/avdel + 0.75*a));
+            tmp2 = 1.0 + 0.5 * a * DeltaBot / avdel + sqr(a)/8.0;
+            tmp3 = (1 - 1.0 / sqr(tmp2)) * sqr((1 + tmp1) / (1 - tmp1));
+            tmp4 = sqrt(2.0) * (s1 - DeltaTop / avdel - a);
+            tmp5 = sqrt(2.0) * (s2 - DeltaTop / avdel - a);
+            tmp6 = 4.0 / (1 + exp(tmp4)) + tmp4;
+            tmp7 = 4.0 / (1 + exp(tmp5)) + tmp5;
+            ret = (tmp6 - tmp7) / sqrt(2.0) * tmp3;
         } else {
             //  If join of curves lies within the layer.
-            s3 = pt25*a;
-            tmp2 = s2+two/a/(one+pt5*a*(delb/avdel+s2));
-            tmp1 = s3+two/a/(one+pt5*a*(delb/avdel+s3));
-            ret = tmp1-tmp2;
-            tmp1 = exp(-1*sqrt(two)*(delt/avdel+pt75*a));
-            tmp2 = one+pt5*a*delb/avdel+sqr(a)/eight;
-            tmp3 = (1-one/sqr(tmp2))*sqr((1+tmp1)/(1-tmp1));
-            tmp4 = sqrt(two)*(s1-delt/avdel-a);
-            tmp5 = sqrt(two)*(s3-delt/avdel-a);
-            tmp6 = four/(1+exp(tmp4))+tmp4;
-            tmp7 = four/(1+exp(tmp5))+tmp5;
-            ret = ret+(tmp6-tmp7)/sqrt(two)*tmp3;
+            s3 = 0.25*a;
+            tmp2 = s2 + 2.0 / a / (1.0 + 0.5*a*(DeltaBot/avdel + s2));
+            tmp1 = s3 + 2.0 / a / (1.0 + 0.5*a*(DeltaBot/avdel + s3));
+            ret = tmp1 - tmp2;
+            tmp1 = exp(-1 * sqrt(2.0) * (DeltaTop / avdel + 0.75*a));
+            tmp2 = 1.0 + 0.5 * a * DeltaBot / avdel + sqr(a)/8.0;
+            tmp3 = (1 - 1.0 / sqr(tmp2)) * sqr((1+tmp1) / (1-tmp1));
+            tmp4 = sqrt(2.0) * (s1 - DeltaTop/avdel - a);
+            tmp5 = sqrt(2.0) * (s3 - DeltaTop/avdel - a);
+            tmp6 = 4.0 / (1 + exp(tmp4)) + tmp4;
+            tmp7 = 4.0 / (1 + exp(tmp5)) + tmp5;
+            ret = ret + (tmp6 - tmp7) / sqrt(2.0) * tmp3;
         }
     } else {
         //  Curves for small withdrawal
-        ret = zero;
-
-        if (z1 <= da/four+hh) {
+        da4 = da / 4.0;
+        da7 = da * 0.75;
+        if (z1 <= da4 + hh) {
             //  If top and bottom fall within lower curve.;
-            tmp1 = z1+(delb+da/four)/Pi*sin(Pi*(z1-hh-da/four)/(delb+da/four));
-            tmp2 = z2+(delb+da/four)/Pi*sin(Pi*(z2-hh-da/four)/(delb+da/four));
-            ret = tmp1-tmp2;
-        } else if (z2 >= hh+da/four) {
+            tmp1 = z1 + (DeltaBot + da4) / Pi * sin(Pi * (z1 - hh - da4) / (DeltaBot + da4));
+            tmp2 = z2 + (DeltaBot + da4) / Pi * sin(Pi * (z2 - hh - da4) / (DeltaBot + da4));
+            ret = tmp1 - tmp2;
+        } else if (z2 >= hh+da4) {
             //  If layer falls within upper curve.
-            temp1 = z1+(delt+da*pt75)/Pi*sin(Pi*(z1-hh-da/four)/(delt+da*pt75));
-            temp2 = z2+(delt+da*pt75)/Pi*sin(Pi*(z2-hh-da/four)/(delt+da*pt75));
-            ret = temp1-temp2;
+            tmp1 = z1 + (DeltaTop + da7) / Pi * sin(Pi * (z1 - hh - da4) / (DeltaTop + da7));
+            tmp2 = z2 + (DeltaTop + da7) / Pi * sin(Pi * (z2 - hh - da4) / (DeltaTop + da7));
+            ret = tmp1 - tmp2;
         } else {
             // If join of curves falls within the layer.
-            z3 = pt25*da+hh;
-            da4 = da/four;
-            da7 = da*pt75;
-            tmp1 = z3+(delb+da4)/Pi*sin(Pi*(z3-hh-da4)/(delb+da4));
-            tmp2 = z2+(delb+da4)/Pi*sin(Pi*(z2-hh-da4)/(delb+da4));
-            ret = tmp1-tmp2;
-            tmp3 = z3+(delt+da7)/Pi*sin(Pi*(z3-hh-da4)/(delt+da7));
-            tmp4 = z1+(delt+da7)/Pi*sin(Pi*(z1-hh-da4)/(delt+da7));
-            ret = tmp4-tmp3+ret;
+            z3 = 0.25 * da + hh;
+            tmp1 = z3 + (DeltaBot + da4) / Pi * sin(Pi * (z3 - hh - da4) / (DeltaBot + da4));
+            tmp2 = z2 + (DeltaBot + da4) / Pi * sin(Pi * (z2 - hh - da4) / (DeltaBot + da4));
+            ret = tmp1 - tmp2;
+            tmp3 = z3 + (DeltaTop + da7) / Pi * sin(Pi * (z3 - hh - da4) / (DeltaTop + da7));
+            tmp4 = z1 + (DeltaTop + da7) / Pi * sin(Pi * (z1 - hh - da4) / (DeltaTop + da7));
+            ret = tmp4 - tmp3 + ret;
         }
     }
 
@@ -146,24 +183,24 @@ REALTYPE dv_1(REALTYPE z1, REALTYPE z2, REALTYPE da, REALTYPE avdel,
 /******************************************************************************
  * This function combines two layers and return the mean concentration        *
  ******************************************************************************/
-REALTYPE combine(REALTYPE c1, REALTYPE v1, REALTYPE d1,
-                 REALTYPE c2, REALTYPE v2, REALTYPE d2)
+AED_REAL combine(AED_REAL c1, AED_REAL v1, AED_REAL d1,
+                 AED_REAL c2, AED_REAL v2, AED_REAL d2)
 {
-    REALTYPE M1big, M1sml;
-    REALTYPE M2big, M2sml;
-    REALTYPE MTotal;
+    AED_REAL M1big, M1sml;
+    AED_REAL M2big, M2sml;
+    AED_REAL MTotal;
 
 /*----------------------------------------------------------------------------*/
     if (fabs(c1-c2) < 1e-5 && fabs(d1-d2) < 1e-5) return c1;
 
-    M1big = v1*thsnd;
-    M1sml = v1*d1;
-    M2big = v2*thsnd;
-    M2sml = v2*d2;
+    M1big = v1 * 1000.0;
+    M1sml = v1 * d1;
+    M2big = v2 * 1000.0;
+    M2sml = v2 * d2;
 
     MTotal = M1sml + M2sml + M1big + M2big;
 
-    return ((c1*M1sml+c2*M2sml) + thsnd*(c1*v1+c2*v2)) / MTotal;
+    return ((c1*M1sml+c2*M2sml) + 1000.0*(c1*v1+c2*v2)) / MTotal;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -173,50 +210,49 @@ REALTYPE combine(REALTYPE c1, REALTYPE v1, REALTYPE d1,
  * Function to combine two layers and return the mean                         *
  * concentration taking into account volumes                                  *
  ******************************************************************************/
-REALTYPE combine_vol(REALTYPE c1,REALTYPE v1,REALTYPE c2,REALTYPE v2)
-{ return (c1 * v1 + c2 * v2)/(v1 + v2); }
+AED_REAL combine_vol(AED_REAL c1,AED_REAL v1,AED_REAL c2,AED_REAL v2)
+{ return (c1 * v1 + c2 * v2) / (v1 + v2); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 #endif
 
 
 /******************************************************************************
  *                                                                            *
- * Function to calculates the density (rho) of water at a given temperature   *
+ * Function to calculate the density (rho) of water at a given temperature    *
  * (deg C) and salinity (ppm) based on UNESCO (1981) polynomial               *
  *                                                                            *
  * Note: this estimate actually returns (density - 1000)                      *
  *       c1 accounts for this correction (=999.842594) is desired             *
  *                                                                            *
  ******************************************************************************/
-REALTYPE calculate_density(REALTYPE temp, REALTYPE salt)
+AED_REAL calculate_density(AED_REAL temp, AED_REAL salt)
 {
-    REALTYPE dpure;
-    REALTYPE t1,t2,t3,t4,t5,tm;
-    REALTYPE s1,s32,s2;
-    REALTYPE csal1;
-    REALTYPE csal32;
-    REALTYPE csal2;
+    AED_REAL dpure;
+    AED_REAL t1,t2,t3,t4,t5,tm;
+    AED_REAL s1,s32,s2;
+    AED_REAL csal1;
+    AED_REAL csal32;
+    AED_REAL csal2;
 
-    REALTYPE term[15];
+    AED_REAL term[15];
 
-    REALTYPE c1=0.157406,    c2=6.793952E-2, c3=9.095290E-3,
-             c4=1.001685E-4, c5=1.120083E-6, c6=6.536332E-9,
-             d1=8.24493E-1,  d2=4.0899E-3,   d3=7.6438E-5,
-             d4=8.2467E-7,   d5=5.3875E-9,   d6=5.72466E-3,
-             d7=1.0227E-4,   d8=1.6546E-6,   d9=4.8314E-4,
-             onept5=1.5,     tenthou=10000.0;
+    const AED_REAL c1=0.157406,    c2=6.793952E-2, c3=9.095290E-3,
+                   c4=1.001685E-4, c5=1.120083E-6, c6=6.536332E-9,
+                   d1=8.24493E-1,  d2=4.0899E-3,   d3=7.6438E-5,
+                   d4=8.2467E-7,   d5=5.3875E-9,   d6=5.72466E-3,
+                   d7=1.0227E-4,   d8=1.6546E-6,   d9=4.8314E-4;
 
     t1 = (temp);
     s1 = (salt);
-    tm = round(t1*tenthou);
-    t1 = (tm)/tenthou;
+    tm = round(t1*10000.);
+    t1 = (tm)/10000.;
 
     t2 = sqr(t1);
     t3 = t2*t1;
     t4 = t3*t1;
     t5 = t4*t1;
     s2 = s1*s1;
-    s32 = pow(s1,onept5);
+    s32 = pow(s1,1.5);
 
     term[0]  = -c1;
     term[1]  =  c2 * t1;
@@ -248,8 +284,8 @@ REALTYPE calculate_density(REALTYPE temp, REALTYPE salt)
  * Calculates the saturated vapour pressure (SatVap) corresponding to         *
  * temperature (temp, deg C)                                                  *
  ******************************************************************************/
-REALTYPE saturated_vapour(REALTYPE temp)
-{ return pow(10.0, 9.28603523 - (2322.37885/(temp+273.15))); }
+AED_REAL saturated_vapour(AED_REAL temp)
+{ return pow(10.0, 9.28603523 - (2322.37885/(temp+Kelvin))); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 

@@ -37,3 +37,18 @@ for f in `find . -name glm.vcxproj` ; do
     echo no change to version number for $f
   fi
 done
+
+for f in `find . -name libglm_wq_\*.vfproj` ; do
+  COUNT=`grep -w Version $f | grep VFLinkerTool | wc -l`
+  if [ $COUNT = 4 ] ; then
+    i=`grep -w Version $f | grep VFLinkerTool | grep LIBCMTD | sort -u | cut -f6 -d\" | cut -f1 -d\"`
+    echo $i is the version for $f
+    if [ $i != $vers ] ; then
+      echo sed -i "s/Version=\"${i}\"/Version=\"${vers}\"/" $f
+      sed -i "s/Version=\"${i}\"/Version=\"${vers}\"/" $f
+    else
+      echo no change to version number for $f
+    fi
+  fi
+done
+

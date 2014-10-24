@@ -34,31 +34,32 @@
 
 #include "glm.h"
 
-#if _FORTRAN_VERSION_
+#ifdef _FORTRAN_VERSION_
 !###############################################################################
 
   INTERFACE
 
-
     SUBROUTINE Mobility(N,dt,h,A,ww,min_C,cc) BIND(C, name="Mobility")
        USE ISO_C_BINDING
+#      if defined( _WIN32 ) && USE_DL_LOADER
+       !DEC$ ATTRIBUTES DLLIMPORT :: Mobility
+#      endif
        CINTEGER,INTENT(in)     :: N       !# number of vertical layers
-       REALTYPE,INTENT(in)     :: dt      !# time step (s)
-       REALTYPE,INTENT(in)     :: h(*)    !# layer thickness (m)
-       REALTYPE,INTENT(in)     :: A(*)    !# layer areas (m2)
-       REALTYPE,INTENT(in)     :: ww(*)   !# vertical speed (m/s)
-       REALTYPE,INTENT(in)     :: min_C   !# minimum allowed cell concentration
-       REALTYPE,INTENT(inout)  :: cc(*)   !# cell concentration
+       AED_REAL,INTENT(in)     :: dt      !# time step (s)
+       AED_REAL,INTENT(in)     :: h(*)    !# layer thickness (m)
+       AED_REAL,INTENT(in)     :: A(*)    !# layer areas (m2)
+       AED_REAL,INTENT(in)     :: ww(*)   !# vertical speed (m/s)
+       AED_REAL,INTENT(in)     :: min_C   !# minimum allowed cell concentration
+       AED_REAL,INTENT(inout)  :: cc(*)   !# cell concentration
     END SUBROUTINE Mobility
 
   END INTERFACE
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 #else
 
-   void Mobility(int *N, REALTYPE *dt, REALTYPE *h, REALTYPE *A,
-                         REALTYPE *ww, REALTYPE *min_C, REALTYPE *cc);
+   void Mobility(int *N, AED_REAL *dt, AED_REAL *h, AED_REAL *A,
+                         AED_REAL *ww, AED_REAL *min_C, AED_REAL *cc);
 
 #endif
-
 
 #endif

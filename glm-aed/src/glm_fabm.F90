@@ -39,17 +39,6 @@
 
 #include "glm.h"
 
-!# In 2014 fabm stopped beclaring these macros
-#ifndef _ATTR_DIMENSIONS_1_
-#define _ATTR_DIMENSIONS_1_ ,dimension(:)
-#endif
-#ifndef _ATTR_LOCATION_DIMENSIONS_
-#define _ATTR_LOCATION_DIMENSIONS_ ,dimension(_LOCATION_DIMENSIONS_)
-#endif
-#ifndef _ATTR_LOCATION_DIMENSIONS_HZ_
-#define _ATTR_LOCATION_DIMENSIONS_HZ_
-#endif
-
 !# As of june 2014 these were no longer defined
 #define varname_wind_sf  standard_variables%wind_speed
 #define varname_extc     standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux
@@ -92,54 +81,73 @@ MODULE glm_fabm
 #include "glm_csv.h"
 #include "glm_mobl.h"
 !
-   PUBLIC init_glm_fabm, init_glm_fabm_output
-   PUBLIC set_glm_fabm_data
-   PUBLIC clean_glm_fabm, write_glm_fabm, do_glm_fabm
-   PUBLIC WQVar_Index
+#if USE_DL_LOADER
+# define _WQ_INIT_GLM        "wq_init_glm"
+# define _WQ_SET_GLM_DATA    "wq_set_glm_data"
+# define _WQ_DO_GLM          "wq_do_glm"
+# define _WQ_CLEAN_GLM       "wq_clean_glm"
+# define _WQ_INIT_GLM_OUTPUT "wq_init_glm_output"
+# define _WQ_WRITE_GLM_      "wq_write_glm"
+# define _WQ_VAR_INDEX_C     "wq_var_index_c"
+# define _WQ_SET_FLAGS       "wq_set_flags"
+#else
+# define _WQ_INIT_GLM        "fabm_init_glm"
+# define _WQ_SET_GLM_DATA    "fabm_set_glm_data"
+# define _WQ_DO_GLM          "fabm_do_glm"
+# define _WQ_CLEAN_GLM       "fabm_clean_glm"
+# define _WQ_INIT_GLM_OUTPUT "fabm_init_glm_output"
+# define _WQ_WRITE_GLM_      "fabm_write_glm"
+# define _WQ_VAR_INDEX_C     "fabm_var_index_c"
+# define _WQ_SET_FLAGS       "fabm_set_flags"
+#endif
+   !PUBLIC INIT_GLM_FABM, INIT_GLM_FABM_OUTPUT
+   !PUBLIC SET_GLM_FABM_DATA
+   !PUBLIC CLEAN_GLM_FABM, WRITE_GLM_FABM, DO_GLM_FABM
+   !PUBLIC WQVAR_INDEX_C
 !
 !-------------------------------------------------------------------------------
 !
 !MODULE DATA
 
-   REALTYPE :: lKw    !# background light attenuation (m**-1)
+   AED_REAL :: lKw    !# background light attenuation (m**-1)
    LOGICAL  :: lIce = .FALSE.
 
    !# Namelist variables
-   CINTEGER,PUBLIC,BIND(C) :: ode_method = 1, split_factor = 1
-   CLOGICAL,PUBLIC,BIND(C) :: bioshade_feedback = .TRUE., repair_state = .TRUE., multi_ben = .FALSE.
-   CLOGICAL,PUBLIC,BIND(C) :: mobility_off = .FALSE.  !# flag to turn mobility off
+   INTEGER :: ode_method = 1, split_factor = 1
+   LOGICAL :: bioshade_feedback = .TRUE., repair_state = .TRUE., multi_ben = .FALSE.
+   LOGICAL :: mobility_off = .FALSE.  !# flag to turn mobility off
+   LOGICAL :: do_plots = .TRUE.
 
    !# Model
    TYPE (type_model),POINTER :: model
 
    !# Arrays for state and diagnostic variables
-   REALTYPE,ALLOCATABLE,DIMENSION(:,:) :: cc !# water quality array, nlayers, nvars
-   REALTYPE,ALLOCATABLE,DIMENSION(:,:) :: cc_diag
-   REALTYPE,ALLOCATABLE,DIMENSION(:,:) :: rhs_flux
-   REALTYPE,ALLOCATABLE,DIMENSION(:)   :: cc_diag_hz
-   REALTYPE,ALLOCATABLE,DIMENSION(:)   :: tss
-   REALTYPE,ALLOCATABLE,DIMENSION(:)   :: sed_zones
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc !# water quality array, nlayers, nvars
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc_diag
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: rhs_flux
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: cc_diag_hz
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: tss
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: sed_zones
 
    !# Arrays for work, vertical movement, and cross-boundary fluxes
-   REALTYPE,ALLOCATABLE,DIMENSION(:,:) :: ws
-   REALTYPE,ALLOCATABLE,DIMENSION(:)   :: sfl
-   REALTYPE,ALLOCATABLE,DIMENSION(:)   :: total
-   REALTYPE,ALLOCATABLE _ATTR_DIMENSIONS_1_ :: local
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: ws
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: sfl
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: total
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: local
 
    !# Arrays for environmental variables not supplied externally.
-   REALTYPE,ALLOCATABLE,DIMENSION(:) :: par,pres
+   AED_REAL,ALLOCATABLE,DIMENSION(:) :: par,pres
 
    !# External variables
-   REALTYPE :: dt, dt_eff   ! External and internal time steps
+   AED_REAL :: dt, dt_eff   ! External and internal time steps
    INTEGER  :: w_adv_ctr    ! Scheme for vertical advection (0 IF not used)
-   REALTYPE,POINTER,DIMENSION(:) :: rad, z, salt, temp, rho, area
-   REALTYPE,POINTER,DIMENSION(:) :: extc_coef
-   REALTYPE,POINTER              :: precip, evap, bottom_stress
-   REALTYPE,TARGET               :: bs_dummy
+   AED_REAL,POINTER,DIMENSION(:) :: rad, z, salt, temp, rho, area
+   AED_REAL,POINTER,DIMENSION(:) :: extc_coef, layer_stress
+   AED_REAL,POINTER              :: precip, evap, bottom_stress
 
    CHARACTER(len=30),ALLOCATABLE :: names(:)
 
-   REALTYPE,ALLOCATABLE :: dz(:)         !# layer thickness
+   AED_REAL,ALLOCATABLE :: dz(:)         !# layer thickness
 
 !===============================================================================
 CONTAINS
@@ -186,7 +194,28 @@ END FUNCTION f_get_lun
 
 
 !###############################################################################
-SUBROUTINE init_glm_fabm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name="init_glm_wq")
+SUBROUTINE fabm_set_flags(c_split_factor, c_mobility, c_bioshade,              &
+                  c_repair_state, c_ode, c_multi_ben, c_do_plots) BIND(C, name=_WQ_SET_FLAGS)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CLOGICAL,INTENT(in) :: c_mobility, c_bioshade, c_repair_state, c_multi_ben, c_do_plots
+   CINTEGER,INTENT(in) :: c_split_factor, c_ode
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   split_factor = c_split_factor
+   mobility_off = c_mobility
+   bioshade_feedback = c_bioshade
+   ode_method = c_ode
+   repair_state = c_repair_state
+   multi_ben = c_multi_ben
+   do_plots = c_do_plots
+END SUBROUTINE fabm_set_flags
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ_INIT_GLM)
 !-------------------------------------------------------------------------------
 ! Initialize the GLM-FABM driver by reading settings from fabm.nml.
 !-------------------------------------------------------------------------------
@@ -195,7 +224,7 @@ SUBROUTINE init_glm_fabm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name="in
    CINTEGER,INTENT(in)   :: len
    CINTEGER,INTENT(in)   :: MaxLayers
    CINTEGER,INTENT(out)  :: NumFABMVars
-   REALTYPE,INTENT(in)   :: pKw
+   AED_REAL,INTENT(in)   :: pKw
 !
 !LOCALS
    INTEGER :: i,rc,namlst
@@ -384,7 +413,7 @@ SUBROUTINE init_glm_fabm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name="in
    tss = _ZERO_
 
    CALL fabm_link_bulk_data(model,varname_tss,tss)
-END SUBROUTINE init_glm_fabm
+END SUBROUTINE fabm_init_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -405,8 +434,8 @@ END SUBROUTINE init_glm_fabm
 !###############################################################################
 SUBROUTINE link_pointer(dst, src)
 !ARGUMENTS
-   REALTYPE,POINTER _ATTR_LOCATION_DIMENSIONS_,INTENT(out) :: dst
-   REALTYPE _ATTR_LOCATION_DIMENSIONS_,TARGET,INTENT(in)   :: src
+   AED_REAL,POINTER,DIMENSION(:),INTENT(out) :: dst
+   AED_REAL,DIMENSION(:),TARGET,INTENT(in)   :: src
 !-------------------------------------------------------------------------------
 !BEGIN
    dst => src
@@ -416,14 +445,15 @@ END SUBROUTINE link_pointer
 
 
 !###############################################################################
-SUBROUTINE set_glm_fabm_data(Lake, MaxLayers, NumLayers, MetData, SurfData, dt_) &
-                                                 BIND(C, name="set_glm_wq_data")
+SUBROUTINE fabm_set_glm_data(Lake, MaxLayers, NumLayers, MetData, SurfData, dt_) &
+                                                 BIND(C, name=_WQ_SET_GLM_DATA)
+!-------------------------------------------------------------------------------
 !ARGUMENTS
    CINTEGER, INTENT(in) :: MaxLayers, NumLayers
    TYPE(LakeDataType),TARGET    :: Lake(1:MaxLayers)
    TYPE(MetDataType),TARGET     :: MetData  !# Meteorological data
    TYPE(SurfaceDataType),TARGET :: SurfData !# Surface Data
-   REALTYPE,INTENT(in)  :: dt_
+   AED_REAL,INTENT(in)  :: dt_
 !
 !LOCALS
    INTEGER i
@@ -433,15 +463,15 @@ SUBROUTINE set_glm_fabm_data(Lake, MaxLayers, NumLayers, MetData, SurfData, dt_)
    _LINK_POINTER_(z, Lake%Height)
    _LINK_POINTER_(temp, Lake%Temp)
    _LINK_POINTER_(salt, Lake%Salinity)
-   _LINK_POINTER_(rho, Lake%Density)
+   _LINK_POINTER_(rho, Lake%SPDensity)
    _LINK_POINTER_(area, Lake%LayerArea)
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
+   _LINK_POINTER_(layer_stress, Lake%LayerStress)
 
    precip => MetData%Rain
    evap   => SurfData%Evap
-   bs_dummy = 0.
-   bottom_stress => bs_dummy
+   bottom_stress => layer_stress(1)
 
    !# Copy scalars that will not change during simulation, and are needed in do_glm_fabm)
    dt = dt_
@@ -468,12 +498,12 @@ SUBROUTINE set_glm_fabm_data(Lake, MaxLayers, NumLayers, MetData, SurfData, dt_)
 
    ! Trigger an error if FABM hasn't got all it needs from us.
    CALL fabm_check_ready(model)
-END SUBROUTINE set_glm_fabm_data
+END SUBROUTINE fabm_set_glm_data
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 !###############################################################################
-SUBROUTINE do_glm_fabm(wlev, pIce) BIND(C, name="do_glm_wq")
+SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
 !-------------------------------------------------------------------------------
 !                           wlev is the number of levels used;
 !                           nlev is the total num levels in the array
@@ -483,10 +513,10 @@ SUBROUTINE do_glm_fabm(wlev, pIce) BIND(C, name="do_glm_wq")
    CLOGICAL,INTENT(in) :: pIce
 !
 !LOCALS
-   REALTYPE :: min_C
+   AED_REAL :: min_C
    INTEGER  :: i, split
-   REALTYPE, POINTER :: fdhz
-   REALTYPE, DIMENSION(:),POINTER :: fdiag
+   AED_REAL, POINTER :: fdhz
+   AED_REAL, DIMENSION(:),POINTER :: fdiag
 
 !
 !-------------------------------------------------------------------------------
@@ -501,6 +531,7 @@ SUBROUTINE do_glm_fabm(wlev, pIce) BIND(C, name="do_glm_wq")
 
    !# Calculate local pressure
    pres(1:wlev) = -z(1:wlev)
+   bottom_stress => layer_stress(1)
 
    DO i=1,ubound(model%info%state_variables,1)
       CALL fabm_link_bulk_state_data(model,i,cc(i,1:wlev))
@@ -594,7 +625,7 @@ SUBROUTINE do_glm_fabm(wlev, pIce) BIND(C, name="do_glm_wq")
          cc_diag(i,1:wlev) = fdiag(1:wlev)    !# Simply use last value
       ENDDO
    ENDDO
-END SUBROUTINE do_glm_fabm
+END SUBROUTINE fabm_do_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -637,8 +668,8 @@ SUBROUTINE right_hand_side_rhs(first,numc,nlev,cc,rhs)
 !ARGUMENTS
    LOGICAL, INTENT(in)     :: first
    INTEGER, INTENT(in)     :: numc,nlev
-   REALTYPE, INTENT(in)    :: cc(:,:)
-   REALTYPE, INTENT(out)   :: rhs(:,:)
+   AED_REAL, INTENT(in)    :: cc(:,:)
+   AED_REAL, INTENT(out)   :: rhs(:,:)
 !
 !LOCALS
    INTEGER :: i,nvars,k
@@ -681,6 +712,7 @@ SUBROUTINE right_hand_side_rhs(first,numc,nlev,cc,rhs)
    !# (2) benthic flux
    !# Calculate temporal derivatives due to exchanges at the sediment/water interface
 
+   bottom_stress => layer_stress(1)
    CALL fabm_do_benthos(model,1,rhs_flux(1:nvars,1),rhs(nvars+1:,1))
    !# Limit flux out of bottom layers to concentration of that layer
    !# i.e. don't flux out more than is there
@@ -689,6 +721,9 @@ SUBROUTINE right_hand_side_rhs(first,numc,nlev,cc,rhs)
 
    IF ( multi_ben ) THEN
       DO k=2,nlev
+         !# fabm wants a horizontal variable so fake it
+         bottom_stress => layer_stress(k)
+
          !# Calculate temporal derivatives due to benthic processes.
          CALL fabm_do_benthos(model,1,rhs_flux(1:nvars,k),rhs(nvars+1:,k))
 
@@ -717,9 +752,9 @@ SUBROUTINE right_hand_side_ppdd(first,numc,nlev,cc,pp,dd)
 !ARGUMENTS
    LOGICAL, INTENT(in)    :: first
    INTEGER, INTENT(in)    :: numc,nlev
-   REALTYPE, INTENT(in)   :: cc(:,:)
-   REALTYPE, INTENT(out)  :: pp(:,:,:)
-   REALTYPE, INTENT(out)  :: dd(:,:,:)
+   AED_REAL, INTENT(in)   :: cc(:,:)
+   AED_REAL, INTENT(out)  :: pp(:,:,:)
+   AED_REAL, INTENT(out)  :: dd(:,:,:)
 !
 !LOCALS
    INTEGER :: i,nvars
@@ -762,7 +797,7 @@ END SUBROUTINE right_hand_side_ppdd
 
 
 !###############################################################################
-SUBROUTINE clean_glm_fabm() BIND(C, name="clean_glm_wq")
+SUBROUTINE fabm_clean_glm() BIND(C, name=_WQ_CLEAN_GLM)
 !-------------------------------------------------------------------------------
 ! Finish biogeochemical model
 !-------------------------------------------------------------------------------
@@ -779,7 +814,7 @@ SUBROUTINE clean_glm_fabm() BIND(C, name="clean_glm_wq")
    IF (ALLOCATED(par))        DEALLOCATE(par)
    IF (ALLOCATED(pres))       DEALLOCATE(pres)
 
-END SUBROUTINE clean_glm_fabm
+END SUBROUTINE fabm_clean_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -790,12 +825,12 @@ SUBROUTINE update_light(nlev, bioshade_feedback)
 ! based on surface radiation, and background and biotic extinction.
 !-------------------------------------------------------------------------------
 !ARGUMENTS
-   INTEGER,INTENT(in)  :: nlev
-   CLOGICAL,INTENT(in) :: bioshade_feedback
+   INTEGER,INTENT(in) :: nlev
+   LOGICAL,INTENT(in) :: bioshade_feedback
 !
 !LOCALS
    INTEGER :: i
-   REALTYPE :: zz,localext
+   AED_REAL :: zz,localext
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -821,7 +856,7 @@ END SUBROUTINE update_light
 
 
 !###############################################################################
-SUBROUTINE init_glm_fabm_output(ncid,x_dim,y_dim,z_dim,time_dim) BIND(C, name="init_glm_wq_output")
+SUBROUTINE fabm_init_glm_output(ncid,x_dim,y_dim,z_dim,time_dim) BIND(C, name=_WQ_INIT_GLM_OUTPUT)
 !-------------------------------------------------------------------------------
 !  Initialize the output by defining biogeochemical variables.
 !-------------------------------------------------------------------------------
@@ -909,7 +944,7 @@ SUBROUTINE init_glm_fabm_output(ncid,x_dim,y_dim,z_dim,time_dim) BIND(C, name="i
 
    !# Take NetCDF library out of define mode (ready for storing data).
    CALL define_mode_off(ncid)
-END SUBROUTINE init_glm_fabm_output
+END SUBROUTINE fabm_init_glm_output
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -917,7 +952,7 @@ END SUBROUTINE init_glm_fabm_output
 !  Save properties of biogeochemical model, including state variable
 !  values, diagnostic variable values, and sums of conserved quantities.
 !-------------------------------------------------------------------------------
-SUBROUTINE write_glm_fabm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name="write_glm_wq_")
+SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE_GLM_)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
    CINTEGER,INTENT(in) :: ncid,wlev,nlev
@@ -925,7 +960,7 @@ SUBROUTINE write_glm_fabm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name="write_gl
 !
 !LOCALS
    INTEGER  :: n,i
-   REALTYPE :: val_out
+   AED_REAL :: val_out
    CLOGICAL :: last = .FALSE.
 !
 !-------------------------------------------------------------------------------
@@ -983,12 +1018,12 @@ SUBROUTINE write_glm_fabm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name="write_gl
    DO n=1,ubound(model%info%conserved_quantities,1)
       CALL store_nc_scalar(ncid,model%info%conserved_quantities(n)%externalid,XYT_SHAPE,scalar=total(n))
    ENDDO
-END SUBROUTINE write_glm_fabm
+END SUBROUTINE fabm_write_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 !###############################################################################
-CINTEGER FUNCTION wqvar_index_c(name, len) BIND(C, name="wqvar_index_c")
+CINTEGER FUNCTION fabm_var_index_c(name, len) BIND(C, name=_WQ_VAR_INDEX_C)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
    CCHARACTER,INTENT(in) :: name(*)
@@ -1002,8 +1037,8 @@ CINTEGER FUNCTION wqvar_index_c(name, len) BIND(C, name="wqvar_index_c")
      tn=tn//' '
      tn(i:i) = name(i)
    ENDDO
-   WQVar_Index_c = WQVar_Index(tn) - 1
-END FUNCTION wqvar_index_c
+   fabm_var_index_c = WQVar_Index(tn) - 1
+END FUNCTION fabm_var_index_c
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

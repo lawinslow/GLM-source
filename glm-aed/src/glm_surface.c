@@ -36,6 +36,7 @@
 #include "glm.h"
 
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "glm_util.h"
@@ -45,6 +46,16 @@
 //#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
 #define dbgprt(...) /* __VA_ARGS__ */
 
+#define OLD_ 0
+
+AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
+                          AED_REAL *Q_sensible,
+                          AED_REAL  WindSp,
+                          AED_REAL  WaterTemp,
+                          AED_REAL  AirTemp,
+                          AED_REAL  p_atm,
+                          AED_REAL  humidity_surface,
+                          AED_REAL  humidity_altitude);
 
 /******************************************************************************
  * Variables for the ice cover components                                     *
@@ -59,26 +70,65 @@
  * L_fusion = a switch between the snow and ice latent heats of fusion        *
  ******************************************************************************/
 
-int ice;         // flag that tells if there is ice formation
-
-extern int stepnum;
+int ice = FALSE;          // flag that tells if there is ice formation
 
 // These are made available for the lake.csv output
-REALTYPE Q_shortwave;    // Solar radiation at water surface
-REALTYPE Q_sensibleheat;
-REALTYPE Q_latentheat;
-REALTYPE Q_longwave;
+AED_REAL Q_shortwave;     // Solar radiation at water surface
+AED_REAL Q_sensibleheat;  // Sensible heat flux
+AED_REAL Q_latentheat;    // Evaporative heat flux
+AED_REAL Q_longwave;      // Net longwave heat flux
 
-static REALTYPE  Q01;     // heat flux out of snow/ice surface
-static REALTYPE  QF1;     // heat flux across water/ice interface
-static REALTYPE  QW1;     // heat flux through the water surface
-static REALTYPE  QI1;     // heat flux through water due to molecular conductivity
-static REALTYPE  QS1;     // heat flux through water due to flow under the ice
-static REALTYPE  H_FLUX;  // the heat flux at the surface due to meteorological forcing
-static REALTYPE  U_FLOW;  // the velocity of the underflow
+static AED_REAL  Q01;     // heat flux out of snow/ice surface
+static AED_REAL  QF1;     // heat flux across water/ice interface
+static AED_REAL  QW1;     // heat flux through the water surface
+static AED_REAL  QI1;     // heat flux through water due to molecular conductivity
+static AED_REAL  QS1;     // heat flux through water due to flow under the ice
+static AED_REAL  H_FLUX;  // the heat flux at the surface due to meteorological forcing
+static AED_REAL  U_FLOW;  // the velocity of the underflow
+
+
 
 void recalc_surface_salt(void);
-REALTYPE calculate_qsw(int kDays, int mDays, int iclock, REALTYPE Latitude, REALTYPE SWOld, REALTYPE ShortWave);
+AED_REAL calculate_qsw(int kDays, int mDays, int iclock,
+                        AED_REAL Latitude, AED_REAL SWOld, AED_REAL ShortWave, AED_REAL WindSp);
+
+
+
+/******************************************************************************
+ *                                                                            *
+ *  atm_density  [kg m^3]                                                     *
+ *     = 0.348 * (1 + r)/(1 + 1.61*r) * p/T   of TVA, p 5.12                  *
+ *                                                                            *
+ *  Returns the density of the atmosphere given total atmospheric pressure    *
+ *  and water vapour pressure.                                                *
+ *                                                                            *
+ *  Ref: TVA, [1972,p5.12]                                                    *
+ *                                                                            *
+ * -- Ratio of the molecular (or molar) weight of water to dry air [-]:       */
+const AED_REAL mwrw2a    =    18.016    /    28.966;      // = 0.62197
+/*                                                                            *
+ * -- The universal gas constant  [J mol^-1 K^-1] = 8.31436;                  *
+ * -- Gas constant for dry air in terms of mass of gas rather than moles      *
+ * -- [J kg^-1 K^-1]:                                                         */
+const AED_REAL c_gas   = 1.0E3 *    8.31436     /    28.966;
+/******************************************************************************/
+AED_REAL atm_density(AED_REAL atmosPressure, // (total) atmospheric pressure     [Pa]
+                     AED_REAL vapPressure,   // water vapour (partial) pressure  [Pa]
+                     AED_REAL AirTemp)       // dry bulb air temperature         [Cel]
+{
+/*
+    // Dry air
+    return (p_atm)/(287.058 * (AirTemp + Kelvin));
+*/
+
+    // Moist air
+    // mixing ratio: r = Mwater/(Mwater+Mdry_air)
+    AED_REAL r = mwrw2a * vapPressure/(atmosPressure - vapPressure);
+
+    return 1.0/c_gas * (1 + r)/(1 + r/mwrw2a) * atmosPressure/(AirTemp + Kelvin);
+
+}
+
 
 /******************************************************************************
  * Performs the thermal transfers at the surface                              *
@@ -88,77 +138,74 @@ REALTYPE calculate_qsw(int kDays, int mDays, int iclock, REALTYPE Latitude, REAL
  * The day commences at midday, variable daylength (Time of year and latitude)*
  ******************************************************************************/
 void do_surface_thermodynamics(int jday, int iclock, int LWModel,
-                              REALTYPE Latitude, REALTYPE SWOld, REALTYPE ShortWave)
+                              AED_REAL Latitude, AED_REAL SWOld, AED_REAL ShortWave)
 // LWModel   // type of longwave radiation
 // SWOld     // Total solar radiation at the surface for yesterday
 // ShortWave // Total solar radiation at the surface for today
 {
 /*----------------------------------------------------------------------------*/
-    REALTYPE  AreaFactor = 1.0E+6;
-    REALTYPE  Stefan_Boltzman = 5.67E-8;  //#Stefan-Boltzman constant
-    REALTYPE  Kelvin = 273.15,HTEVAP = 2.453E+9,SPHEAT = 4.186;
-    REALTYPE  K_I1 = 2.3,K_I2 = 2.0,K_W = 0.57,CSEN = 0.0014;
-    REALTYPE  L_I = 334000.0,L_S = 334000.0,TF = 0.0,TMELT = 0.0;
-    REALTYPE  A_ONE = 0.7;        //# fraction of short wave radiation in first wavelength band
-    REALTYPE  A_TWO = 0.3;        //# fraction of short wave radiation in second wavelength band
-    REALTYPE  ET_ICE_ONE = 1.5;   //# attenuation coefficient of the ice in the first spectral band
-    REALTYPE  ET_ICE_TWO = 20.;   //# attenuation coefficient of the ice in the second spectral band
-    REALTYPE  ET_WICE_ONE = 6.0;  //# attenuation coefficient of the white ice in the first spectral band
-    REALTYPE  ET_WICE_TWO = 20.;  //# attenuation coefficient of the white ice in the second spectral band
-    REALTYPE  ET_SNOW_ONE = 6.0;  //# attenuation coefficient of the snow in the first spectral band
-    REALTYPE  ET_SNOW_TWO = 20.;  //# attenuation coefficient of the snow in the second spectral band
-    REALTYPE  DENSITY_I1 = 917.0; //# density of ice
-    REALTYPE  DENSITY_I2 = 890.0;
-    REALTYPE  RHOMXSNO = 300.0,RHOMNSNO = 50.;
+    const AED_REAL  AreaFactor = 1.0E+6;
+    const AED_REAL  K_I1 = 2.3, K_I2 = 2.0, K_W = 0.57, CSEN = 0.0014;
+    const AED_REAL  L_I = 334000.0,L_S = 334000.0,TF = 0.0,TMELT = 0.0;
+    const AED_REAL  A_ONE = 0.7;        //# fraction of short wave radiation in first wavelength band
+    const AED_REAL  A_TWO = 0.3;        //# fraction of short wave radiation in second wavelength band
+    const AED_REAL  ET_ICE_ONE = 1.5;   //# attenuation coefficient of the ice in the first spectral band
+    const AED_REAL  ET_ICE_TWO = 20.;   //# attenuation coefficient of the ice in the second spectral band
+    const AED_REAL  ET_WICE_ONE = 6.0;  //# attenuation coefficient of the white ice in the first spectral band
+    const AED_REAL  ET_WICE_TWO = 20.;  //# attenuation coefficient of the white ice in the second spectral band
+    const AED_REAL  ET_SNOW_ONE = 6.0;  //# attenuation coefficient of the snow in the first spectral band
+    const AED_REAL  ET_SNOW_TWO = 20.;  //# attenuation coefficient of the snow in the second spectral band
+    const AED_REAL  DENSITY_I1 = 917.0; //# density of ice
+    const AED_REAL  DENSITY_I2 = 890.0;
+    const AED_REAL  RHOMXSNO = 300.0,RHOMNSNO = 50.;
+    const AED_REAL  eps_water = 0.985;
 
 /*----------------------------------------------------------------------------*/
 
-    REALTYPE CLOUD;
-    REALTYPE DT;
+    AED_REAL CLOUD;
+    AED_REAL DT;
 
 #ifndef _VISUAL_C_
-    // The dumb compiler on windows doesn't like this so must malloc manually
-    REALTYPE LayerThickness[MaxLayers],     //# Layer thickness (m)
+    // The visual c compiler on doesn't like this so must malloc manually
+    AED_REAL LayerThickness[MaxLayers],     //# Layer thickness (m)
              heat[MaxLayers];
 #else
-    REALTYPE *LayerThickness;
-    REALTYPE *heat;
+    AED_REAL *LayerThickness;
+    AED_REAL *heat;
 #endif
-    REALTYPE HEN;
-    REALTYPE Q_lw_in;       //# Long wave radiation from atmosphere W/m2
-    REALTYPE QSI,QSI1;
-    REALTYPE QRL;
-    REALTYPE Q_lw_out;  //# Long wave radiation emission W/m2
-    REALTYPE SVP0;
-    REALTYPE WindSp;      //# Wind speed corrected by multiplicative factor
+    AED_REAL HEN;
+    AED_REAL Q_lw_in;       //# Long wave radiation from atmosphere W/m2
+    AED_REAL QSI,QSI1;
+    AED_REAL QRL;
+    AED_REAL Q_lw_out;  //# Long wave radiation emission W/m2
+    AED_REAL satvap;
+    AED_REAL WindSp;      //# Wind speed corrected by multiplicative factor
 
-    REALTYPE AAA, BBB, CCC, DDD, EEE, FFF, GGG;
-    REALTYPE T001;
-    REALTYPE T01_OLD,T01_NEW;
-    REALTYPE RHOSNO, RHOLDSNO, KCOMSNO, K_S;
-    REALTYPE SUMPO4, SUMTP, SUMNO3, SUMNH4, SUMTN, SUMSI;
-    REALTYPE QLATENT;
+    AED_REAL AAA, BBB, CCC, DDD, EEE, FFF, GGG;
+    AED_REAL T001;
+    AED_REAL T01_OLD,T01_NEW;
+    AED_REAL RHOSNO, RHOLDSNO, KCOMSNO, K_S;
+    AED_REAL SUMPO4, SUMTP, SUMNO3, SUMNH4, SUMTN, SUMSI;
+    AED_REAL QLATENT;
 
    //# New parameters for heat flux estimate
-//  REALTYPE KSED;
-//  REALTYPE TYEAR;
-//  REALTYPE ZSED;
+//  AED_REAL KSED;
+//  AED_REAL TYEAR;
+//  AED_REAL ZSED;
 
     int i;
-    int kDays;    //# Days since start of year for yesterday
-    int mDays;    //# Days since start of year for today
     int underFlow;
 
 /*----------------------------------------------------------------------------*/
 
 #ifdef _VISUAL_C_
-    LayerThickness = malloc(sizeof(REALTYPE) * MaxLayers);
-    heat = malloc(sizeof(REALTYPE) * MaxLayers);
+    LayerThickness = malloc(sizeof(AED_REAL) * MaxLayers);
+    heat = malloc(sizeof(AED_REAL) * MaxLayers);
 #endif
 
     Q_longwave = 0.;
     SurfData.Evap = 0.;
-    memset(heat, 0, sizeof(REALTYPE)*MaxLayers);
+    memset(heat, 0, sizeof(AED_REAL)*MaxLayers);
 
     T01_NEW = 0.;
     T01_OLD = 0.;
@@ -188,10 +235,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     else     WindSp = MetData.WindSpeed;
 
     //# Convert julian days to days since the start of the year
-    kDays = day_of_year(jday - 1);
-    mDays = day_of_year(jday);
 
-    Q_shortwave = calculate_qsw(kDays,mDays,iclock,Latitude,SWOld,ShortWave);
+    //# Get shortwave - either from sub-daily data, or approximate
+    Q_shortwave = calculate_qsw(day_of_year(jday - 1), day_of_year(jday), iclock, Latitude, SWOld, ShortWave, WindSp);
 
     // Into layer surfLayer goes qsw(surfLayer)-qsw(surfLayer-1) over the
     // area common to layers surfLayer and surfLayer-1, and qsw(surfLayer)
@@ -224,31 +270,46 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     // Heating due to NIR/UV (all absorbed in surf layer only)
     heat[surfLayer] = heat[surfLayer] + 0.55 * Q_shortwave * Lake[surfLayer].LayerArea * AreaFactor;
 
-    //Total daily short wave radiation (J/day)
+    //Total daily short wave radiation (J/day), stored for lake.csv
     SurfData.dailyQsw += Lake[surfLayer].LayerArea * Q_shortwave * noSecs;
 
 
-    //  Evaporative heat flux affects top layer only
-    //  See tva report p4.11. also p 4.17.  units are joules
+    // Units are Joules/m**2/s
     if (!ice) {
-        SVP0 = saturated_vapour(Lake[surfLayer].Temp);
-  //    Q_latentheat [W/m2] = CE * rho_air * latent heat * psychro const / air_presssure * windspeed * VPD
-        Q_latentheat = -CE * 1.200 * (HTEVAP*1e-3) * (0.622/1013.) * WindSp * (SVP0 - MetData.SatVapDef);
+        AED_REAL p_atm = 1013.0,
+        //        atm_density = (p_atm*100.0)/(287.058 * (MetData.AirTemp+Kelvin));
+        rho_air = atm_density(p_atm*100.0,MetData.SatVapDef,MetData.AirTemp);
+
+        //#  Evaporative heat flux affects top layer only
+        satvap = saturated_vapour(Lake[surfLayer].Temp);
+        //# Q_latentheat [W/m2] = CE * rho_air * latent heat * psychro const / air_presssure * windspeed * VPD
+        Q_latentheat = -CE * rho_air * (latent*1e-3) * (0.622/p_atm) * WindSp * (satvap - MetData.SatVapDef);
 
         if (Q_latentheat > 0.0) Q_latentheat = 0.0;
 
         if ( no_evap )
             SurfData.Evap = 0.0;
         else
-            SurfData.Evap = Q_latentheat/(HTEVAP);
+            SurfData.Evap = Q_latentheat/(latent);
 
         // Conductive Heat Gain only affects top layer.
-        // Units are Joules/M**2/S
-  //    Q_sensibleheat [W/m2] = CH * rho_air * specific heat * windspeed * temp diff
-        Q_sensibleheat = -CH * (1.200*1003.) * WindSp * (Lake[surfLayer].Temp - MetData.AirTemp);
+        //# Q_sensibleheat [W/m2] = CH * rho_air * specific heat * windspeed * temp diff
+        Q_sensibleheat = -CH * (rho_air * 1005.) * WindSp * (Lake[surfLayer].Temp - MetData.AirTemp);
 
-        // Long Wave emission (ie. longwave out) affects only top layer.
-        Q_lw_out = -Stefan_Boltzman*0.97*pow((Kelvin+Lake[surfLayer].Temp), 4.0);
+        // If chosen by user, do atmospheric stability correction routine
+        if (atm_stab)
+            coef_wind_drag =
+               atmos_stability(&Q_latentheat,
+                               &Q_sensibleheat,
+                                WindSp,
+                                Lake[surfLayer].Temp,
+                                MetData.AirTemp,
+                                p_atm*100.,
+                                satvap,
+                                MetData.SatVapDef);
+
+#if OLD_
+         Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+Lake[surfLayer].Temp), 4.0);
 
         // Long Wave absorption (ie. longwave in) affects only top layer
         if (LWModel  ==  LW_CC){
@@ -256,8 +317,44 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
             Q_lw_in = (1.0 + 0.275 * CLOUD) * Stefan_Boltzman * pow((Kelvin+MetData.AirTemp), 4.0) *
                   (1.0 - 0.261 * exp(-0.000777E-4 * pow(MetData.AirTemp, 2.0)));
             Q_longwave = Q_lw_out + Q_lw_in;
-        } else if (LWModel  ==  LW_IN){
+        } else if (LWModel  ==  LW_IN) {
             Q_lw_in = MetData.LongWave;
+#else
+        // Long Wave emission (ie. longwave out) affects only top layer.
+        Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+Lake[surfLayer].Temp), 4.0);
+
+        // Long Wave absorption (ie. longwave in) affects only top layer
+        // See Henderson-Sellers 1986 for a good summary
+        if (LWModel  ==  LW_CC){
+            // Cloud data is available
+            AED_REAL eps_star = 0.8;  // default in case of a duff cloudmode value
+            CLOUD = MetData.LongWave;
+            switch (cloud_mode) {
+                case 1:
+                    // Idso and Jackson (1969)
+                    //eps_star = (1.0 + 0.275*CLOUD)*(1.0 - 0.261 * exp(-0.000777 * pow(-MetData.AirTemp, 2.0))); //
+                    eps_star = (1.0 + 0.275*CLOUD)*(1.0 - 0.261 * exp(-0.000777E-4 * pow(MetData.AirTemp, 2.0)));
+                    break;
+                case  2:
+                    // Swinbank (1963)
+                    eps_star = (1.0 + 0.17 * CLOUD * CLOUD) * (9.365e-6 * pow(MetData.AirTemp, 2.0));
+                    break;
+                case 3:
+                    // Brutsaert (1975)
+                    eps_star = (1.0 + 0.275*CLOUD) * 0.642 * pow(MetData.SatVapDef/(MetData.AirTemp+Kelvin), 1/7) ;
+                    break;
+                case 4:
+                    // Yajima 2014 - Tono Dam
+                    eps_star = (1.0 - pow(CLOUD, 2.796) ) * 1.24 * pow(MetData.SatVapDef/(MetData.AirTemp+Kelvin), 1/7) +
+                                                           0.955 * pow(CLOUD, 2.796) ;
+                    break;
+            }
+
+            Q_lw_in = (1 - 0.03) * eps_star * Stefan_Boltzman * pow((Kelvin+MetData.AirTemp), 4.0);
+            Q_longwave = Q_lw_out + Q_lw_in;
+        } else if (LWModel  ==  LW_IN) {
+            Q_lw_in = (1 - 0.03) * MetData.LongWave;
+#endif
             Q_longwave = Q_lw_out+Q_lw_in;
         } else if (LWModel  ==  LW_NET)
             Q_longwave = MetData.LongWave;
@@ -270,18 +367,18 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         SurfData.dailyQlw += Q_longwave * Lake[surfLayer].LayerArea * noSecs;
     } else {
         // The various atmospheric fluxes - evaporative, sensible heat, longwave
-        // for ice cover all depend on the ice surface temperature.  note that wind
+        // for ice cover all depend on the ice surface temperature.  Note that wind
         // here is not set to zero (USE MetData.WindSpeed, NOT WindSp].
-        // Emissivity for LW OUT IS 0.95
+        // Emissivity for LW OUT is 0.985 (eps_water)
         T01_NEW = 50.;
         T01_OLD = -50.;
         T001 = 0.;
         while (1) {
-            SVP0 = (1+(0.00972*T001)+(0.000042*pow(T001, 2)))*saturated_vapour(T001);
-            Q_latentheat = CE * MetData.WindSpeed * (SVP0 - MetData.SatVapDef);
+            satvap = (1+(0.00972*T001)+(0.000042*pow(T001, 2)))*saturated_vapour(T001);
+            Q_latentheat = CE * MetData.WindSpeed * (satvap - MetData.SatVapDef);
             if (Q_latentheat > 0.0) Q_latentheat = 0.0;
             Q_sensibleheat = CH * MetData.WindSpeed * (T001 - MetData.AirTemp);
-            Q_lw_out = -Stefan_Boltzman * 0.95 * pow((Kelvin+T001), 4.0);
+            Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+T001), 4.0);
 
             if (LWModel  ==  LW_CC) {
                 CLOUD = MetData.LongWave;
@@ -329,12 +426,12 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         T01_NEW = 50.0;
         T01_OLD = -50.0;
         if (SurfData.HeightSnow > 0.)
-            SurfData.HeightSnow = SurfData.HeightSnow+Q_latentheat/(HTEVAP)*noSecs;
+            SurfData.HeightSnow = SurfData.HeightSnow+Q_latentheat/(latent)*noSecs;
         else {
             if (SurfData.HeightWhiteIce > 0.)
-                SurfData.HeightWhiteIce = SurfData.HeightWhiteIce+Q_latentheat/(HTEVAP)*noSecs;
+                SurfData.HeightWhiteIce = SurfData.HeightWhiteIce+Q_latentheat/(latent)*noSecs;
             else
-                SurfData.HeightBlackIce = SurfData.HeightBlackIce+Q_latentheat/(HTEVAP)*noSecs;
+                SurfData.HeightBlackIce = SurfData.HeightBlackIce+Q_latentheat/(latent)*noSecs;
         }
 
         //--------------------------------------------------------------------+
@@ -344,11 +441,11 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         //--------------------------------------------------------------------+
         if (T001 >= TMELT) {
             T001 = TMELT;
-            SVP0 = (1+(0.00972*T001)+(0.000042*pow((T001), 2)))*saturated_vapour(T001);
-            Q_latentheat = CE * MetData.WindSpeed * (SVP0 - MetData.SatVapDef);
+            satvap = (1+(0.00972*T001)+(0.000042*pow((T001), 2)))*saturated_vapour(T001);
+            Q_latentheat = CE * MetData.WindSpeed * (satvap - MetData.SatVapDef);
             if (Q_latentheat > 0.0)Q_latentheat = 0.0;
             Q_sensibleheat = CH * MetData.WindSpeed * (T001 - MetData.AirTemp);
-            Q_lw_out = -Stefan_Boltzman * 0.95 * pow((Kelvin+T001), 4.0);
+            Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+T001), 4.0);
 
             if (LWModel  ==  LW_CC) {
                 CLOUD = MetData.LongWave;
@@ -386,13 +483,13 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                     if ((SurfData.HeightBlackIce-SurfData.dHt) < 0.)SurfData.dHt = SurfData.HeightBlackIce;
                     SurfData.HeightBlackIce = SurfData.HeightBlackIce-SurfData.dHt;
                 }
-                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(DENSITY_I1/(1000.+Lake[surfLayer].Density));
+                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(DENSITY_I1/(1000.+Lake[surfLayer].SPDensity));
             } else {
                 if (RHOSNO == 0.0) RHOSNO = RHOMXSNO;
                 SurfData.dHt = (1/(L_S*RHOSNO))*(H_FLUX+Q01)*noSecs;
                 if ((SurfData.HeightSnow-SurfData.dHt) < 0.0)SurfData.dHt = SurfData.HeightSnow;
                 SurfData.HeightSnow = SurfData.HeightSnow-SurfData.dHt;
-                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(RHOSNO/(1000.+Lake[surfLayer].Density));
+                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(RHOSNO/(1000.+Lake[surfLayer].SPDensity));
             }
 
             recalc_surface_salt();
@@ -423,10 +520,10 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
     // Compute the temperature increase in non-surface layers over noSecs
     for (i = botmLayer; i <= surfLayer; i++) {
-        if (fabs(heat[i]) >= 1E-20 && Lake[i].Density != 0.0 && Lake[i].LayerVol != 0.0)
-            DT = heat[i]*noSecs/(SPHEAT*(1000.+Lake[i].Density)*Lake[i].LayerVol*AreaFactor);
+        if (fabs(heat[i]) >= 1E-20 && Lake[i].SPDensity != 0.0 && Lake[i].LayerVol != 0.0)
+            DT = heat[i]*noSecs/(SPHEAT*(1000.+Lake[i].SPDensity)*Lake[i].LayerVol*AreaFactor);
         else
-           DT = 0.;
+            DT = 0.;
 
         Lake[i].Temp += DT;
     }
@@ -461,7 +558,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         // see eq 22 of rogers et al and note that DZ has been adjusted to ...
         QI1 = -K_W*(TF-Lake[surfLayer].Temp)/0.039;
         if (underFlow)
-            QS1 = CSEN*Lake[surfLayer].Density*SPHEAT*1000.*U_FLOW*(Lake[surfLayer].Temp-TF);
+            QS1 = CSEN*Lake[surfLayer].SPDensity*SPHEAT*1000.*U_FLOW*(Lake[surfLayer].Temp-TF);
         else
             QS1 = 0.0;
 
@@ -486,9 +583,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
         // Adjust water temperature for ice/water exchange, determine latent heat
         Lake[surfLayer].Temp = Lake[surfLayer].Temp+(((K_W*((TF-Lake[surfLayer].Temp)/0.039))*Lake[surfLayer].LayerArea*
-                                 AreaFactor*noSecs)+QLATENT)/(SPHEAT*(1000.+Lake[surfLayer].Density)*Lake[surfLayer].LayerVol*AreaFactor);
+                                 AreaFactor*noSecs)+QLATENT)/(SPHEAT*(1000.+Lake[surfLayer].SPDensity)*Lake[surfLayer].LayerVol*AreaFactor);
         QLATENT = L_I*DENSITY_I1*SurfData.dHt/noSecs;
-        Lake[surfLayer].Height = Lake[surfLayer].Height-SurfData.dHt*(DENSITY_I1/(1000.+Lake[surfLayer].Density));
+        Lake[surfLayer].Height = Lake[surfLayer].Height-SurfData.dHt*(DENSITY_I1/(1000.+Lake[surfLayer].SPDensity));
 
         recalc_surface_salt();
     }
@@ -499,34 +596,45 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
  * sediment heating function but will need to be generic and parameterised so
  * best to remove for this version.
  *            -----------------------------------
-
-    // Input of heat from the sediments - based on rogers et al heat flux
-    // sediment temperature measurements for lake mendota (birge et al 1927)
-    // and basically invariant at 5m at deep station, LayerThickness is required
-    TYEAR = 9.7+2.7*sin(((kDays-151.3)*2.*Pi)/365.);
-    ZSED = 6.;
-    KSED = 1.2;
-    for (i = botmLayer+1; i <= surfLayer; i++) {
-        Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
-                  (Lake[i].LayerArea-Lake[i-1].LayerArea)*
-                   AreaFactor*LayerThickness[i]*noSecs)/(SPHEAT*(1000.+Lake[i].Density)*Lake[i].LayerVol*AreaFactor);
-    }
-    Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
-                               Lake[botmLayer].LayerArea*AreaFactor*LayerThickness[botmLayer] *
-                           noSecs)/(SPHEAT*(1000.+Lake[botmLayer].Density)*Lake[botmLayer].LayerVol*AreaFactor);
+ *
+ *  // Input of heat from the sediments - based on rogers et al heat flux
+ *  // sediment temperature measurements for lake mendota (birge et al 1927)
+ *  // and basically invariant at 5m at deep station, LayerThickness is required
+ *  TYEAR = 9.7+2.7*sin(((kDays-151.3)*2.*Pi)/365.);
+ *  ZSED = 6.;
+ *  KSED = 1.2;
+ *  for (i = botmLayer+1; i <= surfLayer; i++) {
+ *      Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
+ *                (Lake[i].LayerArea-Lake[i-1].LayerArea)*
+ *                 AreaFactor*LayerThickness[i]*noSecs)/(SPHEAT*(1000.+Lake[i].SPDensity)*Lake[i].LayerVol*AreaFactor);
+ *  }
+ *  Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
+ *                             Lake[botmLayer].LayerArea*AreaFactor*LayerThickness[botmLayer] *
+ *                         noSecs)/(SPHEAT*(1000.+Lake[botmLayer].SPDensity)*Lake[botmLayer].LayerVol*AreaFactor);
  *
  ******************************************************************************/
 
     // precipitation, evaporation in the absence of ice
     if (! ice) {
+	AED_REAL catch_runoff = 0.;
+
+	if ( catchrain ) {
+	    // compute runoff in ML (1000m3)
+	    if ( MetData.Rain > rain_threshold )
+	        catch_runoff = (MaxArea - Lake[surfLayer].LayerArea) *
+		        ( MetData.Rain - rain_threshold )  *  (noSecs/SecsPerDay) * runoff_coef;
+	}
+
         SurfData.dailyEvap += SurfData.Evap * noSecs * Lake[surfLayer].LayerArea * 1000.0;
         SurfData.dailyRain += MetData.Rain * (noSecs / SecsPerDay) * Lake[surfLayer].LayerArea;
+        if ( catchrain ) SurfData.dailyRain += catch_runoff;
 
         // Rainfall composition.  NOTE that evaporation leaves salts (nutrients)
         // deposits them at a rate dependent on the input composition of rainfall
         // with changes in depth, not area, for the surface layer. therefore just
         // depths to get new composition. firstly evaporation
         Lake[surfLayer].Height += (SurfData.Evap * noSecs + (MetData.Rain / 1000.0) * (noSecs / SecsPerDay));
+	if ( catchrain ) Lake[surfLayer].Height += catch_runoff / Lake[surfLayer].LayerArea;
 
         recalc_surface_salt();
     }
@@ -559,10 +667,10 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                 RHOSNO = RHOLDSNO;
                 QRL = 0.0;
             } else if (MetData.Snow == 0.0 && MetData.Rain > 0.0) {
-                //------------------------------------------------------------------#
-                // Rainfall on Snow. Check the air temperature. If AirTemp > 0 then #
-                // add the Rain. If AirTemp < 0 then add the rainfall to Snow.      #
-                //------------------------------------------------------------------#
+                /********************************************************************
+                 * Rainfall on Snow. Check the air temperature. If AirTemp > 0 then *
+                 * add the Rain. If AirTemp < 0 then add the rainfall to Snow.      *
+                 ********************************************************************/
                 if (MetData.AirTemp > 0.0) {
                     KCOMSNO = 0.166+0.834*(1.-exp(-1.*MetData.Rain));
                     RHOLDSNO = RHOSNO+(RHOMXSNO-RHOSNO)*KCOMSNO;
@@ -624,8 +732,8 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                                     SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO)) {
             HEN = SurfData.HeightSnow-(SurfData.HeightBlackIce*(1000.-DENSITY_I1) +
                       SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO;
-            QSI = ((Lake[surfLayer].Temp*SPHEAT*1000.+L_I)*(Lake[surfLayer].Density +
-                 1000.)*HEN*(1.-(RHOSNO/(Lake[surfLayer].Density+1000.))))/SecsPerDay;
+            QSI = ((Lake[surfLayer].Temp*SPHEAT*1000.+L_I)*(Lake[surfLayer].SPDensity +
+                 1000.)*HEN*(1.-(RHOSNO/(Lake[surfLayer].SPDensity+1000.))))/SecsPerDay;
             SurfData.HeightWhiteIce = SurfData.HeightWhiteIce+SurfData.HeightSnow -
                  ((SurfData.HeightBlackIce*(1000.-DENSITY_I1) +
                    SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO);
@@ -650,14 +758,14 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
     // Recalculate densities
     for (i = botmLayer; i <= surfLayer; i++)
-        Lake[i].Density = calculate_density(Lake[i].Temp,Lake[i].Salinity);
+        Lake[i].SPDensity = calculate_density(Lake[i].Temp,Lake[i].Salinity);
 
     // Set ice cover flag
     if (Lake[surfLayer].Temp <= 0.0 && SurfData.HeightBlackIce == 0.) {
         ice = TRUE;
         SurfData.HeightBlackIce = 0.05;
         SurfData.HeightWhiteIce = 0.0;
-        Lake[surfLayer].Height = Lake[surfLayer].Height-0.05*(DENSITY_I1/(1000.+Lake[surfLayer].Density));
+        Lake[surfLayer].Height -= 0.05*(DENSITY_I1/(1000.+Lake[surfLayer].SPDensity));
 
         recalc_surface_salt();
 
@@ -666,9 +774,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
     if ((SurfData.HeightBlackIce+SurfData.HeightWhiteIce) < 0.05  &&  ice) {
         Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.HeightBlackIce*
-              (DENSITY_I1/(1000.+Lake[surfLayer].Density))+SurfData.HeightWhiteIce*
-              (DENSITY_I2/(1000.+Lake[surfLayer].Density))+SurfData.HeightSnow*
-              (RHOSNO/(1000.+Lake[surfLayer].Density));
+              (DENSITY_I1/(1000.+Lake[surfLayer].SPDensity))+SurfData.HeightWhiteIce*
+              (DENSITY_I2/(1000.+Lake[surfLayer].SPDensity))+SurfData.HeightSnow*
+              (RHOSNO/(1000.+Lake[surfLayer].SPDensity));
 
         recalc_surface_salt();
 
@@ -677,9 +785,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         SurfData.HeightWhiteIce = 0.0;
         SurfData.HeightSnow = 0.0;
     }
-    //for (i = botmLayer; i <= surfLayer; i++)
-        //printf("Light = %10.5f\n",Lake[surfLayer].Light);
-        //printf("surfLayer = %d\n",surfLayer);
+    // for (i = botmLayer; i <= surfLayer; i++)
+    //     printf("Light = %10.5f\n",Lake[surfLayer].Light);
+    //     printf("surfLayer = %d\n",surfLayer);
 
 #ifdef _VISUAL_C_
     free(LayerThickness);  free(heat);
@@ -689,34 +797,33 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
-REALTYPE calculate_qsw(int kDays, int mDays, int iclock, REALTYPE Latitude, REALTYPE SWOld, REALTYPE ShortWave)
-/*----------------------------------------------------------------------------*
- * ARGUMENTS
- * INTEGER,INTENT(in)   :: kDays     !# Days since start of year for yesterday
- * INTEGER,INTENT(in)   :: mDays     !# Days since start of year for today
- * INTEGER,INTENT(in)   :: iclock    !# #seconds into the day
- * REALTYPE,INTENT(in)  :: Latitude
- * REALTYPE,INTENT(in)  :: SWOld     !# Total solar radiation at the surface for yesterday
- * REALTYPE,INTENT(in)  :: ShortWave !# Total solar radiation at the surface for today
- *----------------------------------------------------------------------------*/
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
+                       int mDays,     // Days since start of year for today
+                       int iclock,    // #seconds into the day
+                       AED_REAL Latitude,
+                       AED_REAL SWOld,     // Total solar radiation at the surface for yesterday
+                       AED_REAL ShortWave, // Total solar radiation at the surface for today
+                       AED_REAL WindSp)    // current wind speed (adjusted for possible ice)
 {
-    REALTYPE RADTIM0;  //# Start of time step as fraction of day in radians
-    REALTYPE RADTIM1;  //# End of time step as fraction of day in radians
-    REALTYPE SOLAR0;   //# Solar angle yesterday
-    REALTYPE SOLAR1;   //# Solar angle today
-    REALTYPE SOLARW;   //# Sun's arc from sunrise to sunset for yesterday
-    REALTYPE SOLARY;   //# Sun's arc from sunrise to sunset for today
-    REALTYPE SW0;      //# Total solar radiation at the surface for yesterday after ALBEDO
-    REALTYPE SW1;      //# Total solar radiation at the surface for today after ALBEDO
-    REALTYPE TD0;      //# Day length for yesterday
-    REALTYPE TD1;      //# Day length for yesterday
+    AED_REAL RADTIM0;  //# Start of time step as fraction of day in radians
+    AED_REAL RADTIM1;  //# End of time step as fraction of day in radians
+    AED_REAL SOLAR0;   //# Solar angle yesterday
+    AED_REAL SOLAR1;   //# Solar angle today
+    AED_REAL SOLARW;   //# Sun's arc from sunrise to sunset for yesterday
+    AED_REAL SOLARY;   //# Sun's arc from sunrise to sunset for today
+    AED_REAL SW0;      //# Total solar radiation at the surface for yesterday after ALBEDO
+    AED_REAL SW1;      //# Total solar radiation at the surface for today after ALBEDO
+    AED_REAL TD0;      //# Day length for yesterday
+    AED_REAL TD1;      //# Day length for yesterday
     int jClock;        //# End of the current time step
 
-    REALTYPE Albedo0;  //# Photosynthetically active radiation scattered previous day
-    REALTYPE Albedo1;  //# Photosynthetically active radiation scattered present day
-    REALTYPE T001;
-    REALTYPE lQSW;
+    AED_REAL Albedo0;  //# Photosynthetically active radiation scattered previous day
+    AED_REAL Albedo1;  //# Photosynthetically active radiation scattered present day
+    AED_REAL T001;
+    AED_REAL lQSW;
 
 /*----------------------------------------------------------------------------*/
 
@@ -738,11 +845,11 @@ REALTYPE calculate_qsw(int kDays, int mDays, int iclock, REALTYPE Latitude, REAL
             else if (T001 > -5.0 && T001 < 0.) Albedo0 = 0.44 - 0.032 * T001;
             else if (T001 >= 0.)               Albedo0 = 0.44;
         } else
-            Albedo0 = 0.08+0.44*(pow((SurfData.HeightBlackIce+SurfData.HeightWhiteIce-0.05), 0.28));
+            Albedo0 = 0.08 + 0.44 * pow((SurfData.HeightBlackIce+SurfData.HeightWhiteIce-0.05), 0.28);
 
         if (SurfData.HeightSnow > 0.0) {
             if (T001 <= -5.)                   Albedo1 = 0.7;
-            else if (T001 > -5.0 && T001 < 0.) Albedo1 = 0.5-0.04*T001;
+            else if (T001 > -5.0 && T001 < 0.) Albedo1 = 0.5 - 0.04 * T001;
             else if (T001 >= 0.)               Albedo1 = 0.5;
 
             if (SurfData.HeightSnow < 0.1)
@@ -753,15 +860,42 @@ REALTYPE calculate_qsw(int kDays, int mDays, int iclock, REALTYPE Latitude, REAL
 
         Albedo1 = Albedo0;
     } else {
-        if (Latitude > 2*Pi) { //# Lake is in the northern hemisphere
-            Albedo0 = 0.08-0.02*sin(2*Pi*kDays/365-(Pi/2));
-            Albedo1 = 0.08-0.02*sin(2*Pi*mDays/365-(Pi/2));
-        } else { //# Lake is in the southern hemisphere
-            Albedo0 = 0.08-0.02*sin(2*Pi*kDays/365+(Pi/2));
-            Albedo1 = 0.08-0.02*sin(2*Pi*mDays/365+(Pi/2));
+        Albedo0 = 0.08;
+        Albedo1 = 0.08;
+
+        switch (albedo_mode) {
+            case 1: // simple daily albedo calc as in Hamilton and Schladow
+                if (Latitude > two_Pi) { //# Lake is in the northern hemisphere
+                    Albedo0 = 0.08 - 0.02 * sin(two_Pi * kDays/365 - (halfPi));
+                    Albedo1 = 0.08 - 0.02 * sin(two_Pi * mDays/365 - (halfPi));
+                } else { //# Lake is in the southern hemisphere
+                    Albedo0 = 0.08 - 0.02 * sin(two_Pi * kDays/365 + (halfPi));
+                    Albedo1 = 0.08 - 0.02 * sin(two_Pi * mDays/365 + (halfPi));
+                }
+                break;
+            case 2: { // Briegleb et al. (1986), B scheme in Scinocca et al 2006.
+                    AED_REAL sza = zenith_angle(Longitude, Latitude, mDays, iclock, timezone);  //degrees
+                    if (sza < 80){
+                        AED_REAL csza = cos(Pi * sza/180);
+                        Albedo1 = ((2.6 / (1.1 * pow(csza, 1.7) - 0.065)) +
+                                  (15 * (csza-0.1) * (csza-0.5) * (csza-1))) /100.;
+                    } else
+                        Albedo1 = 0.3;
+                }
+                break;
+             case 3: { // Yajima and Yamamoto (2014).
+                    AED_REAL sza = zenith_angle(Longitude, Latitude, mDays, iclock, timezone);  //degrees
+                    AED_REAL csza = cos(Pi * sza/180);
+
+                    // from excel, need fixing
+                    Albedo1 = MAX(0.01, 0.001 * MetData.RelHum * pow(1-csza, 0.33) -
+                                        0.001 * WindSp * pow(1-csza, -0.57) -
+                                        0.001 * 6 * pow(1-csza, 0.829));
+                }
+                break;
+             default : break;
         }
     }
-
 
     if ( subdaily )
         lQSW = ShortWave * (1.0-Albedo1);
@@ -822,7 +956,7 @@ REALTYPE calculate_qsw(int kDays, int mDays, int iclock, REALTYPE Latitude, REAL
 /******************************************************************************/
 void recalc_surface_salt()
 {
-    REALTYPE OldVol, AddDensity, WaterMass;
+    AED_REAL OldVol, AddDensity, WaterMass;
 
     OldVol = Lake[surfLayer].LayerVol;
 
@@ -830,270 +964,257 @@ void recalc_surface_salt()
 
     AddDensity = calculate_density(Lake[surfLayer].Temp, zero);
 
-    WaterMass = OldVol * (Lake[surfLayer].Density - AddDensity) +
+    WaterMass = OldVol * (Lake[surfLayer].SPDensity - AddDensity) +
                 Lake[surfLayer].LayerVol * (AddDensity + 1000.);
 
-    Lake[surfLayer].Salinity = ((1000. + Lake[surfLayer].Density) / WaterMass) *
+    Lake[surfLayer].Salinity = ((1000. + Lake[surfLayer].SPDensity) / WaterMass) *
                                                    OldVol * Lake[surfLayer].Salinity;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-#define r_zero    0.0
-#define r_one     1.0
-#define r_two     2.0
-#define r_three   3.0
-#define r_five    5.0
-#define r_ten    10.0
-#define r_comp    0.5
-#define c_gas     0.0
-#define c_tbase   0.0
+
+/******************************************************************************
+ ******************************************************************************/
+
 #define gamma_air 0.0
 #define k_air     0.0
-#define cp_air    0.0
 #define mu_air    0.0
-#define GRAV_TRUE 0.0
-#define c_latent_heat 0.0
-#define WIND_HEIGHT 100.
-#define HUMIDITY_HEIGHT 100.
-#define RHO_AIR 1.0
+
+#define WIND_HEIGHT 10.0
+#define HUMIDITY_HEIGHT 10.0
 
 #define SIGN(a,b)  ( ((b) > 0.) ? abs(a) : -abs(a) )
 
+static AED_REAL psi_m(AED_REAL zL);
+static AED_REAL psi_hw(AED_REAL zL);
 
-static REALTYPE PSI_M(REALTYPE zL);
-static REALTYPE PSI_HW(REALTYPE zL);
 
-#if 0
 /******************************************************************************/
-void  Atmos_Stability(REALTYPE *evap_heat_flux,
-                      REALTYPE *sens_heat_flux,
-                      REALTYPE *wind_speed,
-                      REALTYPE *temperature,
-                      REALTYPE *t_air,
-                      REALTYPE *p_atm,
-                      REALTYPE *c_wind,
-                      REALTYPE *humidity_surface,
-                      REALTYPE *humidity_altitude,
-                      REALTYPE *m_wet_point,
-                      REALTYPE *m_surface,
-                      int n_max, int n_surface)
+AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
+                          AED_REAL *Q_sensible,
+                          AED_REAL  WindSp,
+                          AED_REAL  WaterTemp,
+                          AED_REAL  AirTemp,
+                          AED_REAL  p_atm,
+                          AED_REAL  humidity_surface,
+                          AED_REAL  humidity_altitude)
 {
-    REALTYPE U10[n_surface+1], U_sensM[n_surface+1], CD4[n_surface+1];
-    REALTYPE zL, L, zL0, z0, zS, G1, G2, G3, G5, G6;
-    REALTYPE U_sensH, CDN10, CHWN10, CDN4, CDN3;
-    REALTYPE CHW, CHWN, rCDN, P1, P2, P4;
-    REALTYPE atm_density, T_virt, Ux, dT, dq;
-    REALTYPE SH, LH, momn_flux;
-    REALTYPE r_o, r_a, rho_a, rho_o, alpha_e;
-    REALTYPE evap_heat_flux_still, sens_heat_flux_still;
+    AED_REAL U10, U_sensM, CD4;
+    AED_REAL zL, L, zL0, z0, zS, G1, G2, G3, G5, G6;
+    AED_REAL U_sensH, CDN10, CHWN10, CDN4, CDN3;
+    AED_REAL CHW, CHWN, rCDN, P1, P2, P4;
+    AED_REAL rho_air, T_virt, Ux, dT, dq;
+    AED_REAL SH, LH, momn_flux;
+    AED_REAL r_o, r_a, rho_a, rho_o, alpha_e;
+    AED_REAL Q_latentheat_still, Q_sensible_still;
 
-    int NCOUNT, i;
+    int NCOUNT;
 
-    REALTYPE c_vonK = 0.41;      // Von Karmans constant
-    REALTYPE c_z0 = 0.0001;      // Default roughness
+    AED_REAL vonK = 0.41;      // Von Karmans constant
+    AED_REAL c_z0 = 0.0001;    // Default roughness
+    AED_REAL cp_air = 1005.0;  // Specific heat of air
 
-    REALTYPE zL_MAX;
+    AED_REAL zL_MAX;
 
 /*----------------------------------------------------------------------------*/
 
     // Bound the iteration (e.g. 15 for 10m, 3 for 2m)
     zL_MAX = -15.0;
 
-/*
-    if (time_step == 1) {
-        printf("                       --oo0oo--                          \n");
-        printf("  Correction for atmospheric stability is being calculated\n");
-        printf("  Anemometer Height (m)                  = %f\n",WIND_HEIGHT);
-        printf("  Humidity/Temperature Sensor Height (m) = %f\n",HUMIDITY_HEIGHT);
-        printf("                       --oo0oo--                          \n");
-    }
-*/
+    if (abs(WIND_HEIGHT-10.0) > 0.5)
+        U10 = WindSp * (log(10.0/c_z0)/log(WIND_HEIGHT/c_z0));
+    else
+        U10 = WindSp;
 
-    if (abs(WIND_HEIGHT-10.0) > r_comp) {
-        for (i = 0; i <= n_surface; i++)
-            U10[i] = wind_speed[i]*(log(r_ten/c_z0)/log(WIND_HEIGHT/c_z0));
+    U_sensM = WindSp;
+
+    CHWN10 = CH;
+
+    // Calculate still air approximations and use this as a minimum
+    // Fluxes to sill air see TVA Section 5.311 and 5.314
+
+    // mixing ratios
+    r_o = humidity_surface/(1-humidity_surface/c_gas);
+    r_a = humidity_altitude/(1-humidity_altitude/c_gas);
+
+    // density
+    // 0.01 is for conversion from pascal to millibars
+    rho_a = 0.348*((1+r_a)/(1+1.61*r_a))*(p_atm*0.01/(AirTemp+Kelvin));  // should use atm_density
+    rho_o = 0.348*((1+r_o)/(1+1.61*r_o))*(p_atm*0.01/(WaterTemp+Kelvin));
+
+    dT = WaterTemp - AirTemp;
+    dq = humidity_surface - humidity_altitude;
+
+    if (rho_a - rho_o > zero) {
+        alpha_e = 0.137*0.5*(gamma_air/cp_air)* pow((9.81*(rho_a-rho_o)/(rho_a*mu_air*k_air)), (1/3.0));
+        Q_sensible_still = -alpha_e * dT;
+        Q_latentheat_still = -alpha_e * dq * latent;
     } else {
-        for (i = 0; i <= n_surface; i++)
-            U10[i] = wind_speed[i];
+        Q_sensible_still = zero;
+        Q_latentheat_still = zero;
     }
-    for (i = 0; i <= n_surface; i++)
-        U_sensM[i] = wind_speed[i];
 
-    CHWN10 = 0.0013;
-    for (i = 0; i <= n_surface; i++) {
-        if (m_wet_point(m_surface[i]) == 0)
-            continue;  // back to start of the loop
+    CDN10 = 0.001;
+    if (U_sensM<0.01) {
+        *Q_sensible = Q_sensible_still;
+        *Q_latentheat = Q_latentheat_still;
+    } else {
+        // Neutral Drag Coefficient is a function of windspeed @ 10m
+        //Option1
+          //  if (U10 > 5.0)
+          //      CDN10 = (1.0 + 0.07*(U10-5.0))/1000.0;
+        //Option2
+        CDN10 = 1.92E-7 * U10*U10*U10 + 0.00096;
 
-        // Calculate still air approximations and use this as a minimum
-        // Fluxes to sill air see TVA Section 5.311 and 5.314
+        //Check
+        if (CDN10>0.0025) CDN10 = 0.025;
+    }
 
-        // mixing ratios
-        r_o = humidity_surface[i]/(1-humidity_surface[i]/c_gas);
-        r_a = humidity_altitude[i]/(1-humidity_altitude[i]/c_gas);
+    // Atmospheric Density
+    //?rho_air = RHO_AIR*Kelvin/(AirTemp+Kelvin);
+    //rho_air = (p_atm)/(287.058 * (AirTemp+Kelvin));
+    rho_air = rho_a;
 
-        // density
-        // 0.01 is for conversion from pascal to millibars
-        rho_a = 0.348*((1+r_a)/(1+1.61*r_a))*(p_atm[i]*0.01/(t_air[i]+c_tbase));
-        rho_o = 0.348*((1+r_o)/(1+1.61*r_o))*(p_atm[i]*0.01/(temperature(m_surface[i])+c_tbase));
+    // Charnock computation of roughness, from Ux estimate.
+    // 0.00001568 is kin viscosity
+    // 0.012 is Charnock constant (alpha)
+    Ux = sqrt(CDN10  * U_sensM * U_sensM);
+    z0 = (0.012*Ux*Ux/9.81) + 0.11*0.00001568/Ux;
+    CDN10 = pow(vonK/log(10./z0),2.0);
 
-        dT = (temperature(m_surface[i]) - t_air[i]);
-        dq = (humidity_surface[i] - humidity_altitude[i]);
+    // Estimate Surface Roughness Lengths
+    z0 = 10.0/(exp(vonK/sqrt(CDN10)));
+    zS = 10.0/(exp(vonK*vonK/(CHWN10*log(10.0/z0))));
 
-        if (rho_a - rho_o > r_zero) {
-            alpha_e = 0.137*0.5*(gamma_air/cp_air)* pow((GRAV_TRUE*(rho_a-rho_o)/(rho_a*mu_air*k_air)), (1/r_three));
-            sens_heat_flux_still = -alpha_e * dT;
-            evap_heat_flux_still = -alpha_e * dq * c_latent_heat;
-        } else {
-            sens_heat_flux_still = r_zero;
-            evap_heat_flux_still = r_zero;
-        }
+    // Height Correction Factors
+    G1 = log(10.0/z0);
+    G2 = log(10.0/zS);
+    G3 = log(HUMIDITY_HEIGHT/zS);
+    G5 = log(HUMIDITY_HEIGHT/z0);
+    G6 = log(WIND_HEIGHT/z0);
 
-        if (U_sensM[i]<0.01) {
-            sens_heat_flux[i] = sens_heat_flux_still;
-            evap_heat_flux[i] = evap_heat_flux_still;
-        } else {
-            // Neutral Drag Coefficient is a function of windspeed @ 10m
-            CDN10 = 0.001;
-            if (U10[i] > r_five) {
-               CDN10 = (r_one + 0.07*(U10[i]-r_five))/1000.0;
-            }
+    CDN4 = CDN10*(G1*G1)/(G6*G6);    // Scale down to sensor heights
+    CDN3 = CDN10*(G1*G1)/(G5*G5);
+    CHWN = CHWN10*(G1*G2)/(G5*G3);
+    CD4  = CDN4;                   // Initialize
+    CHW  = CHWN;
 
-            // Estimate Surface Roughness Lengths
-            z0 = r_ten/(exp(c_vonK/sqrt(CDN10)));
-            zS = r_ten/(exp(c_vonK*c_vonK/(CHWN10*log(r_ten/z0))));
+    // Windspeed at the humidity sensor height
+    U_sensH = U_sensM*(G5/G6);
 
-            // Height Correction Factors
-            G1 = log(r_ten/z0);
-            G2 = log(r_ten/zS);
-            G3 = log(HUMIDITY_HEIGHT/zS);
-            G5 = log(HUMIDITY_HEIGHT/z0);
-            G6 = log(WIND_HEIGHT/z0);
+    // Virtual Air Temperature
+    T_virt = (AirTemp + Kelvin) * (1.0 + 0.61*humidity_altitude);
 
-            CDN4 = CDN10*(G1*G1)/(G6*G6);    // Scale down to sensor heights
-            CDN3 = CDN10*(G1*G1)/(G5*G5);
-            CHWN = CHWN10*(G1*G2)/(G5*G3);
-            CD4[i] = CDN4;                   // Initialize
-            CHW = CHWN;
+    // Heat Fluxes
+    dT = WaterTemp - AirTemp;
+    dq = humidity_surface - humidity_altitude;
+    SH = CHW * rho_air * cp_air * U_sensH  * dT;
+    LH = CHW * rho_air * U_sensH * dq;
 
-            // Windspeed at Humidity Sensor
-            U_sensH = U_sensM[i]*(G5/G6);
+    // Friction Velocity
+    momn_flux = CD4 * rho_air * U_sensM*U_sensM;
+    Ux = sqrt(momn_flux/rho_air);
 
-            // Atmospheric Density
-            atm_density = RHO_AIR*c_tbase/(t_air[i]+c_tbase);
+    // Monin - Obukhov Length
+    L = -rho_air *Ux*Ux*Ux * T_virt / (vonK * 9.81
+                            * ((SH/cp_air) + 0.61*(AirTemp+Kelvin)*LH));
+    if (abs(L) < 0.5)
+        L = SIGN(1.0*1.0e-20,dT);
+    zL = HUMIDITY_HEIGHT/L;
 
-            // Virtual Air Temperature
-            T_virt = (t_air[i] + c_tbase)*(r_one + 0.61*humidity_altitude[i]);
+    // Start Iterative Sequence for Heat Flux Calculations
+    NCOUNT = 1;
+    zL0 = zero;
+    while ((abs(zL - zL0) >= 0.0001*abs(zL)) && (abs(zL) <= abs(zL_MAX))) {
+        zL0 = zL;
+        zL = WIND_HEIGHT/L;
 
-            // Heat Fluxes
-            dT = (temperature(m_surface[i]) - t_air[i]);
-            dq = (humidity_surface[i] - humidity_altitude[i]);
-            SH = CHW * atm_density * cp_air * U_sensH  * dT;
-            LH = CHW * atm_density * U_sensH * dq;
+        if (++NCOUNT>=15)
+            break;
 
-            // Friction Velocity
-            momn_flux = CD4[i] * atm_density * U_sensM[i]*U_sensM[i];
-            Ux = sqrt(momn_flux/atm_density);
+        // Calculate Drag Coefficient, CD
+        P4 = psi_m(zL);
+        rCDN = sqrt(CDN4);
+        CD4 = CDN4/(1.0+CDN4*(P4*P4 - 2.0*vonK*P4/rCDN)/(vonK*vonK));
 
-            // Monin - Obukhov Length
-            L = -atm_density *Ux*Ux*Ux * T_virt / (c_vonK * GRAV_TRUE
-                            * ((SH/cp_air) + 0.61*(t_air[i]+c_tbase)*LH));
-            if (abs(L) < r_comp) {
-                L = SIGN(r_one*1.0e-20,dT);
-            }
-            zL = HUMIDITY_HEIGHT/L;
+        // Calculate Humdity/Temp Coefficient, CHW
+        zL = HUMIDITY_HEIGHT/L;
 
-            // Start Iterative Sequence for Heat Flux Calculations
-            NCOUNT = 1;
-            zL0 = r_zero;
-            while ((abs(zL - zL0)>= 0.0001*abs(zL)) && (abs(zL) <= abs(zL_MAX))) {
-                zL0 = zL;
-                NCOUNT = NCOUNT + 1;
-                zL = WIND_HEIGHT/L;
-                if (NCOUNT>=15) {
-                    break;
-                }
-                // Calculate Drag Coefficient, CD
-                P4 = PSI_M(zL);
-                rCDN = sqrt(CDN4);
-                CD4[i] = CDN4/(r_one+CDN4*(P4*P4 - r_two*c_vonK*P4/rCDN)/(c_vonK*c_vonK));
-                // Calculate Humdity/Temp Coefficient, CHW
-                zL = HUMIDITY_HEIGHT/L;
+        P1 = psi_m(zL);
+        P2 = psi_hw(zL);
+        rCDN = sqrt(CDN3);
+        CHW = CHWN/(1.0 + CHWN*(P1*P2 - (vonK*P2/rCDN)
+                            - vonK*P1*rCDN/CHWN)/(vonK*vonK));
 
-                P1 = PSI_M(zL);
-                P2 = PSI_HW(zL);
-                rCDN = sqrt(CDN3);
-                CHW = CHWN/(r_one + CHWN*(P1*P2 - (c_vonK*P2/rCDN)
-                            - c_vonK*P1*rCDN/CHWN)/(c_vonK*c_vonK));
+        // Recalculate Heat Fluxes
+        SH = CHW * rho_air * cp_air * U_sensH * dT;
+        LH = CHW * rho_air * U_sensH  * dq;
+        momn_flux = CD4 * rho_air * U_sensM*U_sensM;
 
-                // Recalculate Heat Fluxes
-                SH = CHW * atm_density * cp_air * U_sensH * dT;
-                LH = CHW * atm_density * U_sensH  * dq;
-                momn_flux = CD4[i] * atm_density * U_sensM[i]*U_sensM[i];
-                // Recalculate Friction Velocity
-                Ux = sqrt(momn_flux/atm_density);
-                // Recalculate Monin - Obukhov Length
-                L = -atm_density *Ux*Ux*Ux * T_virt / (c_vonK * GRAV_TRUE
-                                * ((SH/cp_air) + 0.61*(t_air[i]+c_tbase)*LH));
-                if (abs(L) < r_comp) {
-                    L = SIGN(r_one*1.0e-20,dT);
-                }
-                zL = HUMIDITY_HEIGHT/L;
-            } // enddo
+        // Recalculate Friction Velocity
+        Ux = sqrt(momn_flux/rho_air);
 
-            // Last Calculation - But 1st, check for high values
-            if (abs(zL)>abs(zL_MAX))
-                zL = SIGN(abs(zL_MAX),zL);
-            else
-                zL = WIND_HEIGHT/L;
+        // Recalculate Monin - Obukhov Length
+        L = -rho_air *Ux*Ux*Ux * T_virt / (vonK * 9.81
+                                * ((SH/cp_air) + 0.61*(AirTemp+Kelvin)*LH));
 
-            P4 = PSI_M(zL);
-            rCDN = sqrt(CDN4);
-            CD4[i] = CDN4/(r_one+CDN4*(P4*P4 - r_two*c_vonK*P4/rCDN)/(c_vonK*c_vonK));
-            zL = zL*HUMIDITY_HEIGHT/WIND_HEIGHT;
-            P1 = PSI_M(zL);
-            P2 = PSI_HW(zL);
-            rCDN = sqrt(CDN3);
-            CHW = CHWN/(r_one + CHWN*(P1*P2 - (c_vonK*P2/rCDN)
-                                - c_vonK*P1*rCDN/CHWN)/(c_vonK*c_vonK));
-
-            sens_heat_flux[i] = -CHW * atm_density * cp_air * U_sensH * dT;
-            evap_heat_flux[i] = -CHW * atm_density * U_sensH * dq * c_latent_heat;
-
-            // Limit minimum to still air value
-            if (sens_heat_flux_still < sens_heat_flux[i])
-                sens_heat_flux[i] = sens_heat_flux_still;
-            if (evap_heat_flux_still < evap_heat_flux[i])
-                evap_heat_flux[i] = evap_heat_flux_still;
-
-            // Link stability corrected drag to main code
-            c_wind[i] = CD4[i];
-        }
+        if (abs(L) < 0.5)
+            L = SIGN(1.0e-20,dT);
+        zL = HUMIDITY_HEIGHT/L;
     } // enddo
+
+    // Last Calculation - But 1st, check for high values
+    if (abs(zL)>abs(zL_MAX))
+        zL = SIGN(abs(zL_MAX),zL);
+    else
+        zL = WIND_HEIGHT/L;
+
+    P4 = psi_m(zL);
+    rCDN = sqrt(CDN4);
+    CD4 = CDN4/(1.0+CDN4*(P4*P4 - 2.0*vonK*P4/rCDN)/(vonK*vonK));
+    zL = zL*HUMIDITY_HEIGHT/WIND_HEIGHT;
+    P1 = psi_m(zL);
+    P2 = psi_hw(zL);
+    rCDN = sqrt(CDN3);
+    CHW = CHWN/(1.0 + CHWN*(P1*P2 - (vonK*P2/rCDN)
+            - vonK*P1*rCDN/CHWN)/(vonK*vonK));
+
+    *Q_sensible = -CHW * rho_air * cp_air * U_sensH * dT;
+    *Q_latentheat = -CHW * rho_air * U_sensH * dq * latent;
+
+    // Limit minimum to still air value
+    if (Q_sensible_still < *Q_sensible)
+        *Q_sensible = Q_sensible_still;
+    if (Q_latentheat_still < *Q_latentheat)
+        *Q_latentheat = Q_latentheat_still;
+
+    // Link stability corrected drag to main code
+    return CD4;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-#endif
+
 
 /******************************************************************************/
-REALTYPE PSI_M(REALTYPE zL)
+static AED_REAL psi_m(AED_REAL zL)
 {
-    REALTYPE X;
+    AED_REAL X;
 
-    REALTYPE AA = 5.0;
-    REALTYPE PIE = 3.14159;
+    AED_REAL AA = 5.0;
+    AED_REAL PIE = 3.14159;
 
 /*----------------------------------------------------------------------------*/
 
     if (zL < 0.0) {
-        X = pow(r_one - 16.0*zL, 0.25);
-        return r_two*log((r_one+X)/r_two)+log((r_one+X*X)/r_two) - r_two*atan(X) + PIE/r_two;
+        X = pow(1.0 - 16.0*zL, 0.25);
+        return 2.0*log((1.0+X)/2.0)+log((1.0+X*X)/2.0) - 2.0*atan(X) + PIE/2.0;
     } else if (zL > 0.0) {
         if (zL > 0.5) {
-            if (zL > r_ten)
-                return log(r_one*zL) - 0.76*zL - 12.093;
+            if (zL > 10.0)
+                return log(1.0*zL) - 0.76*zL - 12.093;
             return (0.5/(zL*zL)) -4.25/zL -7.0*log(zL)-0.852;
         }
-        return -AA*zL;
+        return -AA * zL;
     }
     return 0.0;
 }
@@ -1101,24 +1222,24 @@ REALTYPE PSI_M(REALTYPE zL)
 
 
 /******************************************************************************/
-REALTYPE PSI_HW(REALTYPE zL)
+static AED_REAL psi_hw(AED_REAL zL)
 {
-    REALTYPE X;
+    AED_REAL X;
 
-    REALTYPE AA = 5.0;
+    AED_REAL AA = 5.0;
 
 /*----------------------------------------------------------------------------*/
 
     if (zL < 0.0) {
-        X = pow(r_one - 16.0*zL, 0.25);
-        return r_two*log((r_one+X*X)/r_two);
+        X = pow(1.0 - 16.0*zL, 0.25);
+        return 2.0*log((1.0+X*X)/2.0);
     } else if (zL > 0.0) {
         if (zL > 0.5) {
-            if (zL>r_ten)
+            if (zL > 10.0)
                 return log(zL) - 0.76*zL - 12.093;
             return (0.5/(zL*zL)) -4.25/zL -7.0*log(zL) -0.852;
         }
-        return -AA*zL;
+        return -AA * zL;
     }
 
     return 0.0;

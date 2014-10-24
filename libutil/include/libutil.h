@@ -28,13 +28,13 @@
 #ifndef _LIBUTIL_H_
 #define _LIBUTIL_H_
 
-#define LIB_UTIL_VERSION  "0.9.2"
+#define LIB_UTIL_VERSION  "0.9.4"
 
-#ifndef REALTYPE
+#ifndef AED_REAL
    #if SINGLE
-     #define REALTYPE float
+     #define AED_REAL float
    #else
-     #define REALTYPE double
+     #define AED_REAL double
    #endif
 #endif
 #ifndef LOGICAL

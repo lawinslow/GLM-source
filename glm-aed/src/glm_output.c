@@ -46,6 +46,7 @@
 #include "glm.h"
 
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "aed_time.h"
@@ -54,30 +55,22 @@
 #include "glm_ncdf.h"
 #include "glm_wqual.h"
 #include "glm_plot.h"
-#ifdef PLOTS
+
 #include "libplot.h"
-#endif
+
 /* for WQ interface */
-void write_glm_wq(int ncid, int wlev, int nlev, int *lvl, int point_nlevs)
-{ write_glm_wq_(&ncid, &wlev, &nlev, lvl, &point_nlevs); }
+void wq_write_glm(int ncid, int wlev, int nlev, int *lvl, int point_nlevs)
+{ wq_write_glm_(&ncid, &wlev, &nlev, lvl, &point_nlevs); }
 
 
-extern REALTYPE XLW, XCO, XEV, QSW;
-
-#ifdef PLOTS
-extern int saveall;
-extern int do_plots, theplots[10], nplots;
-#ifdef XPLOTS
-extern int xdisp;
-#endif
-#endif
+extern AED_REAL XLW, XCO, XEV, QSW;
 
 
 /******************************************************************************
  * Initialise output streams                                                  *
- *----------------------------------------------------------------------------*/
+ ******************************************************************************/
 void init_output(int jstart, const char *out_dir, const char *out_fn,
-                   int oMaxLayers, REALTYPE Longitude, REALTYPE Latitude, int o_lkn)
+                   int oMaxLayers, AED_REAL Longitude, AED_REAL Latitude, int o_lkn)
 {
     char ts[20];
     char path[1024];
@@ -105,14 +98,9 @@ void init_output(int jstart, const char *out_dir, const char *out_fn,
     init_csv_output(out_dir, lkn);
 
     //# Initialize WQ output (creates NetCDF variables)
-    if (wq_calc) init_glm_wq_output(&ncid, &x_dim, &y_dim, &z_dim, &time_dim);
+    if (wq_calc) wq_init_glm_output(&ncid, &x_dim, &y_dim, &z_dim, &time_dim);
 
 #ifdef PLOTS
-# ifdef XPLOTS
-    do_plots = xdisp || saveall;
-# else
-    do_plots = saveall;
-# endif
     if ( do_plots ) init_plots(jstart,nDays,CrestLevel);
 #endif
 }
@@ -120,10 +108,10 @@ void init_output(int jstart, const char *out_dir, const char *out_fn,
 
 
 /******************************************************************************/
-static REALTYPE min_temp(LakeDataType *Lake, int count)
+static AED_REAL min_temp(LakeDataType *Lake, int count)
 {
     int i;
-    REALTYPE min;
+    AED_REAL min;
 
     min = Lake[0].Temp;
     for (i = 1; i < count; i++)
@@ -134,10 +122,10 @@ static REALTYPE min_temp(LakeDataType *Lake, int count)
 
 
 /******************************************************************************/
-static REALTYPE max_temp(LakeDataType *Lake, int count)
+static AED_REAL max_temp(LakeDataType *Lake, int count)
 {
     int i;
-    REALTYPE max;
+    AED_REAL max;
 
     max = Lake[0].Temp;
     for (i = 1; i < count; i++)
@@ -148,9 +136,9 @@ static REALTYPE max_temp(LakeDataType *Lake, int count)
 
 
 /******************************************************************************/
-static REALTYPE sum_lake_layervol()
+static AED_REAL sum_lake_layervol()
 {
-    REALTYPE sum = 0.;
+    AED_REAL sum = 0.;
     int i;
     for (i = 0; i < NumLayers; i++)
         sum += Lake[i].LayerVol;
@@ -160,10 +148,10 @@ static REALTYPE sum_lake_layervol()
 
 
 /******************************************************************************/
-static REALTYPE max_dtdz_at(LakeDataType *Lake, int count)
+static AED_REAL max_dtdz_at(LakeDataType *Lake, int count)
 {
     int  i, max_at;
-    REALTYPE dtdz, max_dtdz;
+    AED_REAL dtdz, max_dtdz;
 
     if (count < 2)
         return Lake[0].Height / 2;
@@ -184,7 +172,7 @@ static REALTYPE max_dtdz_at(LakeDataType *Lake, int count)
 
 /******************************************************************************
  * Write the various output files and/or plots.                               *
- *----------------------------------------------------------------------------*/
+ ******************************************************************************/
 void write_output(int jday, int iclock, int nsave, int stepnum)
 {
     int i, n, lvl[MaxPointCSV];
@@ -218,6 +206,8 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
         put_xplot_val("rad", NumLayers, NULL);
         put_xplot_val("extc", NumLayers, NULL);
         put_xplot_val("dens", NumLayers, NULL);
+        put_xplot_val("uorb", NumLayers, NULL);
+        put_xplot_val("taub", NumLayers, NULL);
     }
 #endif
 
@@ -225,7 +215,7 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
 
     //# outputs WQ vars to NetCDF
     if (wq_calc)
-        write_glm_wq(ncid, NumLayers, MaxLayers, lvl, csv_point_nlevs);
+        wq_write_glm(ncid, NumLayers, MaxLayers, lvl, csv_point_nlevs);
 
     if (csv_point_nlevs > 0) {
         for (i = 0; i < csv_point_nlevs; i++)
@@ -250,10 +240,11 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
 
 /******************************************************************************
  * Write the various output files and/or plots.                               *
- *----------------------------------------------------------------------------*/
-void write_diags(int jday, REALTYPE LakeNum)
+ ******************************************************************************/
+void write_diags(int jday, AED_REAL LakeNum)
 {
     char ts[20];
+    extern AED_REAL Hs, L, T;
 
     if ( csv_lake_file < 0 ) return;
 
@@ -282,23 +273,28 @@ void write_diags(int jday, REALTYPE LakeNum)
     write_csv_lake("Light",           Lake[surfLayer].Light,     NULL, FALSE);
     write_csv_lake("Benthic Light",   Benthic_Light_pcArea,      NULL, FALSE);
 
+    write_csv_lake("H_s",             Hs,                        NULL, FALSE);
+    write_csv_lake("L",               L,                         NULL, FALSE);
+    write_csv_lake("T",               T,                         NULL, FALSE);
+
     if (lkn) write_csv_lake("LakeNumber", LakeNum, NULL, FALSE);
-    write_csv_lake("Max dT/dz",    max_dtdz_at(Lake, NumLayers), NULL, TRUE);
+    write_csv_lake("Max dT/dz",    max_dtdz_at(Lake, NumLayers), NULL, FALSE);
+    write_csv_lake("coef_wind_drag", coef_wind_drag,             NULL, TRUE);
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
 /******************************************************************************
  * Write the outflow data file with WQ variables.                             *
- *----------------------------------------------------------------------------*/
-void write_outflow(int of_idx, int jday, REALTYPE vol)
+ ******************************************************************************/
+void write_outflow(int of_idx, int jday, AED_REAL vol)
 {
     char ts[64];
     int i, lvl;
-    REALTYPE DrawHeight;
+    AED_REAL DrawHeight;
     extern int csv_outlet_allinone, csv_outfl_nvars;
     extern int ofl_wq_idx[];
-    static REALTYPE vol_tot, state_of_v[MaxCSVOutVars];
+    static AED_REAL vol_tot, state_of_v[MaxCSVOutVars];
 
     //# work out which level the outflow is at now.
     if (Outflows[of_idx].FloatOff) {
@@ -351,7 +347,7 @@ void write_outflow(int of_idx, int jday, REALTYPE vol)
 
 /******************************************************************************
  * Close files and plots                                                      *
- *----------------------------------------------------------------------------*/
+ ******************************************************************************/
 void close_output()
 {
     close_glm_ncdf(ncid);

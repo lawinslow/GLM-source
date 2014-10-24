@@ -30,13 +30,16 @@
 #ifndef _GLM_GLOBALS_H_
 #define _GLM_GLOBALS_H_
 
-#if _FORTRAN_VERSION_
+#ifdef _FORTRAN_VERSION_
 
 INTERFACE
 
      SUBROUTINE set_c_wqvars_ptr(iwqvars) BIND(C, name="set_c_wqvars_ptr")
         USE ISO_C_BINDING
-        REALTYPE,INTENT(in) :: iwqvars(*)
+#       if defined( _WIN32 ) && USE_DL_LOADER
+        !DEC$ ATTRIBUTES DLLIMPORT :: set_c_wqvars_ptr
+#       endif
+        AED_REAL,INTENT(in) :: iwqvars(*)
      END SUBROUTINE set_c_wqvars_ptr
 
 # if DEBUG
@@ -74,31 +77,32 @@ extern int NumLayers;   //* current number of layers
 extern LakeDataType *Lake;
 
 
-extern REALTYPE Latitude, Longitude;
+extern AED_REAL Latitude, Longitude;
 
-extern REALTYPE DMin;    //* minimum layer thickness
-extern REALTYPE DMax;    //* maximum layer thickness
-extern REALTYPE VMin;    //* minimum layer volume
-extern REALTYPE VMax;    //* maximum layer volume
+extern AED_REAL DMin;    //* minimum layer thickness
+extern AED_REAL DMax;    //* maximum layer thickness
+extern AED_REAL VMin;    //* minimum layer volume
+extern AED_REAL VMax;    //* maximum layer volume
 
-extern REALTYPE Kw;      //* background light attenuation (m**-1)
+extern AED_REAL Kw;      //* background light attenuation (m**-1)
 
 extern int wq_calc;      //* are we doing water quality calcs
 
 extern int Num_WQ_Vars;      //* number of water quality variables
-extern REALTYPE *WQ_Vars;    //* water quality array, nlayers, nvars
+extern AED_REAL *WQ_Vars;    //* water quality array, nlayers, nvars
 
-extern REALTYPE *dz;   //* layer thickness
+extern CLOGICAL atm_stab;      // Account for non-neutral atmospheric stability
 
 /*----------------------------------------------------------------------------*/
 
-extern REALTYPE CrestLevel; //* crest elevation of reservoir
-extern REALTYPE LenAtCrest; //* length of reservoir at crest
-extern REALTYPE WidAtCrest; //* width of reservoir at crest
-extern REALTYPE VolAtCrest; //* volume at crest level
-extern REALTYPE Base;       //* bottom elevation of reservoir
-extern REALTYPE Benthic_Light_pcArea;
-extern REALTYPE Benthic_Imin;
+extern AED_REAL CrestLevel; //* crest elevation of reservoir
+extern AED_REAL LenAtCrest; //* length of reservoir at crest
+extern AED_REAL WidAtCrest; //* width of reservoir at crest
+extern AED_REAL VolAtCrest; //* volume at crest level
+extern AED_REAL Base;       //* bottom elevation of reservoir
+extern AED_REAL Benthic_Light_pcArea;
+extern AED_REAL Benthic_Imin;
+extern AED_REAL MaxArea;
 
 /*----------------------------------------------------------------------------*/
 
@@ -111,10 +115,11 @@ extern OutflowDataType Outflows[];  //* Array of Outflows
 /*----------------------------------------------------------------------------*/
 
 extern int NumDif;
-extern REALTYPE mol_diffusivity[];
-extern REALTYPE coef_wind_drag;   //* = 0.0013;
-extern REALTYPE CE;   //* = 0.0013;
-extern REALTYPE CH;   //* = 0.0013;
+extern AED_REAL mol_diffusivity[];
+extern AED_REAL coef_wind_drag;   //* = 0.0013;
+extern AED_REAL CD;   //* = 0.0013;
+extern AED_REAL CE;   //* = 0.0013;
+extern AED_REAL CH;   //* = 0.0013;
 
 /*----------------------------------------------------------------------------*/
 
@@ -126,40 +131,48 @@ extern int subdaily; //* = FALSE;
 
 extern int Nmorph;             //* Number of data points
 
-extern REALTYPE *MphLevelArea;    //* area of each layer determined by linear interpolation
-extern REALTYPE *dMphLevelArea;   //* gradients of area between 0.1m layers
-extern REALTYPE *dMphLevelVol;    //* gradients of volume between 0.1m layers
-extern REALTYPE *dMphLevelVolda;  //*
-extern REALTYPE *MphLevelVol;     //* volume of each layer determined by linear interpolation
-extern REALTYPE *MphLevelVoldash; //*
+extern AED_REAL *MphLevelArea;    //* area of each layer determined by linear interpolation
+extern AED_REAL *dMphLevelArea;   //* gradients of area between 0.1m layers
+extern AED_REAL *dMphLevelVol;    //* gradients of volume between 0.1m layers
+extern AED_REAL *dMphLevelVolda;  //*
+extern AED_REAL *MphLevelVol;     //* volume of each layer determined by linear interpolation
+extern AED_REAL *MphLevelVoldash; //*
 
 /*----------------------------------------------------------------------------*/
-extern REALTYPE vel;
-extern REALTYPE WaveNumSquared;
-extern REALTYPE XMoment1;
+extern AED_REAL vel;
+extern AED_REAL WaveNumSquared;
+extern AED_REAL XMoment1;
 
 /*----------------------------------------------------------------------------*/
 
-extern REALTYPE einff;   //* change in potential energy (see do_inflows)
-extern REALTYPE coef_mix_KH;    //* Kelvin-Helmholtz billows
-extern REALTYPE coef_mix_conv;  //* convective overturn
-extern REALTYPE coef_mix_shear; //* shear efficiency
-extern REALTYPE coef_mix_turb;  //* unsteady effects
-extern REALTYPE coef_wind_stir; //* wind stirring
-extern REALTYPE coef_mix_hyp;   //# efficiency of hypolimnetic mixing
+extern AED_REAL einff;   //* change in potential energy (see do_inflows)
+extern AED_REAL coef_mix_KH;    //* Kelvin-Helmholtz billows
+extern AED_REAL coef_mix_conv;  //* convective overturn
+extern AED_REAL coef_mix_shear; //* shear efficiency
+extern AED_REAL coef_mix_turb;  //* unsteady effects
+extern AED_REAL coef_wind_stir; //* wind stirring
+extern AED_REAL coef_mix_hyp;   //# efficiency of hypolimnetic mixing
 
 extern CLOGICAL mobility_off;
 extern CLOGICAL non_avg;
 extern int      deep_mixing;    //# = 0 => off > 0 => on
 
+extern CLOGICAL catchrain;
+extern AED_REAL rain_threshold;
+extern AED_REAL runoff_coef;
+
+extern int      rad_mode;
+extern int      albedo_mode;
+extern int      cloud_mode;
+
 /*----------------------------------------------------------------------------*/
 
-extern REALTYPE db;  //* = 0.;
+extern AED_REAL timezone, timezone_m, timezone_i, timezone_o;
 
 /*----------------------------------------------------------------------------*/
 
-extern int nDays;          //* number of days to simulate
-extern REALTYPE timestep;
+extern int nDays;          //# number of days to simulate
+extern AED_REAL timestep;
 extern int noSecs;
 
 /*----------------------------------------------------------------------------*
@@ -169,7 +182,7 @@ extern CLOGICAL no_evap;   //* turn off evaporation
 
 /******************************************************************************/
 void allocate_storage(void);
-void set_c_wqvars_ptr(REALTYPE *iwqvars);
+void set_c_wqvars_ptr(AED_REAL *iwqvars);
 
 void debug_print_lake(void);
 void debug_initialisation(int which);

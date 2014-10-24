@@ -38,7 +38,7 @@
 #endif
 #define USE_FILLVALUE 1
 
-#define GLM_VERSION  "1.4.0"
+#define GLM_VERSION  "2.0.0beta1"
 
 #define POINT         0
 #define Z_SHAPE       1
@@ -60,11 +60,15 @@
 #  define WQ_INF_(a,i,j) a(_IDX_2d(MaxInf,MaxVars,i,j))
 
 #  if SINGLE
-#    define REALTYPE real(kind=C_FLOAT)
+#    ifndef AED_REAL
+#    define AED_REAL real(kind=C_FLOAT)
+#    endif
 #    define NF90_REALTYPE NF90_FLOAT
 #    define NC_FILLER NC_FILL_FLOAT
 #  else
-#    define REALTYPE REAL(kind=C_DOUBLE)
+#    ifndef AED_REAL
+#    define AED_REAL REAL(kind=C_DOUBLE)
+#    endif
 #    define NF90_REALTYPE NF90_DOUBLE
 #    define NC_FILLER NC_FILL_DOUBLE
 #    define IFIX IDINT
@@ -97,12 +101,12 @@
 
   #if SINGLE
     #define AMOD fmodf
-    typedef float REALTYPE;
+    typedef float AED_REAL;
     #define NC_REALTYPE NC_FLOAT
     #define NC_FILLER NC_FILL_FLOAT
   #else
     #define AMOD fmod
-    typedef double REALTYPE;
+    typedef double AED_REAL;
     #define NC_REALTYPE NC_DOUBLE
     #define NC_FILLER NC_FILL_DOUBLE
   #endif

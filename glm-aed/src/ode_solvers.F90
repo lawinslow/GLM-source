@@ -36,11 +36,11 @@
 
 #include "glm.h"
 
+# define REALTYPE AED_REAL
+
 #if SINGLE
-!# define REALTYPE real
 # define _POINT_NEG_NINE_ 1.-9
 #else
-!# define REALTYPE double precision
 # define _POINT_NEG_NINE_ 1.d-9
 #endif
 !#define _ZERO_ 0.

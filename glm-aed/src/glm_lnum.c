@@ -36,6 +36,7 @@
 #include "glm.h"
 
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "glm_util.h"
@@ -44,10 +45,10 @@
 int lkn = FALSE;
 
 /*----------------------------------------------------------------------------*/
-static int interpolate_layer_data(REALTYPE *iheight, REALTYPE *density);
-static void lnpe3(int NLayers, REALTYPE *iheight, REALTYPE *density,
-                             REALTYPE *xpp, REALTYPE *zcp, REALTYPE *xmasspe3);
-static REALTYPE calc_xmoment(int NLayers, REALTYPE *iheight, REALTYPE *density);
+static int interpolate_layer_data(AED_REAL *iheight, AED_REAL *density);
+static void lnpe3(int NLayers, AED_REAL *iheight, AED_REAL *density,
+                             AED_REAL *xpp, AED_REAL *zcp, AED_REAL *xmasspe3);
+static AED_REAL calc_xmoment(int NLayers, AED_REAL *iheight, AED_REAL *density);
 /*----------------------------------------------------------------------------*/
 
 
@@ -66,23 +67,23 @@ static REALTYPE calc_xmoment(int NLayers, REALTYPE *iheight, REALTYPE *density);
  *      referring to depth of 0.1m (Top of first layer)                       *
  *                                                                            *
  ******************************************************************************/
-REALTYPE calculate_lake_number(void)
+AED_REAL calculate_lake_number(void)
 {
     int  NLayers;
-    REALTYPE wind_speed;
+    AED_REAL wind_speed;
 #ifndef _VISUAL_C_
-    REALTYPE density[Nmorph], iheight[Nmorph];
+    AED_REAL density[Nmorph], iheight[Nmorph];
 #else
-    REALTYPE *density, *iheight;
+    AED_REAL *density, *iheight;
 #endif
-    REALTYPE lake_top, lake_bottom;
-    REALTYPE usquared, thermdepth;
-    REALTYPE xp, zc, xmass;
+    AED_REAL lake_top, lake_bottom;
+    AED_REAL usquared, thermdepth;
+    AED_REAL xp, zc, xmass;
 
 /*----------------------------------------------------------------------------*/
 #ifdef _VISUAL_C_
-    density = malloc(sizeof(REALTYPE) * Nmorph);
-    iheight = malloc(sizeof(REALTYPE) * Nmorph);
+    density = malloc(sizeof(AED_REAL) * Nmorph);
+    iheight = malloc(sizeof(AED_REAL) * Nmorph);
 #endif
 
     NLayers = interpolate_layer_data(iheight, density);
@@ -138,9 +139,9 @@ REALTYPE calculate_lake_number(void)
  *    of constant value within each layer.(ZERO'th ORDER INTERPOL.)           *
  *                                                                            *
  ******************************************************************************/
-static int interpolate_layer_data(REALTYPE *iheight, REALTYPE *density)
+static int interpolate_layer_data(AED_REAL *iheight, AED_REAL *density)
 {
-    REALTYPE this_height;
+    AED_REAL this_height;
     int i,j;
 
     i = 0;
@@ -149,7 +150,7 @@ static int interpolate_layer_data(REALTYPE *iheight, REALTYPE *density)
     for (j = 0; j < NumLayers; j++) {
         while (this_height <= Lake[j].Height) {
             iheight[i] = this_height;
-            density[i] = Lake[j].Density;
+            density[i] = Lake[j].SPDensity;
             this_height += 0.1;
             i++;
             if ( i > Nmorph ) {
@@ -163,9 +164,11 @@ static int interpolate_layer_data(REALTYPE *iheight, REALTYPE *density)
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*/
-void lnpe3(int NLayers, REALTYPE *iheight, REALTYPE *density, REALTYPE *xpp,
-                                             REALTYPE *zcp, REALTYPE *xmasspe3)
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void lnpe3(int NLayers, AED_REAL *iheight, AED_REAL *density, AED_REAL *xpp,
+                                             AED_REAL *zcp, AED_REAL *xmasspe3)
 {
     DOUBLETYPE zcvp, ab, da, ht, dens, xvol, xvolp;
     DOUBLETYPE xmassp, xpe, zcv, xmass;
@@ -176,15 +179,19 @@ void lnpe3(int NLayers, REALTYPE *iheight, REALTYPE *density, REALTYPE *xpp,
     dens = 0.;
     ibdep = 0;
 
-    // get the centre of volume and potential energy, total mass etc.
-    // locate the surface in relation to the storage table.  ij is
-    // the last storage entry before the surface, y is the distance
-    // to the surface from there.
+    /**************************************************************************
+     * get the centre of volume and potential energy, total mass etc.         *
+     * locate the surface in relation to the storage table.  ij is            *
+     * the last storage entry before the surface, y is the distance           *
+     * to the surface from there.                                             *
+     **************************************************************************/
 
     ij = (iheight[NLayers-1] * 10.0);
 
-    // initialize the loop. il is the current layer number, do the area
-    // gradient starting at ibdep (here, ibdep always equals zero)
+    /**************************************************************************
+     * initialize the loop. il is the current layer number, do the area       *
+     * gradient starting at ibdep (here, ibdep always equals zero)            *
+     **************************************************************************/
 
     xvol = 0.0;
     xmass = 0.0;
@@ -249,24 +256,24 @@ void lnpe3(int NLayers, REALTYPE *iheight, REALTYPE *density, REALTYPE *xpp,
 
 
 /*############################################################################*/
-static REALTYPE calc_xmoment(int NLayers, REALTYPE *iheight, REALTYPE *density)
+static AED_REAL calc_xmoment(int NLayers, AED_REAL *iheight, AED_REAL *density)
 {
 #ifndef _VISUAL_C_
-    REALTYPE BFSQ[Nmorph], mid_depth[Nmorph];
+    AED_REAL BFSQ[Nmorph], mid_depth[Nmorph];
 #else
-    REALTYPE *BFSQ, *mid_depth;
+    AED_REAL *BFSQ, *mid_depth;
 #endif
-    REALTYPE func_XMOM, func_XMOMO;
+    AED_REAL XMom, XMomO;
     int i;
 
 /*-----------------------------------------------------------------------------*/
 #ifdef _VISUAL_C_
-    BFSQ = malloc(sizeof(REALTYPE) * Nmorph);
-    mid_depth = malloc(sizeof(REALTYPE) * Nmorph);
+    BFSQ = malloc(sizeof(AED_REAL) * Nmorph);
+    mid_depth = malloc(sizeof(AED_REAL) * Nmorph);
 #endif
 
-    func_XMOM = 0.0;
-    func_XMOMO = 0.0;
+    XMom = 0.0;
+    XMomO = 0.0;
 
     mid_depth[0] = iheight[0] / 2.0;
 
@@ -275,19 +282,19 @@ static REALTYPE calc_xmoment(int NLayers, REALTYPE *iheight, REALTYPE *density)
 
         BFSQ[i] = gprime(density[i], density[i-1]) / (mid_depth[i] - mid_depth[i-1]);
 
-        func_XMOM  = func_XMOM + iheight[i-1] * BFSQ[i] * (dMphLevelVol[i+1]+dMphLevelVol[i]) / 2.0;
-        func_XMOMO = func_XMOMO +               BFSQ[i] * (dMphLevelVol[i+1]+dMphLevelVol[i]) / 2.0;
+        XMom  = XMom + iheight[i-1] * BFSQ[i] * (dMphLevelVol[i+1]+dMphLevelVol[i]) / 2.0;
+        XMomO = XMomO +               BFSQ[i] * (dMphLevelVol[i+1]+dMphLevelVol[i]) / 2.0;
     }
 
-    if (func_XMOMO <= 0.0)
-        func_XMOM = -1.0;
+    if (XMomO <= 0.0)
+        XMom = -1.0;
     else
-        func_XMOM = func_XMOM / func_XMOMO;
+        XMom = XMom / XMomO;
 
 #ifdef _VISUAL_C_
     free(BFSQ); free(mid_depth);
 #endif
 
-    return func_XMOM;
+    return XMom;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/

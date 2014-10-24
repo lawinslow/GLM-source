@@ -37,15 +37,15 @@
 
 #include "glm.h"
 
-//#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
-#define dbgprt(...) /* __VA_ARGS__ */
-
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "glm_util.h"
 #include "glm_mixu.h"
 
+//#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
+#define dbgprt(...) /* __VA_ARGS__ */
 
 /******************************************************************************
  * This subroutine checks the reservoir layer structure for compliance        *
@@ -69,11 +69,11 @@
 void check_layer_thickness(void)
 {
 //LOCALS
-    REALTYPE D;
-    REALTYPE DELDP;
-    REALTYPE V;         // Split volume
-    REALTYPE Vdown;     // Volume of layer below amalgamation
-    REALTYPE Vup;       // Volume of layer above amalgamation
+    AED_REAL D;
+    AED_REAL DELDP;
+    AED_REAL V;         // Split volume
+    AED_REAL Vdown;     // Volume of layer below amalgamation
+    AED_REAL Vup;       // Volume of layer above amalgamation
 
     int i;
     int iadd;
@@ -92,7 +92,8 @@ void check_layer_thickness(void)
 
     //# Check against vmin
     KLAST=botmLayer;
-    while (1) {
+    // while (1) { //
+    while (NumLayers > 1) { // stop at 1 layer
         for (i = KLAST; i <= surfLayer; i++) {
             if (i == botmLayer)
                  DELDP = Lake[i].Height;
@@ -106,10 +107,10 @@ void check_layer_thickness(void)
         // Layer i is amalgamated with its smallest neighbour
         if (i == botmLayer) {
             Vup = zero;
-            Vdown = one;
+            Vdown = 1.0;
         } else {
             if (i == surfLayer) {
-                Vup = one;
+                Vup = 1.0;
                 Vdown = zero;
             } else {
                 Vup = Lake[i+1].LayerVol;
@@ -120,15 +121,15 @@ void check_layer_thickness(void)
         j = i;
         if (Vup > Vdown) j = i-1;
 
-        Lake[j].Salinity = combine(Lake[j].Salinity,   Lake[j].LayerVol,   Lake[j].Density,
-                                   Lake[j+1].Salinity, Lake[j+1].LayerVol, Lake[j+1].Density);
-        Lake[j].Temp = combine(Lake[j].Temp,   Lake[j].LayerVol,   Lake[j].Density,
-                               Lake[j+1].Temp, Lake[j+1].LayerVol, Lake[j+1].Density);
+        Lake[j].Salinity = combine(Lake[j].Salinity,   Lake[j].LayerVol,   Lake[j].SPDensity,
+                                   Lake[j+1].Salinity, Lake[j+1].LayerVol, Lake[j+1].SPDensity);
+        Lake[j].Temp = combine(Lake[j].Temp,   Lake[j].LayerVol,   Lake[j].SPDensity,
+                               Lake[j+1].Temp, Lake[j+1].LayerVol, Lake[j+1].SPDensity);
 
         for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
             _WQ_Vars(wqidx,j) = combine_vol(_WQ_Vars(wqidx,j), Lake[j].LayerVol, _WQ_Vars(wqidx,j+1), Lake[j+1].LayerVol);
 
-        Lake[j].Density = calculate_density(Lake[j].Temp, Lake[j].Salinity);
+        Lake[j].SPDensity = calculate_density(Lake[j].Temp, Lake[j].Salinity);
         Lake[j].LayerVol = Lake[j].LayerVol + Lake[j+1].LayerVol;
         Lake[j].Height = Lake[j+1].Height;
         Lake[j].Vol1 = Lake[j+1].Vol1;
@@ -142,7 +143,7 @@ void check_layer_thickness(void)
             KB = j + 1;
             for (k = KB; k <= KT; k++) {
                 Lake[k].Height = Lake[k+1].Height;
-                Lake[k].Density = Lake[k+1].Density;
+                Lake[k].SPDensity = Lake[k+1].SPDensity;
                 Lake[k].Temp = Lake[k+1].Temp;
                 Lake[k].Salinity = Lake[k+1].Salinity;
 
@@ -161,9 +162,9 @@ void check_layer_thickness(void)
     // here when all layers have been checked for VMin, DMin
     if (surfLayer != botmLayer) {
         for (i = botmLayer+1; i <= surfLayer; i++)
-            Lake[i].MeanHeight=(Lake[i].Height+Lake[i-1].Height)/two;
+            Lake[i].MeanHeight=(Lake[i].Height+Lake[i-1].Height)/ 2.0;
     }
-    Lake[botmLayer].MeanHeight = Lake[botmLayer].Height/two;
+    Lake[botmLayer].MeanHeight = Lake[botmLayer].Height/ 2.0;
 
     // check layers for VMax
     //sgs Flag to prevent top layer splitting more than once
@@ -216,7 +217,7 @@ void check_layer_thickness(void)
             for (j = KT; j >= KB; j--) {
                 jold = j-iadd;
                 Lake[j].Vol1 = Lake[jold].Vol1;
-                Lake[j].Density = Lake[jold].Density;
+                Lake[j].SPDensity = Lake[jold].SPDensity;
                 Lake[j].Temp = Lake[jold].Temp;
                 Lake[j].Salinity = Lake[jold].Salinity;
 
@@ -236,7 +237,7 @@ void check_layer_thickness(void)
             else
                 Lake[k].Vol1=Lake[k-1].Vol1+Lake[k].LayerVol;
 
-            Lake[k].Density = Lake[i].Density;
+            Lake[k].SPDensity = Lake[i].SPDensity;
             Lake[k].Temp = Lake[i].Temp;
             Lake[k].Salinity = Lake[i].Salinity;
 
@@ -254,43 +255,41 @@ void check_layer_thickness(void)
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 
-/*############################################################################*
- #CAB#  These comments are clearly WRONG!
- * This subroutine finds the level of Neutral Bouyancy for a given inflo
- * and returns the layer number (i), the half-thickness (B0), basin length
- * at the intrusion midpoint (AL), basin width at the intrusion
- * midpoint, and the mean intrusion velocity (UINF) in m/s.
- *----------------------------------------------------------------------------*/
-void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
-                             REALTYPE *wqx, int ntims, REALTYPE *width, int *ll)
+/******************************************************************************
+ #CAB#  These comments are clearly WRONG!                                     *
+ * This subroutine finds the level of Neutral Bouyancy for a given inflow     *
+ * and returns the layer number (i), the half-thickness (B0), basin length    *
+ * at the intrusion midpoint (AL), basin width at the intrusion               *
+ * midpoint, and the mean intrusion velocity (UINF) in m/s.                   *
+ ******************************************************************************/
+void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
+                             AED_REAL *wqx, int ntims, AED_REAL *width, int *ll)
 {
-    REALTYPE pt44 = 0.44, arfac = 1.0E+6, pt15 = 0.15;
-
-    REALTYPE AHLE;
-    REALTYPE AL;
-    REALTYPE ALSQ;
-    REALTYPE BL;
-    REALTYPE B0;
-    REALTYPE DBB,DELT,DELB;
-    REALTYPE DHLE;
-    REALTYPE DT;
+    AED_REAL AHLE;
+    AED_REAL AL;
+    AED_REAL ALSQ;
+    AED_REAL BL;
+    AED_REAL B0;
+    AED_REAL DBB,DELT,DELB;
+    AED_REAL DHLE;
+    AED_REAL DT;
 #ifndef _VISUAL_C_
-    // The dumb compiler on windows doesn't like this so must malloc manually
-    REALTYPE DVR[MaxLayers];
+    // The visual c compiler doesn't like this so must malloc manually
+    AED_REAL DVR[MaxLayers];
 #else
-    REALTYPE *DVR;
+    AED_REAL *DVR;
 #endif
-    REALTYPE DZ;
-    REALTYPE F;
-    REALTYPE GD;
-    REALTYPE GR;
-    REALTYPE R;
-    REALTYPE TDASH;
-    REALTYPE UINF;
-    REALTYPE VISCOS;
-    REALTYPE XN;
-    REALTYPE XNSQ;
-    REALTYPE ZP,ZT,ZB;
+    AED_REAL DZ;
+    AED_REAL F;
+    AED_REAL GD;
+    AED_REAL GR;
+    AED_REAL R;
+    AED_REAL TDASH;
+    AED_REAL UINF;
+    AED_REAL VISCOS;
+    AED_REAL XN;
+    AED_REAL XNSQ;
+    AED_REAL ZP,ZT,ZB;
 
     int wqidx;
     int i,j,k;
@@ -303,40 +302,40 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
 /*----------------------------------------------------------------------------*/
 
 #ifdef _VISUAL_C_
-    DVR = malloc(sizeof(REALTYPE) * MaxLayers);
+    DVR = malloc(sizeof(AED_REAL) * MaxLayers);
 #endif
 
     DELT=0.;
     DELB=0.;
 
-    for (iz=botmLayer; iz <= surfLayer; iz++)
+    for (iz = botmLayer; iz <= surfLayer; iz++)
        if (Lake[iz].Height > 0.) break;
-    if (iz > surfLayer) iz=surfLayer;
+    if (iz > surfLayer) iz = surfLayer;
 
     DHLE = Lake[iz].Height;
     AHLE = Lake[iz].LayerArea;
 
-    if (di <= Lake[surfLayer].Density) {
+    if (di <= Lake[surfLayer].SPDensity) {
         // Here for surface overflow
         i = surfLayer;
         *ll = i;
-        B0 = (Lake[surfLayer].Height-Lake[surfLayer-1].Height)/two;
+        B0 = (Lake[surfLayer].Height-Lake[surfLayer-1].Height)/ 2.0;
         AL = LenAtCrest;
-        if (*width <= 1E-7) *width = Lake[surfLayer].LayerArea * arfac / AL;
-        UINF = q * thsnd / (two * B0 * (*width));
+        if (*width <= 1E-7) *width = Lake[surfLayer].LayerArea * AreaFactor / AL;
+        UINF = q * 1000.0 / ( 2.0 * B0 * (*width));
     } else {
         // Find level of neutral buoyancy
         for (i = surfLayer; i > botmLayer; i--)
-            if (di <= Lake[i-1].Density) break;
+            if (di <= Lake[i-1].SPDensity) break;
 
         if (i <= botmLayer) {
             //  Here for underflow
             i = botmLayer;
             *ll = i;
             AL = DHLE/sin(bsl);
-            if ((*width) <= 1E-7) (*width) = AHLE * arfac / AL;
-            B0 = (DHLE/two)/two;
-            UINF = q * thsnd / (two * B0 * (*width));
+            if ((*width) <= 1E-7) (*width) = AHLE * AreaFactor / AL;
+            B0 = (DHLE/ 2.0)/ 2.0;
+            UINF = q * 1000.0 / ( 2.0 * B0 * (*width));
         } else {
             //  Here for intrusion
             JT = i;
@@ -344,13 +343,13 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
             JB = i-1;
             AL = Lake[i].Height/sin(bsl);
             ALSQ = sqr(AL);
-            if ((*width) <= 1E-7) (*width) = Lake[i].LayerArea*arfac/AL;
+            if ((*width) <= 1E-7) (*width) = Lake[i].LayerArea*AreaFactor/AL;
 
             while(1) {
                 DT = Lake[JT].MeanHeight;
                 DBB = Lake[JB].MeanHeight;
                 DZ = DT - DBB;
-                XNSQ = g*(Lake[JB].Density-Lake[JT].Density)/((di+1000.0)*DZ);
+                XNSQ = g*(Lake[JB].SPDensity-Lake[JT].SPDensity)/((di+1000.0)*DZ);
                 if (XNSQ  <=  zero)
                     //  Here for unstable stratification
                     BL=AL;
@@ -358,24 +357,24 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
                     //  here for stable stratification
                     XN = sqrt(XNSQ);
                     F = q*1000.0/((*width)*ntims*XN*ALSQ);
-                    VISCOS = Lake[i].Epsilon * twenty;
+                    VISCOS = Lake[i].Epsilon * 20.0;
                     if (VISCOS <= 0.) VISCOS=Visc;
                     GR = XNSQ*sqr(ALSQ)/sqr(VISCOS);
 
-                    R = F*pow(GR,(one/three));
-                    TDASH=ntims*XN/(pow(GR,(one/six)));
+                    R = F*pow(GR,(1.0/3.0));
+                    TDASH=ntims*XN/(pow(GR,(1.0/6.0)));
                     R /= TDASH;
                     if (R > 1.)
-                        BL = pt44*TDASH*AL*sqrt(R);
+                        BL = 0.44*TDASH*AL*sqrt(R);
                     else
-                        BL = 0.57*AL*pow(R, (three/two))*pow((TDASH/R), (five/six));
+                        BL = 0.57*AL*pow(R, (3.0/ 2.0))*pow((TDASH/R), (5.0/6.0));
 
                     BL = MIN(BL,AL);
                     if (BL < 1.0) BL = 1.0;
                 }
 
                 // B0 is 1/2 the intrusion thickness
-                B0 = q*thsnd/((*width)*BL);
+                B0 = q*1000.0/((*width)*BL);
                 if (B0 > DZ) {
                     if ( !((JT == surfLayer) && (JB == botmLayer)) ) {
                         if (JT != surfLayer) JT++;
@@ -386,12 +385,12 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
                 break;
             }
 
-            if (Lake[i].Height < (DHLE + one)) {
+            if (Lake[i].Height < (DHLE + 1.0)) {
                 AL = DHLE/sin(bsl);
-                if ((*width) <= 1E-7) (*width) = AHLE * arfac / AL;
-                B0 = (DHLE+two)/two;
+                if ((*width) <= 1E-7) (*width) = AHLE * AreaFactor / AL;
+                B0 = (DHLE+ 2.0)/ 2.0;
             }
-            UINF = q*thsnd/(two*B0*(*width));
+            UINF = q*1000.0/( 2.0*B0*(*width));
         }
     }
 
@@ -408,8 +407,8 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
             NT1++;
             DELT = 0.0;
             if (NT1  !=  surfLayer) {
-                GD=gprime(Lake[NT1].Density,Lake[i].Density);
-                if (GD > zero) DELT = pt15 * pow((UINF/(ntims)),2) / GD;
+                GD=gprime(Lake[NT1].SPDensity,Lake[i].SPDensity);
+                if (GD > zero) DELT = 0.15 * pow((UINF/(ntims)),2) / GD;
                 if (DELT > (Lake[NT1].MeanHeight-ZP) || GD <= zero) continue;
                 if (Lake[NT1-1].Height > (ZP+DELT)) NT1--;
             }
@@ -421,8 +420,8 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
         while(1) {
             NB1--;
             if (NB1 != botmLayer) {
-                GD = gprime(Lake[i].Density,Lake[NB1].Density);
-                if (GD > zero) DELB = pt15 * sqr((UINF/(ntims))) / GD;
+                GD = gprime(Lake[i].SPDensity,Lake[NB1].SPDensity);
+                if (GD > zero) DELB = 0.15 * sqr((UINF/(ntims))) / GD;
                 if (DELB > (ZP-Lake[NB1].MeanHeight) || GD <= zero) continue;
                 if (Lake[NB1].Height < (ZP-DELB)) NB1++;
             }
@@ -466,13 +465,13 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
     // Insert inflow into reservoir and adjust layer properties
     // Include water quality and particles
     for (k = NB1; k <= NT1; k++) {
-        Lake[k].Temp = combine(Lake[k].Temp,Lake[k].LayerVol,Lake[k].Density, temp,DVR[k],di);
-        Lake[k].Salinity = combine(Lake[k].Salinity,Lake[k].LayerVol,Lake[k].Density,salt,DVR[k],di);
+        Lake[k].Temp = combine(Lake[k].Temp,Lake[k].LayerVol,Lake[k].SPDensity, temp,DVR[k],di);
+        Lake[k].Salinity = combine(Lake[k].Salinity,Lake[k].LayerVol,Lake[k].SPDensity,salt,DVR[k],di);
 
         for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
             _WQ_Vars(wqidx,k) = combine_vol(_WQ_Vars(wqidx,k),Lake[k].LayerVol,wqx[wqidx],DVR[k]);
 
-        Lake[k].Density=calculate_density(Lake[k].Temp,Lake[k].Salinity);
+        Lake[k].SPDensity=calculate_density(Lake[k].Temp,Lake[k].Salinity);
         Lake[k].LayerVol=Lake[k].LayerVol+DVR[k];
     }
 
@@ -487,5 +486,3 @@ void insert(REALTYPE q, REALTYPE di, REALTYPE bsl, REALTYPE temp, REALTYPE salt,
 #endif
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-/*============================================================================*/

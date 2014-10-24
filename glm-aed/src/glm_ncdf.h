@@ -41,7 +41,7 @@
      CINTEGER FUNCTION init_glm_ncdf(fn,title,lat,lon,nlev,start_time) BIND(C, name="init_glm_ncdf_")
         USE ISO_C_BINDING
         CCHARACTER,INTENT(in) :: fn(*),title(*),start_time(*)
-        REALTYPE,INTENT(in)   :: lat,lon
+        AED_REAL,INTENT(in)   :: lat,lon
         CINTEGER,INTENT(in)   :: nlev
      END FUNCTION init_glm_ncdf
 
@@ -62,6 +62,9 @@
 
      CINTEGER FUNCTION new_nc_variable(ncid,name,len,data_type,ndim,dims) BIND(C, name="new_nc_variable_")
         USE ISO_C_BINDING
+#       if defined( _WIN32 ) && USE_DL_LOADER
+        !DEC$ ATTRIBUTES DLLIMPORT :: new_nc_variable_
+#       endif
         CINTEGER,INTENT(in)   :: ncid
         CCHARACTER,INTENT(in) :: name(*)
         CINTEGER,INTENT(in)   :: len
@@ -73,7 +76,7 @@
         USE ISO_C_BINDING
         CINTEGER,INTENT(in)   :: ncid, id
         CCHARACTER,INTENT(in) :: units(*), long_name(*)
-        REALTYPE,INTENT(in)   :: FillValue
+        AED_REAL,INTENT(in)   :: FillValue
      END SUBROUTINE set_nc_attributes
 
      SUBROUTINE store_nc_integer(ncid, id, var_shape, iscalar) BIND(C, name="store_nc_integer_")
@@ -83,35 +86,38 @@
 
      SUBROUTINE store_nc_scalar(ncid, id, var_shape, scalar) BIND(C, name="store_nc_scalar_")
         USE ISO_C_BINDING
+#       if defined( _WIN32 ) && USE_DL_LOADER
+        !DEC$ ATTRIBUTES DLLIMPORT :: store_nc_scalar_
+#       endif
         CINTEGER,INTENT(in)  :: ncid, id, var_shape
-        REALTYPE,INTENT(in)  :: scalar
+        AED_REAL,INTENT(in)  :: scalar
      END SUBROUTINE store_nc_scalar
 
      SUBROUTINE store_nc_array(ncid, id, var_shape, nvals, maxvals, array) BIND(C, name="store_nc_array_")
         USE ISO_C_BINDING
+#       if defined( _WIN32 ) && USE_DL_LOADER
+        !DEC$ ATTRIBUTES DLLIMPORT :: store_nc_array_
+#       endif
         CINTEGER,INTENT(in)    :: ncid, id, var_shape, nvals, maxvals
-        REALTYPE,INTENT(inout) :: array(*)
+        AED_REAL,INTENT(inout) :: array(*)
      END SUBROUTINE store_nc_array
 
   END INTERFACE
 
-! CINTEGER,PUBLIC,BIND(C) :: x_dim,y_dim,z_dim, time_dim
-
-
 #else
 
-  int init_glm_ncdf(const char *fn, const char *title, REALTYPE lat,
-                                  REALTYPE lon, int nlev, const char *start_time);
-  void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, REALTYPE timestep);
+  int init_glm_ncdf(const char *fn, const char *title, AED_REAL lat,
+                                  AED_REAL lon, int nlev, const char *start_time);
+  void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, AED_REAL timestep);
   void close_glm_ncdf(int ncid);
   void define_mode_on(int *ncid);
   void define_mode_off(int *ncid);
   int new_nc_variable(int ncid, const char *name, int data_type, int ndim, const int *dims);
   void set_nc_attributes(int ncid, int id, const char *units,
-                                      const char *long_name, REALTYPE FillValue);
+                                      const char *long_name, AED_REAL FillValue);
   void store_nc_integer(int ncid, int id, int var_shape, int iscalar);
-  void store_nc_scalar(int ncid, int id, int var_shape, REALTYPE scalar);
-  void store_nc_array(int ncid, int id, int var_shape, int nvals, int maxvals, REALTYPE *array);
+  void store_nc_scalar(int ncid, int id, int var_shape, AED_REAL scalar);
+  void store_nc_array(int ncid, int id, int var_shape, int nvals, int maxvals, AED_REAL *array);
 
   extern int ncid, x_dim, y_dim, z_dim, time_dim;
 
