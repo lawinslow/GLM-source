@@ -1,0 +1,1047 @@
+!###############################################################################
+!#                                                                             #
+!# glm_aed2.F90                                                                #
+!#                                                                             #
+!# The interface between glm and libaed2                                       #
+!#                                                                             #
+!# Developed by :                                                              #
+!#     AquaticEcoDynamics (AED) Group                                          #
+!#     School of Earth & Environment                                           #
+!# (C) The University of Western Australia                                     #
+!#                                                                             #
+!# Copyright by the AED-team @ UWA under the GNU Public License - www.gnu.org  #
+!#                                                                             #
+!# Copyright 2013, 2014 -  The University of Western Australia                 #
+!#                                                                             #
+!#  This file is part of GLM (General Lake Model)                              #
+!#                                                                             #
+!#  GLM is free software: you can redistribute it and/or modify                #
+!#  it under the terms of the GNU General Public License as published by       #
+!#  the Free Software Foundation, either version 3 of the License, or          #
+!#  (at your option) any later version.                                        #
+!#                                                                             #
+!#  GLM is distributed in the hope that it will be useful,                     #
+!#  but WITHOUT ANY WARRANTY; without even the implied warranty of             #
+!#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the              #
+!#  GNU General Public License for more details.                               #
+!#                                                                             #
+!#  You should have received a copy of the GNU General Public License          #
+!#  along with this program.  If not, see <http://www.gnu.org/licenses/>.      #
+!#                                                                             #
+!###############################################################################
+
+#include "aed2.h"
+#undef MISVAL
+
+#ifndef _FORTRAN_VERSION_
+#define _FORTRAN_VERSION_ 1
+#endif
+
+#include "glm.h"
+
+#undef DEBUG
+#define DEBUG 1
+
+#define _NO_ODE_ 1
+
+#ifdef __GFORTRAN__
+#  define _LINK_POINTER_(dst, src)  CALL link_pointer(dst, src)
+#  warning   "gfortran version does not work yet"
+#else
+#  define _LINK_POINTER_(dst, src)  dst => src
+#endif
+
+#ifndef isnan
+#  define isnan(x) ieee_is_nan(x)
+#endif
+
+!-------------------------------------------------------------------------------
+MODULE glm_aed2
+!
+   USE ISO_C_BINDING
+
+   USE aed2_common
+   USE glm_types
+
+   IMPLICIT NONE
+
+   PRIVATE ! By default, make everything private
+!
+#include "glm_globals.h"
+#include "glm_csv.h"
+#include "glm_plot.h"
+#include "glm_ncdf.h"
+#include "glm_mobl.h"
+!
+#if USE_DL_LOADER
+# define _WQ_INIT_GLM        "wq_init_glm"
+# define _WQ_SET_GLM_DATA    "wq_set_glm_data"
+# define _WQ_DO_GLM          "wq_do_glm"
+# define _WQ_CLEAN_GLM       "wq_clean_glm"
+# define _WQ_INIT_GLM_OUTPUT "wq_init_glm_output"
+# define _WQ_WRITE_GLM_      "wq_write_glm"
+# define _WQ_VAR_INDEX_C     "wq_var_index_c"
+# define _WQ_SET_FLAGS       "wq_set_flags"
+#else
+# define _WQ_INIT_GLM        "aed2_init_glm"
+# define _WQ_SET_GLM_DATA    "aed2_set_glm_data"
+# define _WQ_DO_GLM          "aed2_do_glm"
+# define _WQ_CLEAN_GLM       "aed2_clean_glm"
+# define _WQ_INIT_GLM_OUTPUT "aed2_init_glm_output"
+# define _WQ_WRITE_GLM_      "aed2_write_glm"
+# define _WQ_VAR_INDEX_C     "aed2_var_index_c"
+# define _WQ_SET_FLAGS       "aed2_set_flags"
+#endif
+!
+!-------------------------------------------------------------------------------
+!
+!MODULE DATA
+
+   AED_REAL :: lKw    !# background light attenuation (m**-1)
+   LOGICAL  :: lIce = .FALSE.
+
+   !# Namelist variables
+   INTEGER :: ode_method, split_factor
+   LOGICAL :: bioshade_feedback, repair_state, multi_ben
+   LOGICAL :: mobility_off  !# flag to turn mobility off
+   LOGICAL :: do_plots
+
+   !# Arrays for state and diagnostic variables
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc_diag
+!  AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: rhs_flux
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: cc_diag_hz
+   AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: tss
+   AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: sed_zones
+
+   !# Arrays for work, vertical movement, and cross-boundary fluxes
+   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: ws
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: total
+   AED_REAL,ALLOCATABLE,DIMENSION(:)   :: local
+
+   !# Arrays for environmental variables not supplied externally.
+   AED_REAL,ALLOCATABLE,DIMENSION(:),TARGET :: par,pres
+
+   !# External variables
+   AED_REAL :: dt, dt_eff   ! External and internal time steps
+   INTEGER  :: w_adv_ctr    ! Scheme for vertical advection (0 IF not used)
+   AED_REAL,POINTER,DIMENSION(:) :: rad, z, salt, temp, rho, area
+   AED_REAL,POINTER,DIMENSION(:) :: extc_coef, layer_stress
+   AED_REAL,POINTER :: precip, evap, bottom_stress
+   AED_REAL,POINTER :: I_0, wnd
+
+   CHARACTER(len=48),ALLOCATABLE :: names(:)
+   CHARACTER(len=48),ALLOCATABLE :: bennames(:)
+   CHARACTER(len=48),ALLOCATABLE :: diagnames(:)
+   AED_REAL,ALLOCATABLE,DIMENSION(:) :: min_, max_
+
+   AED_REAL,ALLOCATABLE,DIMENSION(:) :: dz        !# layer thickness
+
+   TYPE (aed2_column_t),ALLOCATABLE,DIMENSION(:) :: column
+   INTEGER,ALLOCATABLE,DIMENSION(:) :: externalid
+
+   INTEGER :: n_aed2_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
+
+!===============================================================================
+CONTAINS
+
+
+
+!###############################################################################
+FUNCTION MYTRIM(str) RESULT(res)
+!-------------------------------------------------------------------------------
+! Useful for passing string arguments to C functions
+!-------------------------------------------------------------------------------
+   CHARACTER(*),TARGET :: str
+   CHARACTER(:),POINTER :: res
+   INTEGER :: len
+
+   len = LEN_TRIM(str)+1
+   str(len:len) = achar(0)
+   res => str
+END FUNCTION MYTRIM
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE STOPIT(message)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CHARACTER(*) :: message
+!-------------------------------------------------------------------------------
+   PRINT *,message
+   STOP
+END SUBROUTINE STOPIT
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+INTEGER FUNCTION f_get_lun()
+!-------------------------------------------------------------------------------
+! Find the first free logical unit number
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   INTEGER :: lun
+   LOGICAL :: opened
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   DO lun = 10,99
+      inquire(unit=lun, opened=opened)
+      IF ( .not. opened ) THEN
+         f_get_lun = lun
+         RETURN
+      ENDIF
+   ENDDO
+   f_get_lun = -1
+END FUNCTION f_get_lun
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_set_flags(c_split_factor, c_mobility, c_bioshade,              &
+                  c_repair_state, c_ode, c_multi_ben, c_do_plots) BIND(C, name=_WQ_SET_FLAGS)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CLOGICAL,INTENT(in) :: c_mobility, c_bioshade, c_repair_state, c_multi_ben,c_do_plots
+   CINTEGER,INTENT(in) :: c_split_factor, c_ode
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+!print*,"setting flgs ", c_split_factor, c_mobility, c_bioshade, c_repair_state, c_ode, c_multi_ben, c_do_plots
+
+   split_factor = c_split_factor
+   mobility_off = c_mobility
+   bioshade_feedback = c_bioshade
+   repair_state = c_repair_state
+   ode_method = c_ode
+   multi_ben = c_multi_ben
+   do_plots = c_do_plots
+END SUBROUTINE aed2_set_flags
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,pKw) BIND(C, name=_WQ_INIT_GLM)
+!-------------------------------------------------------------------------------
+! Initialize the GLM-AED2 driver by reading settings from aed.nml.
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CCHARACTER,INTENT(in) :: i_fname(*)
+   CINTEGER,INTENT(in)   :: len
+   CINTEGER,INTENT(in)   :: MaxLayers
+   CINTEGER,INTENT(out)  :: NumWQ_Vars
+   AED_REAL,INTENT(in)   :: pKw
+!
+!LOCALS
+   INTEGER :: i,j,namlst,status
+   INTEGER :: rc, av, v, sv
+
+   CHARACTER(len=80) :: fname
+   TYPE(aed2_variable_t),POINTER :: tvar
+
+   CHARACTER(len=64) :: models(64)
+   NAMELIST /aed2_models/ models
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   CALL make_string(fname, i_fname, len)
+
+   lKw = pKw
+
+   print *,'init_glm_aed2 from ', TRIM(fname)
+   namlst = f_get_lun()
+
+   IF ( aed2_init_core('.') /= 0 ) STOP "Initialisation of aed2_core failed"
+
+   !# Create model tree
+   print *,"Reading aed2_models config from ",TRIM(fname)
+   OPEN(namlst,file=fname,action='read',status='old',iostat=status)
+   IF ( status /= 0 ) CALL STOPIT("Cannot open file " // TRIM(fname))
+
+   models = ''
+   READ(namlst, nml=aed2_models, iostat=status)
+   IF ( status /= 0 ) STOP "Cannot read namelist entry aed2_models"
+
+   DO i=1,size(models)
+      IF (models(i)=='') EXIT
+      CALL aed2_define_model(models(i), namlst)
+   ENDDO
+
+   !# should be finished with this file
+   CLOSE(namlst)
+
+   n_aed2_vars = aed2_core_status(n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet)
+
+#if DEBUG
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tvar) ) THEN
+         print *,"AED2 var ", i, tvar%sheet, tvar%diag, tvar%extern, TRIM(tvar%name)
+      ELSE
+         print *,"AED2 var ", i, " is empty"
+      ENDIF
+   ENDDO
+
+   print*,'AED2 : n_aed2_vars = ', n_aed2_vars, ' MaxLayers = ', MaxLayers
+   print*,'AED2 : n_vars      = ', n_vars,      ' n_vars_ben= ', n_vars_ben
+   print*,'AED2 : n_vars_diag = ', n_vars_diag, ' n_vars_diag_sheet ', n_vars_diag_sheet
+#endif
+
+   n_vars_diag = n_vars_diag + n_vars_diag_sheet
+
+   CALL check_data
+
+   !# names = grab the names from info
+   ALLOCATE(names(n_vars),stat=status)
+   IF (status /= 0) STOP 'allocate_memory(): Error allocating (names)'
+   ALLOCATE(bennames(n_vars_ben),stat=status)
+   IF (status /= 0) STOP 'allocate_memory(): Error allocating (bennames)'
+   ALLOCATE(diagnames(n_vars_diag),stat=status)
+   IF (status /= 0) STOP 'allocate_memory(): Error allocating (diagnames)'
+
+   NumWQ_Vars = n_vars + n_vars_ben
+   !# Now that we know how many vars we need, we can allocate space for them
+   ALLOCATE(cc(NumWQ_Vars, MaxLayers),stat=status)
+   IF (status /= 0) STOP 'allocate_memory(): Error allocating (CC)'
+   cc = 0.         !# initialise to zero
+
+   CALL set_c_wqvars_ptr(cc)
+
+   ALLOCATE(min_(NumWQ_Vars)) ; ALLOCATE(max_(NumWQ_Vars))
+
+   j = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tvar) ) THEN
+         IF ( .NOT. (tvar%sheet .OR. tvar%diag .OR. tvar%extern) ) THEN
+            j = j + 1
+            names(j) = TRIM(tvar%name)
+            min_(j) = tvar%minimum
+            max_(j) = tvar%maximum
+            print *,"AED2 var name(",j,") : ", TRIM(names(j))
+         ENDIF
+      ENDIF
+   ENDDO
+
+   j = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tvar) ) THEN
+         IF ( tvar%sheet .AND. .NOT. (tvar%diag .OR. tvar%extern) ) THEN
+            j = j + 1
+            bennames(j) = TRIM(tvar%name)
+            min_(n_vars+j) = tvar%minimum
+            max_(n_vars+j) = tvar%maximum
+            print *,"AED2 var_ben name(",j,") : ", TRIM(bennames(j))
+         ENDIF
+      ENDIF
+   ENDDO
+
+   j = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tvar) ) THEN
+         IF ( tvar%diag ) THEN
+            j = j + 1
+            diagnames(j) = TRIM(tvar%name)
+            print *,"AED2 diag name(",j,") : ", trim(diagnames(j))
+         ENDIF
+      ENDIF
+   ENDDO
+
+   ALLOCATE(column(n_aed2_vars))
+   ALLOCATE(externalid(n_aed2_vars))
+
+   !----------------------------------------------------------------------------
+
+   !# Now set initial values
+   v = 0 ; sv = 0;
+   DO av=1,n_aed2_vars
+      IF ( .NOT.  aed2_get_var(av, tvar) ) STOP "Error getting variable info"
+      IF ( .NOT. ( tvar%extern .OR. tvar%diag) ) THEN  !# neither global nor diagnostic variable
+         IF ( tvar%sheet ) THEN
+            sv = sv + 1
+            cc(n_vars+sv, :) = tvar%initial
+         ELSE
+            v = v + 1
+            cc(v,:) = tvar%initial
+         ENDIF
+      ENDIF
+   ENDDO
+
+   !# Allocate diagnostic variable array and set all values to zero.
+   !# (needed because time-integrated/averaged variables will increment rather than set the array)
+   ALLOCATE(cc_diag(1:n_vars_diag,1:MaxLayers),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (cc_diag)'
+   cc_diag = _ZERO_
+
+   !# Allocate diagnostic variable array and set all values to zero.
+   !# (needed because time-integrated/averaged variables will increment rather than set the array)
+   ALLOCATE(cc_diag_hz(1:n_vars_diag_sheet),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (cc_diag_hz)'
+   cc_diag_hz = _ZERO_
+
+   !# Allocate array with vertical movement rates (m/s, positive for upwards),
+   !# and set these to the values provided by the model.
+   ALLOCATE(ws(1:n_vars,1:MaxLayers),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (ws)'
+   ws = _ZERO_
+
+   !# Allocate array for photosynthetically active radiation (PAR).
+   !# This will be calculated internally during each time step.
+   ALLOCATE(par(MaxLayers),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (par)'
+   par = _ZERO_
+
+   !# Allocate array for local pressure.
+   !# This will be calculated [approximated] from layer depths internally during each time step.
+   ALLOCATE(pres(MaxLayers),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (pres)'
+   pres = _ZERO_
+
+   ALLOCATE(tss(MaxLayers),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (tss)'
+   tss = _ZERO_
+
+   ALLOCATE(dz(MaxLayers),stat=rc)
+   IF (rc /= 0) STOP 'allocate_memory(): Error allocating (dz)'
+   dz = _ZERO_
+
+END SUBROUTINE aed2_init_glm
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#ifdef __GFORTRAN__
+!###############################################################################
+!# This is a fudge for gFortran. I'm guessing intel fortran creates the
+!# required structures in global space for the associations, but gfortran
+!# only creates them on the local stack so they are lost once the subroutine
+!# that was called from C exits.
+!# Linking fails with "undefined reference to `span.0'"
+!# It only applies to Lake which is the only array.
+!# This routine is accessed by the macro _LINK_POINTER_ which for non-gfortran
+!# compilers will just be dst => src but for gfortran becauses a routine
+!# which is passed the temporary structure which it copies to global space.
+!#
+!# As it happens, this only gets us past the build problems - the pointers are
+!# clearly not right yet - it doesnt run - and it may be a while before it can
+!###############################################################################
+SUBROUTINE link_pointer(dst, src)
+!ARGUMENTS
+   AED_REAL,POINTER,DIMENSION(:),INTENT(out) :: dst
+   AED_REAL,DIMENSION(:),TARGET,INTENT(in)   :: src
+!-------------------------------------------------------------------------------
+!BEGIN
+   dst => src
+END SUBROUTINE link_pointer
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#endif
+
+
+!###############################################################################
+SUBROUTINE aed2_set_glm_data(Lake, MaxLayers, NumLayers, MetData, SurfData, dt_) &
+                                                 BIND(C, name=_WQ_SET_GLM_DATA)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CINTEGER, INTENT(in) :: MaxLayers, NumLayers
+   TYPE(LakeDataType),TARGET    :: Lake(1:MaxLayers)
+   TYPE(MetDataType),TARGET     :: MetData  !# Meteorological data
+   TYPE(SurfaceDataType),TARGET :: SurfData !# Surface Data
+   AED_REAL,INTENT(in)  :: dt_
+!
+!LOCALS
+   INTEGER i
+!-------------------------------------------------------------------------------
+!BEGIN
+   !# Save pointers to external dynamic variables that we need later (in do_glm_wq)
+   _LINK_POINTER_(z, Lake%Height)
+   _LINK_POINTER_(temp, Lake%Temp)
+   _LINK_POINTER_(salt, Lake%Salinity)
+   _LINK_POINTER_(rho, Lake%SPDensity)
+   _LINK_POINTER_(area, Lake%LayerArea)
+   _LINK_POINTER_(rad, Lake%Light)
+   _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
+   _LINK_POINTER_(layer_stress, Lake%LayerStress)
+
+   precip => MetData%Rain
+   evap   => SurfData%Evap
+   bottom_stress => layer_stress(botmLayer)
+
+   !# Copy scalars that will not change during simulation, and are needed in do_glm_wq)
+   dt = dt_
+
+   !# Compute the layer heights
+   dz(1) = z(1)
+   DO i=2,NumLayers
+      dz(i) = z(i) - z(i-1)
+   ENDDO
+
+   !# Provide pointers to arrays with environmental variables to aed2.
+   wnd => MetData%WindSpeed
+   I_0 => MetData%ShortWave
+
+   !# Calculate and save internal time step.
+   dt_eff = dt/FLOAT(split_factor)
+
+   ! Trigger an error if WQ hasn't got all it needs from us.
+   CALL check_data
+END SUBROUTINE aed2_set_glm_data
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE check_data
+!-------------------------------------------------------------------------------
+! Check that all variable dependencies have been met
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+!
+!LOCALS
+   INTEGER :: av !, i
+   INTEGER :: v, d, sv, sd, ev, err_count
+   TYPE(aed2_variable_t),POINTER :: tvar
+!-------------------------------------------------------------------------------
+!BEGIN
+   v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
+   err_count = 0
+
+   DO av=1,n_aed2_vars
+      IF ( .NOT.  aed2_get_var(av, tvar) ) STOP "Error getting variable info"
+
+      IF ( tvar%extern ) THEN !# global variable
+         ev = ev + 1
+         SELECT CASE (tvar%name)
+            CASE ( 'temperature' ) ; tvar%found = .true.
+            CASE ( 'salinity' )    ; tvar%found = .true.
+            CASE ( 'density' )     ; tvar%found = .true.
+            CASE ( 'layer_ht' )    ; tvar%found = .true.
+            CASE ( 'extc_coef' )   ; tvar%found = .true.
+            CASE ( 'tss' )         ; tvar%found = .true.
+            CASE ( 'par' )         ; tvar%found = .true.
+            CASE ( 'sed_zone' )    ; tvar%found = .true.
+            CASE ( 'wind_speed' )  ; tvar%found = .true.
+            CASE ( 'par_sf' )      ; tvar%found = .true.
+            CASE ( 'taub' )        ; tvar%found = .true.
+            CASE DEFAULT ; CALL STOPIT("ERROR: external variable "//TRIM(tvar%name)//" not found.")
+         END SELECT
+      ELSEIF ( tvar%diag ) THEN  !# Diagnostic variable
+         IF ( tvar%sheet ) THEN
+            sd = sd + 1
+         ELSE
+            d = d + 1
+         ENDIF
+      ELSE    !# state variable
+         IF ( tvar%sheet ) THEN
+            sv = sv + 1
+         ELSE
+            v = v + 1
+         ENDIF
+      ENDIF
+      IF ( .NOT. tvar%found ) THEN
+         print *, "ERROR: Undefined variable ", TRIM(tvar%name)
+         err_count = err_count + 1
+      ENDIF
+   ENDDO
+
+   IF ( n_vars < v ) print *,"More vars than expected",v,n_vars
+   IF ( n_vars_ben < sv ) print *,"More sheet vars than expected"
+   IF ( n_vars_diag < sd + d ) print *,"More diag vars than expected"
+   IF ( n_vars_diag_sheet < sd ) print *,"More sheet diag vars than expected"
+
+   IF ( err_count > 0 ) CALL STOPIT("*** Errors in configuration")
+END SUBROUTINE check_data
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+#ifdef PLOTS
+!###############################################################################
+SUBROUTINE do_light(wlev) BIND(C, name="do_light")
+!-------------------------------------------------------------------------------
+!# debug thingy - probably not used because it doesnt seem to change much
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CINTEGER,INTENT(in) :: wlev
+!-------------------------------------------------------------------------------
+   CALL update_light(column, wlev)
+END SUBROUTINE do_light
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+#endif
+
+
+!###############################################################################
+SUBROUTINE define_column(column, top, cc, cc_diag, flux_pel, flux_atm, flux_ben)
+!-------------------------------------------------------------------------------
+! Set up the current column pointers
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   TYPE (aed2_column_t), INTENT(inout) :: column(:)
+   INTEGER, INTENT(in)  :: top
+   AED_REAL, TARGET, INTENT(in) :: cc(:,:)       !# (n_vars, n_layers)
+   AED_REAL, TARGET, INTENT(in) :: cc_diag(:,:)  !# (n_vars, n_layers)
+   AED_REAL, TARGET, INTENT(inout) :: flux_pel(:,:) !# (n_vars, n_layers)
+   AED_REAL, TARGET, INTENT(inout) :: flux_atm(:)   !# (n_vars)
+   AED_REAL, TARGET, INTENT(inout) :: flux_ben(:)   !# (n_vars)
+!
+!LOCALS
+   INTEGER :: av !, i
+   INTEGER :: v, d, sv, sd, ev
+   TYPE(aed2_variable_t),POINTER :: tvar
+!-------------------------------------------------------------------------------
+!BEGIN
+   v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
+   DO av=1,n_aed2_vars
+      IF ( .NOT.  aed2_get_var(av, tvar) ) STOP "Error getting variable info"
+
+      IF ( tvar%extern ) THEN !# global variable
+         ev = ev + 1
+         SELECT CASE (tvar%name)
+            CASE ( 'temperature' ) ; column(av)%cell => temp(:)
+            CASE ( 'salinity' )    ; column(av)%cell => salt(:)
+            CASE ( 'density' )     ; column(av)%cell => rho(:)
+            CASE ( 'layer_ht' )    ; column(av)%cell => z(:)
+            CASE ( 'extc_coef' )   ; column(av)%cell => extc_coef(:)
+            CASE ( 'tss' )         ; column(av)%cell => tss(:)
+            CASE ( 'par' )         ; column(av)%cell => par(:)
+            CASE ( 'sed_zone' )    ; column(av)%cell_sheet => sed_zones(1)
+            CASE ( 'wind_speed' )  ; column(av)%cell_sheet => wnd
+            CASE ( 'par_sf' )      ; column(av)%cell_sheet => I_0
+            CASE ( 'taub' )        ; column(av)%cell_sheet => bottom_stress
+            CASE DEFAULT ; CALL STOPIT("ERROR: external variable "//trim(tvar%name)//" not found.")
+         END SELECT
+      ELSEIF ( tvar%diag ) THEN  !# Diagnostic variable
+         d = d + 1
+         IF ( tvar%sheet ) THEN
+            column(av)%cell_sheet => cc_diag(d, 1)
+         ELSE
+            column(av)%cell => cc_diag(d,:)
+         ENDIF
+      ELSE    !# state variable
+         IF ( tvar%sheet ) THEN
+            sv = sv + 1
+            IF ( tvar%bot ) THEN
+               column(av)%cell_sheet => cc(n_vars+sv, 1)
+            ELSEIF ( tvar%top ) THEN
+               column(av)%cell_sheet => cc(n_vars+sv, top)
+            ENDIF
+            column(av)%flux_ben => flux_ben(n_vars+sv)
+            column(av)%flux_atm => flux_atm(n_vars+sv)
+         ELSE
+            v = v + 1
+            column(av)%cell => cc(v,:)
+            column(av)%flux_atm => flux_atm(v)
+            column(av)%flux_pel => flux_pel(v,:)
+            column(av)%flux_ben => flux_ben(v)
+         ENDIF
+      ENDIF
+   ENDDO
+END SUBROUTINE define_column
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE calculate_fluxes(column, n_layers, flux_pel, flux_atm, flux_ben, h)
+!-------------------------------------------------------------------------------
+! Checks the current values of all state variables and repairs these
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   TYPE (aed2_column_t), INTENT(inout) :: column(:)
+   INTEGER, INTENT(in) :: n_layers
+   AED_REAL, INTENT(inout) :: flux_pel(:,:) !# (n_vars, n_layers)
+   AED_REAL, INTENT(inout) :: flux_atm(:)   !# (n_vars)
+   AED_REAL, INTENT(inout) :: flux_ben(:)   !# (n_vars)
+   AED_REAL, INTENT(inout) :: h(:)          !# (n_layers)
+!
+!LOCALS
+   INTEGER :: i
+!-------------------------------------------------------------------------------
+!BEGIN
+   flux_pel = zero_
+   flux_atm = zero_
+   flux_ben = zero_
+
+   !# Start with calculating all flux terms for rhs in mass/m3/s
+   !# Includes (1) surface exchange, (2) benthic flux and (3) settling/rising as calculated by glm
+
+   !# (1) surface exchange
+   !# Calculate temporal derivatives due to air-water exchange.
+   IF (.NOT. lIce) THEN !# no surface exchange under ice cover
+      CALL aed2_calculate_surface(column, n_layers)
+
+      !# Distribute the fluxes into pelagic surface layer
+      flux_pel(:,n_layers) = flux_pel(:,n_layers) + flux_atm(:)/h(n_layers)
+   ENDIF
+
+   !# (2) benthic flux
+   !# Calculate temporal derivatives due to exchanges at the sediment/water interface
+   CALL aed2_calculate_benthic(column, 1)
+
+   !# Limit flux out of bottom layers to concentration of that layer
+   !# i.e. don't flux out more than is there
+!  rhs_flux(:,1) = max(-1.0 * cc(:,1)*h(1), rhs_flux(:,1))
+
+   !# Distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
+   flux_pel(:,1) = flux_pel(:,1)/h(1)
+
+   IF ( multi_ben ) THEN
+      DO i=2,n_layers
+         !# Calculate temporal derivatives due to benthic processes.
+         CALL aed2_calculate_benthic(column, i)
+
+         !# Limit flux out of bottom layers to concentration of that layer
+         !# i.e. don't flux out more than is there
+!        rhs_flux(1:n_vars,i) = max(-1.0 * cc(1:n_vars,i)*dz(i)/dt_eff, rhs_flux(1:n_vars,i))
+
+         !# Distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
+         flux_pel(1:n_vars,i) = flux_pel(1:n_vars,i) + flux_pel(1:n_vars,i)/dz(i) * (area(i)-area(i-1))/area(i)
+      ENDDO
+   ENDIF
+
+   !# Add pelagic sink and source terms for all depth levels.
+   DO i=1,n_layers
+      CALL aed2_calculate(column, i)
+   ENDDO
+END SUBROUTINE calculate_fluxes
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
+!-------------------------------------------------------------------------------
+!                           wlev is the number of levels used;
+!                           nlev is the total num levels in the array
+!-------------------------------------------------------------------------------
+!USES
+   USE IEEE_ARITHMETIC
+!
+!ARGUMENTS
+   CINTEGER,INTENT(in) :: wlev
+   CLOGICAL,INTENT(in) :: pIce
+!
+!LOCALS
+   TYPE(aed2_variable_t),POINTER :: tv
+
+   AED_REAL :: min_C
+   INTEGER  :: i, v, lev, split
+
+   TYPE (aed2_column_t) :: column(n_aed2_vars)
+   AED_REAL :: flux_ben(n_vars+n_vars_ben), flux_atm(n_vars+n_vars_ben)
+   AED_REAL :: flux (n_vars+n_vars_ben, wlev)
+#if !_NO_ODE_
+   AED_REAL :: flux2(n_vars, wlev), flux3(n_vars, wlev), flux4(n_vars, wlev)
+   AED_REAL :: cc1(n_vars, wlev)
+   TYPE (aed2_column_t) :: column2(n_aed2_vars)
+   TYPE (aed2_column_t) :: column3(n_aed2_vars)
+   TYPE (aed2_column_t) :: column4(n_aed2_vars)
+#endif
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   lIce = pIce
+
+   !# re-compute the layer heights
+   dz(1) = z(1)
+   DO i=2,wlev
+      dz(i) = z(i) - z(i-1)
+   ENDDO
+
+   !# Calculate local pressure
+   pres(1:wlev) = -z(1:wlev)
+
+   CALL define_column(column, wlev, cc, cc_diag, flux, flux_atm, flux_ben)
+
+   !# (3) Calculate source/sink terms due to settling rising of state variables in the water
+   !# column (note that settling into benthos is done in aed2_do_benthos)
+   v = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tv) ) THEN
+         IF ( .NOT. (tv%sheet .OR. tv%diag .OR. tv%extern) ) THEN
+            v = v + 1
+            !# only for state_vars that are not sheet
+            IF ( .NOT. isnan(tv%mobility) ) THEN
+               ws(v,:) = tv%mobility
+               min_C = tv%minimum
+               CALL Mobility(wlev, dt, dz, area, ws(v,:), min_C, cc(v,:))
+               IF ( repair_state ) THEN
+                  IF ( .NOT. isnan(min_(v)) ) THEN
+                     DO lev=1, wlev
+                        IF ( cc(v,lev) < min_(v) ) cc(v,lev) = min_(v)
+                     ENDDO
+                  ENDIF
+                  IF ( .NOT. isnan(max_(v)) ) THEN
+                     DO lev=1, wlev
+                        IF ( cc(v,lev) > max_(v) ) cc(v,lev) = max_(v)
+                     ENDDO
+                  ENDIF
+               ENDIF
+            ENDIF
+         ENDIF
+      ENDIF
+   ENDDO
+
+   DO split=1,split_factor
+      !# Update local light field (self-shading may have changed through changes in biological state variables)
+      !# changed to update_light to be inline with current aed2_phyoplankton that requires only surface par then integrates over
+      CALL update_light(column, wlev)
+
+      !# Time-integrate one biological time step
+#if _NO_ODE_
+      CALL calculate_fluxes(column, wlev, flux(:,1:wlev), flux_atm, flux_ben, dz(1:wlev))
+      DO v = 1, n_vars
+         DO lev = 1, wlev
+            cc(v,lev) = cc(v,lev) + dt*flux(v,lev)
+            IF ( repair_state ) THEN
+               IF ( .NOT. isnan(min_(v)) ) THEN
+                  IF ( cc(v,lev) < min_(v) ) cc(v,lev) = min_(v)
+               ENDIF
+               IF ( .NOT. isnan(max_(v)) ) THEN
+                  IF ( cc(v,lev) > max_(v) ) cc(v,lev) = max_(v)
+               ENDIF
+            ENDIF
+         ENDDO
+      ENDDO
+#endif
+
+   ENDDO
+END SUBROUTINE aed2_do_glm
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_clean_glm() BIND(C, name=_WQ_CLEAN_GLM)
+!-------------------------------------------------------------------------------
+! Finish biogeochemical model
+!-------------------------------------------------------------------------------
+!BEGIN
+
+   ! Deallocate internal arrays
+   IF (ALLOCATED(cc_diag))    DEALLOCATE(cc_diag)
+   IF (ALLOCATED(cc_diag_hz)) DEALLOCATE(cc_diag_hz)
+   IF (ALLOCATED(ws))         DEALLOCATE(ws)
+!  IF (ALLOCATED(rhs_flux))   DEALLOCATE(rhs_flux)
+   IF (ALLOCATED(total))      DEALLOCATE(total)
+   IF (ALLOCATED(local))      DEALLOCATE(local)
+   IF (ALLOCATED(par))        DEALLOCATE(par)
+   IF (ALLOCATED(pres))       DEALLOCATE(pres)
+
+END SUBROUTINE aed2_clean_glm
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE update_light(column, nlev)
+!-------------------------------------------------------------------------------
+! Calculate photosynthetically active radiation over entire column
+! based on surface radiation, and background and biotic extinction.
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   TYPE (aed2_column_t), INTENT(inout) :: column(:)
+   INTEGER,INTENT(in)   :: nlev
+!
+!LOCALS
+   INTEGER :: i
+   AED_REAL :: zz, localext
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   zz = _ZERO_
+
+   DO i=nlev,1,-1
+      CALL aed2_light_extinction(column, i, localext)
+
+      zz = zz + 0.5*dz(i)
+
+      IF (i .EQ. nlev) THEN
+         par(i) = 0.45 * rad(i) * EXP( -(lKw + localext) * zz )
+      ELSE
+         par(i) = par(i+1) * EXP( -(lKw + localext) * zz )
+      ENDIF
+      zz = zz + 0.5*dz(i)
+
+      IF (bioshade_feedback) extc_coef(i) = lKw + localext
+   ENDDO
+END SUBROUTINE update_light
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_init_glm_output(ncid,x_dim,y_dim,z_dim,time_dim) BIND(C, name=_WQ_INIT_GLM_OUTPUT)
+!-------------------------------------------------------------------------------
+!  Initialize the output by defining biogeochemical variables.
+!-------------------------------------------------------------------------------
+!
+!ARGUMENTS
+   CINTEGER,INTENT(in) :: ncid,x_dim,y_dim,z_dim,time_dim
+!
+!LOCALS
+   INTEGER i !, v, d
+   INTEGER dims(4)
+
+   TYPE(aed2_variable_t),POINTER :: tv
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   !# Put NetCDF library in define mode.
+   CALL define_mode_on(ncid)
+
+   !# Set up dimension indices for 3D (+ time) variables (longitude,latitude,depth,time).
+   dims(1) = x_dim
+   dims(2) = y_dim
+   dims(3) = z_dim
+   dims(4) = time_dim
+
+!  v = 0; d = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tv) ) THEN
+         IF ( .NOT. (tv%sheet .OR. tv%extern) ) THEN
+            !# only for state and diag vars that are not sheet
+            externalid(i) = NEW_NC_VARIABLE(ncid, TRIM(tv%name), LEN_TRIM(tv%name), NF90_REALTYPE, 4, dims(1:4))
+            CALL set_nc_attributes(ncid, externalid(i), MYTRIM(tv%units), MYTRIM(tv%longname) PARAM_FILLVALUE)
+         ENDIF
+      ENDIF
+   ENDDO
+
+   !# Set up dimension indices for 2D (+ time) variables (longitude,latitude,time).
+   dims(1) = x_dim
+   dims(2) = y_dim
+   dims(3) = time_dim
+
+!  v = 0; d = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tv) ) THEN
+         IF ( tv%sheet .AND. .NOT. tv%extern ) THEN
+            !# only for state and diag sheet vars
+            externalid(i) = NEW_NC_VARIABLE(ncid, TRIM(tv%name), LEN_TRIM(tv%name), NF90_REALTYPE, 3, dims(1:3))
+            CALL set_nc_attributes(ncid, externalid(i), MYTRIM(tv%units), MYTRIM(tv%longname) PARAM_FILLVALUE)
+         ENDIF
+      ENDIF
+   ENDDO
+
+   !# Take NetCDF library out of define mode (ready for storing data).
+   CALL define_mode_off(ncid)
+END SUBROUTINE aed2_init_glm_output
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+!  Save properties of biogeochemical model, including state variable
+!  values, diagnostic variable values, and sums of conserved quantities.
+!-------------------------------------------------------------------------------
+SUBROUTINE aed2_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE_GLM_)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CINTEGER,INTENT(in) :: ncid, wlev, nlev
+   CINTEGER,INTENT(in) :: lvl(*), point_nlevs
+!
+!LOCALS
+   TYPE(aed2_variable_t),POINTER :: tv
+
+   INTEGER  :: i, j, v, d, sv, sd
+   AED_REAL :: val_out
+   CLOGICAL :: last = .FALSE.
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   v = 0; d = 0; sv = 0; sd = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tv) ) THEN
+         IF ( tv%diag ) THEN
+            !# Process and store diagnostic variables defined on the full domain.
+            IF ( tv%sheet ) THEN
+               sd = sd + 1
+               !# Process and store diagnostic variables defined on horizontal slices of the domain.
+               CALL store_nc_scalar(ncid, externalid(i), XYT_SHAPE, scalar=cc_diag_hz(sd))
+#ifdef PLOTS
+               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc_diag_hz(sd))
+#endif
+            ELSE
+               d = d + 1
+               !# Store diagnostic variable values.
+               CALL store_nc_array(ncid, externalid(i), XYZT_SHAPE, wlev, nlev, array=cc_diag(d,:))
+#ifdef PLOTS
+               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc_diag(d,1:wlev))
+#endif
+            ENDIF
+         ELSE IF ( .NOT. tv%extern ) THEN
+            IF ( tv%sheet ) THEN
+               sv = sv + 1
+               !# Store benthic biogeochemical state variables.
+               CALL store_nc_scalar(ncid, externalid(i), XYT_SHAPE, scalar=cc(n_vars+sv, 1))
+#ifdef PLOTS
+               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc(n_vars+sv,1))
+#endif
+            ELSE
+               v = v + 1
+               !# Store pelagic biogeochemical state variables.
+               CALL store_nc_array(ncid, externalid(i), XYZT_SHAPE, wlev, nlev, array=cc(v,:))
+#ifdef PLOTS
+               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc(v,1:wlev))
+#endif
+               DO j=1,point_nlevs
+                  IF (lvl(j) .GE. 0) THEN ; val_out = cc(v,lvl(j)+1)
+                  ELSE                    ; val_out = missing     ; ENDIF
+                  CALL write_csv_point(j, tv%name, len_trim(tv%name), val_out, "", 0, last=last)
+               ENDDO
+            ENDIF
+         ENDIF
+      ENDIF
+   ENDDO
+
+#if 0
+   !# Integrate conserved quantities over depth.
+   total = _ZERO_
+   DO n=1,wlev
+      CALL aed2_get_conserved_quantities(model,n,local)
+      total = total + dz(n)*local
+   ENDDO
+
+   !# Store conserved quantity integrals.
+   DO n=1,ubound(model%info%conserved_quantities,1)
+      CALL store_nc_scalar(ncid, model%info%conserved_quantities(n)%externalid, XYT_SHAPE, scalar=total(n))
+   ENDDO
+#endif
+END SUBROUTINE aed2_write_glm
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+CINTEGER FUNCTION aed2_var_index_c(name, len) BIND(C, name=_WQ_VAR_INDEX_C)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CCHARACTER,INTENT(in) :: name(*)
+   CINTEGER,INTENT(in)   :: len
+!LOCALS
+   CHARACTER(len=len+1) :: tn
+   INTEGER              :: i
+!BEGIN
+   tn = ''
+   DO i=1,len
+      tn=tn//' '
+      tn(i:i) = name(i)
+   ENDDO
+   aed2_var_index_c = WQVar_Index(tn) - 1
+END FUNCTION aed2_var_index_c
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+INTEGER FUNCTION WQVar_Index(name)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CHARACTER(len=*) :: name
+!
+!LOCALS
+   TYPE(aed2_variable_t),POINTER :: tv
+   INTEGER i
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   DO i=1, n_aed2_vars
+      IF ( aed2_get_var(i, tv) ) THEN
+         IF ( name .EQ. tv%name ) THEN
+             WQVar_Index = i
+             RETURN
+         ENDIF
+      ENDIF
+   ENDDO
+   WQVar_Index = -1
+END FUNCTION WQVar_Index
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+END MODULE glm_aed2
