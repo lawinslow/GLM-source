@@ -40,8 +40,10 @@
 #include <unistd.h>
 #include <time.h>
 
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
+#ifdef PLOTS
+    #include <X11/Xlib.h>
+    #include <X11/Xutil.h>
+#endif
 
 #include <xbasic.h>
 
