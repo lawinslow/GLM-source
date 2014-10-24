@@ -40,10 +40,9 @@
 #include <unistd.h>
 #include <time.h>
 
-#ifdef XPLOTS
-    #include <X11/Xlib.h>
-    #include <X11/Xutil.h>
-#endif
+#include <X11/Xlib.h>
+#include <X11/Xutil.h>
+
 
 #include <xbasic.h>
 
