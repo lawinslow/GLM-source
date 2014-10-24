@@ -1,0 +1,270 @@
+# 1 "src/aed2_iron.F90"
+!###############################################################################
+!#                                                                             #
+!# aed2_iron.F90                                                               #
+!#                                                                             #
+!# Developed by :                                                              #
+!#     AquaticEcoDynamics (AED) Group                                          #
+!#     School of Earth & Environment                                           #
+!# (C) The University of Western Australia                                     #
+!#                                                                             #
+!# Copyright by the AED-team @ UWA under the GNU Public License - www.gnu.org  #
+!#                                                                             #
+!#   -----------------------------------------------------------------------   #
+!#                                                                             #
+!# Created June 2012                                                           #
+!#                                                                             #
+!###############################################################################
+
+# 1 "include/aed2.h" 1 
+!###############################################################################
+!#                                                                             #
+!# aed2.h                                                                      #
+!#                                                                             #
+!# Developed by :                                                              #
+!#     AquaticEcoDynamics (AED) Group                                          #
+!#     School of Earth & Environment                                           #
+!# (C) The University of Western Australia                                     #
+!#                                                                             #
+!# Copyright by the AED-team @ UWA under the GNU Public License - www.gnu.org  #
+!#                                                                             #
+!###############################################################################
+
+
+
+
+
+
+
+!# aed_phytoplankton constants
+
+
+
+
+
+!# for aed_geochemistry
+
+
+
+!#define MISVAL -9999.
+
+
+
+
+
+
+
+
+
+
+
+
+# 45
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# 19 "src/aed2_iron.F90" 2 
+
+!
+MODULE aed2_iron
+!-------------------------------------------------------------------------------
+! aed2_iron --- iron biogeochemical model
+!
+! The AED module iron contains equations that describe exchange of
+! soluable reactive iron across the air/water interface and sediment flux.
+!-------------------------------------------------------------------------------
+   USE aed2_core
+
+   IMPLICIT NONE
+
+   PRIVATE
+!
+   PUBLIC aed2_iron_data_t
+!
+   TYPE,extends(aed2_model_data_t) :: aed2_iron_data_t
+!# Variable identifiers
+      INTEGER  :: id_fe3
+      INTEGER  :: id_temp
+      INTEGER  :: id_sed_fe3
+
+!# Model parameters
+      real(8) :: Fsed_dic,Ksed_dic,theta_sed_dic
+      LOGICAL  :: use_oxy,use_dic
+
+     CONTAINS
+         PROCEDURE :: define            => aed2_define_iron
+         PROCEDURE :: calculate         => aed2_calculate_iron
+         PROCEDURE :: calculate_benthic => aed2_calculate_benthic_iron
+!        PROCEDURE :: mobility          => aed2_mobility_iron
+!        PROCEDURE :: light_extinction  => aed2_light_extinction_iron
+!        PROCEDURE :: delete            => aed2_delete_iron
+
+   END TYPE
+
+
+!===============================================================================
+CONTAINS
+
+
+
+!###############################################################################
+SUBROUTINE aed2_define_iron(data, namlst)
+!-------------------------------------------------------------------------------
+! Initialise the AED model
+!
+!  Here, the aed namelist is read and te variables exported
+!  by the model are registered with AED2.
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CLASS (aed2_iron_data_t),INTENT(inout) :: data
+   INTEGER,INTENT(in) :: namlst
+!
+!LOCALS
+   INTEGER  :: status
+
+   real(8)          :: dic_initial=4.5
+   real(8)          :: Fsed_dic = 3.5
+   real(8)          :: Ksed_dic = 30.0
+   real(8)          :: theta_sed_dic = 1.0
+   CHARACTER(len=64) :: iron_reactant_variable=''
+
+   INTEGER  :: num_irons
+   real(8)          :: decay(100)
+   real(8)          :: settling(100)
+   real(8)          :: Fsed(100)
+
+   real(8),PARAMETER :: secs_pr_day = 86400.
+   NAMELIST /aed2_iron/ num_irons,decay,settling,Fsed
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+! Read the namelist
+   read(namlst,nml=aed2_iron,iostat=status)
+   IF (status /= 0) STOP 'Error reading namelist aed2_iron'
+
+! Store parameter values in our own derived type
+! NB: all rates must be provided in values per day,
+! and are converted here to values per second.
+
+   PRINT *,'AED_IRON : Note this module has not been completed. Stopping.'
+   STOP
+
+!  ! Register environmental dependencies
+   data%id_temp = aed2_locate_global('temperature')
+END SUBROUTINE aed2_define_iron
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_calculate_iron(data,column,layer_idx)
+!-------------------------------------------------------------------------------
+! Right hand sides of aed2_iron model
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CLASS (aed2_iron_data_t),INTENT(in) :: data
+   TYPE (aed2_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+!
+!LOCALS
+   real(8)           :: dic,diff_dic
+   real(8),PARAMETER :: secs_pr_day = 86400.
+
+!-------------------------------------------------------------------------------
+!BEGIN
+
+!  ! Retrieve current (local) state variable values.
+!  dic = column(data%id_dic)%cell(layer_idx)! iron
+
+!  ! Set temporal derivatives
+!  diff_dic = 0.
+
+!  column(data%id_dic)%flux_pel(layer_idx) = column(data%id_dic)%flux_pel(layer_idx) + (diff_dic)
+
+
+END SUBROUTINE aed2_calculate_iron
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+
+!###############################################################################
+SUBROUTINE aed2_calculate_benthic_iron(data,column,layer_idx)
+!-------------------------------------------------------------------------------
+! Calculate pelagic bottom fluxes and benthic sink and source terms of AED iron.
+! Everything in units per surface area (not volume!) per time.
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CLASS (aed2_iron_data_t),INTENT(in) :: data
+   TYPE (aed2_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+!
+!LOCALS
+! Environment
+!  real(8) :: temp
+
+! State
+!  real(8) :: dic,oxy
+
+! Temporary variables
+!  real(8) :: dic_flux
+
+! Parameters
+!  real(8),PARAMETER :: secs_pr_day = 86400.
+
+!-------------------------------------------------------------------------------
+!BEGIN
+
+! Retrieve current environmental conditions for the bottom pelagic layer.
+!  temp = column(data%id_temp)%cell(layer_idx) ! local temperature
+
+! Retrieve current (local) state variable values.
+!  dic = column(data%id_dic)%cell(layer_idx)! iron
+
+!  IF (data%use_oxy) THEN
+!     ! Sediment flux dependent on oxygen and temperature
+!     oxy = column(data%id_oxy)%cell(layer_idx)
+!     dic_flux = data%Fsed_dic * data%Ksed_dic/(data%Ksed_dic+oxy) * (data%theta_sed_dic**(temp-20.0))
+!  ELSE
+!     ! Sediment flux dependent on temperature only.
+!     dic_flux = data%Fsed_dic * (data%theta_sed_dic**(temp-20.0))
+!  ENDIF
+
+!  ! TODO:
+!  ! (1) Get benthic sink and source terms (sccb?) for current environment
+!  ! (2) Get pelagic bttom fluxes (per surface area - division by layer height will be handled at a higher level)
+
+!  ! Set bottom fluxes for the pelagic (change per surface area per second)
+!  ! Transfer sediment flux value to AED2.
+!  !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_pr_day)
+!  !_SET_SED_FLUX_(data%id_dic,dic_flux)
+!  column(data%id_dic)%flux_pel(layer_idx) = column(data%id_dic)%flux_pel(layer_idx) + (dic_flux)
+
+!  ! Set sink and source terms for the benthos (change per surface area per second)
+!  ! Note that this must include the fluxes to and from the pelagic.
+!  !column(data%id_ben_dic)%flux_ben = column(data%id_ben_dic)%flux_ben + (-dic_flux/secs_pr_day)
+
+!  ! Also store sediment flux as diagnostic variable.
+!  column(data%id_sed_dic)%cell_sheet = dic_flux
+
+
+END SUBROUTINE aed2_calculate_benthic_iron
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+END MODULE aed2_iron
