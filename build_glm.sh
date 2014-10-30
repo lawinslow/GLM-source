@@ -78,9 +78,9 @@ if [ "${FABM}" = "true" ] ; then
   make || exit 1
 fi
 
-if [ "$OSTYPE" != "darwin13" ] ; then
+if [ "$OSTYPE" != "Darwin" ] ; then
   cd ${PLOTDIR}
-  make || exit 1
+ make || exit 1
 fi
 
 cd ${CURDIR}/libutil
