@@ -251,7 +251,7 @@ all: $(TARGETS)
 #glm: $(OBJS) ../../libplot/libplot.a ../../libutil/libutil.a
 #	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
 glm: $(OBJS) ../../libutil/libutil.a
-	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
+	$(CC) -o glm -Wl, $(OBJS) $(LIBS)
 
 glm_test_bird: glm_test_bird.o glm_bird.o glm_util.o ../../libplot/libplot.a ../../libutil/libutil.a
 	$(CC) -o glm_test_bird -Wl,--export-dynamic glm_test_bird.o glm_bird.o glm_util.o $(LIBS)
