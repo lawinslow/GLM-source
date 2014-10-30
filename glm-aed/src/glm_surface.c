@@ -875,7 +875,7 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
                 break;
             case 2: { // Briegleb et al. (1986), B scheme in Scinocca et al 2006.
                     AED_REAL sza = zenith_angle(Longitude, Latitude, mDays, iclock, timezone);  //degrees
-                    if (sza < 80){
+                    if (sza < 80) {
                         AED_REAL csza = cos(Pi * sza/180);
                         Albedo1 = ((2.6 / (1.1 * pow(csza, 1.7) - 0.065)) +
                                   (15 * (csza-0.1) * (csza-0.5) * (csza-1))) /100.;
@@ -893,7 +893,7 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
                                         0.001 * 6 * pow(1-csza, 0.829));
                 }
                 break;
-             default : break;
+            default : break;
         }
     }
 

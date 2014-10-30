@@ -36,7 +36,8 @@
 #include "glm_types.h"
 #include "glm_globals.h"
 
-extern CLOGICAL do_plots, saveall;
+extern CLOGICAL do_plots = FALSE;
+extern CLOGICAL saveall;
 extern char *plots_nml_name;
 #include <libplot.h>
 

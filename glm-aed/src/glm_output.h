@@ -31,7 +31,7 @@
 #define _GLM_OUTPUT_H_
 
 void init_output(int jstart, const char *out_dir, const char *out_fn,
-                   int MaxLayers, AED_REAL Longitude, AED_REAL Latitude, int lkn);
+                   int MaxLayers, AED_REAL Longitude, AED_REAL Latitude);
 void write_output(int jday, int iclock, int nsave, int stepnum);
 void write_diags(int jday, AED_REAL LakeNum);
 void write_outflow(int of_idx, int jday, AED_REAL vol);
