@@ -47,6 +47,7 @@ TARGETS=glm
 DEFINES=
 FINCLUDES=
 CINCLUDES=-I$(UTILDIR)/include
+CINCLUDES+=-I/opt/local/include
 LIBS=-L$(UTILDIR) -lutil
 ifeq ($(WITH_PLOTS),true)
   DEFINES+=-DPLOTS
@@ -189,6 +190,7 @@ else
 endif
 
 LIBS+=-lnetcdf
+LIBS+=-L/opt/local/lib
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
