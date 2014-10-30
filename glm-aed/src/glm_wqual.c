@@ -167,11 +167,11 @@ int prime_glm_wq(const char *which)
     }
 #endif
 
-    fprintf(stderr,
+   fprintf(stderr,
         "X) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
+               split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
 
-    (*p_wq_set_flags)(&split_factor, &mobility_off, &bioshade_feedback,
+(*p_wq_set_flags)(&split_factor, &mobility_off, &bioshade_feedback,
                                      &repair_state, &ode_method, &multi_ben, &do_plots);
 
     return 0;
