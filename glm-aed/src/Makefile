@@ -33,15 +33,13 @@
 #                                                                             #
 ###############################################################################
 
--#ifeq ($(OSTYPE),’darwin13’)
--#  WITH_PLOTS=false
--#  WITH_XPLOTS=false
--#else
--#  WITH_PLOTS=true
--#  WITH_XPLOTS=true
--#endif
--WITH_PLOTS=false
--WITH_XPLOTS=false
+ifeq ($(OSTYPE),Darwin)
+  WITH_PLOTS=false
+  WITH_XPLOTS=false
+else
+  WITH_PLOTS=true
+  WITH_XPLOTS=true
+endif
 
 UTILDIR=../../libutil
 
@@ -49,7 +47,6 @@ TARGETS=glm
 DEFINES=
 FINCLUDES=
 CINCLUDES=-I$(UTILDIR)/include
-CINCLUDES+=-I/opt/local/include
 LIBS=-L$(UTILDIR) -lutil
 ifeq ($(WITH_PLOTS),true)
   DEFINES+=-DPLOTS
@@ -71,9 +68,6 @@ ifeq ($(FORTRAN_COMPILER),IFORT11)
   F90=ifort
 endif
 ifeq ($(FORTRAN_COMPILER),IFORT12)
-  F90=ifort
-endif
-ifeq ($(FORTRAN_COMPILER),IFORT15)
   F90=ifort
 endif
 ifeq ($(FORTRAN_COMPILER),OPEN64)
@@ -194,7 +188,6 @@ else
   # OPT_FFLAGS=
 endif
 
-LIBS+=-L/opt/local/lib
 LIBS+=-lnetcdf
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
@@ -203,10 +196,8 @@ ifeq ($(WITH_PLOTS),true)
   endif
 endif
 
-ifeq ($(WITH_PLOTS),false)
-  CFLAGS=-Wall -I$(UTILDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
-else
-  CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
+ifeq ($(PLOTDIR),)
+  PLOTDIR=../../libplot
 endif
 
 CFLAGS=-Wall -I$(UTILDIR) -I$(PLOTDIR) $(CINCLUDES) $(DEFINES) $(DEBUG_CFLAGS) $(OPT_CFLAGS)
