@@ -36,10 +36,12 @@
 #include "glm_types.h"
 #include "glm_globals.h"
 
+extern CLOGICAL do_plots, saveall;
+extern char *plots_nml_name;
+
 #ifdef PLOTS
    #include <libplot.h>
-   extern CLOGICAL do_plots, saveall;
-   extern char *plots_nml_name;
+
 #ifdef XPLOTS
    extern int xdisp;
 #endif
