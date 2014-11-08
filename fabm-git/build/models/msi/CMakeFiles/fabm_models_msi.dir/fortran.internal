@@ -1,0 +1,3 @@
+# The fortran modules provided by this target.
+provides
+ fabm_msi_ergom1

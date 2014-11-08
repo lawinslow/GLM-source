@@ -1,11 +1,17 @@
 #!/bin/bash
 
+export FABM=true
+export FABM_NEW_BUILD=false
+export AED2=true
+export USE_DL=false
+
 export FORTRAN_COMPILER=IFORT
 # export FORTRAN_COMPILER=GFORTRAN
 # export FORTRAN_COMPILER=OPEN64
 
 if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
    . /opt/intel/bin/compilervars.sh intel64
+#export PATH="/opt/intel/bin:$PATH"
    export FC=ifort
    export NETCDFHOME=/opt/intel
 elif [ "$FORTRAN_COMPILER" = "IFORT11" ] ; then
@@ -43,33 +49,46 @@ export NETCDFLIBDIR=$NETCDFHOME/lib
 export NETCDFLIB=${NETCDFLIBDIR}
 export NETCDFLIBNAME="-lnetcdff -lnetcdf"
 export CURDIR=`pwd`
-export FABMDIR=${CURDIR}/fabm-git
+if [ "${FABM_NEW_BUILD}" = "true" ] ; then
+  export FABMDIR=${CURDIR}/FABM-new/fabm-git
+else
+  export FABMDIR=${CURDIR}/fabm-git
+fi
 export PLOTDIR=${CURDIR}/libplot
+export AED2DIR=${CURDIR}/libaed2
+
 export COMPILATION_MODE=production
 if [ "$DEBUG" = "true" ] ; then
   export COMPILATION_MODE=debug
 fi
-export FABM=true
 
-export FABMHOST=glm
-
-mkdir -p ${FABMDIR}/lib/${FABMHOST}/${FORTRAN_COMPILER}
-mkdir -p ${FABMDIR}/modules/${FABMHOST}/${FORTRAN_COMPILER}
-
-cd ${FABMDIR}
-#make VERSION || exit 1
-cd ${FABMDIR}/src
+cd ${AED2DIR}
 make || exit 1
 
-if [ "$OSTYPE" != "darwin13" ] ; then
-  cd ${PLOTDIR}
+if [ "${FABM}" = "true" ] ; then
+  export FABMHOST=glm
+  cd ${FABMDIR}
+  if [ "${FABM_NEW_BUILD}" = "true" ] ; then
+    mkdir build
+    cd build
+    export EXTRA_FFLAGS+=-fPIC
+    cmake ${FABMDIR}/src -DBUILD_SHARED_LIBS=1 || exit 1
+    #cmake ${FABMDIR}/src || exit 1
+  fi
   make || exit 1
+fi
+
+if [ "$OSTYPE" != "Darwin" ] ; then
+  cd ${PLOTDIR}
+ make || exit 1
 fi
 
 cd ${CURDIR}/libutil
 make || exit 1
 
-/bin/rm ${CURDIR}/glm-aed/src/glm
+if [ -f ${CURDIR}/glm-aed/src/glm ] ; then
+  /bin/rm ${CURDIR}/glm-aed/src/glm
+fi
 cd ${CURDIR}/glm-aed/src
 make || exit 1
 
@@ -88,6 +107,8 @@ if [ "$OSTYPE" != "darwin13" ] ; then
   fakeroot make -f debian/rules binary || exit 1
 
   cd ${CURDIR}/glm-aed/win
+  ${CURDIR}/vers.sh $VERSION
+  cd ${CURDIR}/glm-aed/win-dll
   ${CURDIR}/vers.sh $VERSION
 
   cd ${CURDIR}
