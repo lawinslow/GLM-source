@@ -190,7 +190,7 @@ else
 endif
 
 LIBS+=-lnetcdf
-LIBS+=-L/opt/local/lib
+#LIBS+=-L/opt/local/lib
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
@@ -251,7 +251,7 @@ all: $(TARGETS)
 #glm: $(OBJS) ../../libplot/libplot.a ../../libutil/libutil.a
 #	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
 glm: $(OBJS) ../../libutil/libutil.a
-	$(CC) -o glm -Wl, $(OBJS) $(LIBS)
+	$(CC) -o glm -Wl $(OBJS) $(LIBS)
 
 glm_test_bird: glm_test_bird.o glm_bird.o glm_util.o ../../libplot/libplot.a ../../libutil/libutil.a
 	$(CC) -o glm_test_bird -Wl,--export-dynamic glm_test_bird.o glm_bird.o glm_util.o $(LIBS)
