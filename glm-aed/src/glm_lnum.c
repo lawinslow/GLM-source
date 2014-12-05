@@ -42,8 +42,6 @@
 #include "glm_util.h"
 
 
-int lkn = FALSE;
-
 /*----------------------------------------------------------------------------*/
 static int interpolate_layer_data(AED_REAL *iheight, AED_REAL *density);
 static void lnpe3(int NLayers, AED_REAL *iheight, AED_REAL *density,

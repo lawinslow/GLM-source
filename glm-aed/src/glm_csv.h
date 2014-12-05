@@ -37,13 +37,6 @@
 
   INTERFACE
 
-     SUBROUTINE init_csv_output(out_dir, len, lkn) BIND(C, name="init_csv_output_")
-        USE ISO_C_BINDING
-        CCHARACTER,INTENT(in) :: out_dir(*)
-        CINTEGER,INTENT(in)   :: len
-        CLOGICAL,INTENT(in)   :: lkn
-     END SUBROUTINE init_csv_output
-
      SUBROUTINE write_csv_point(f, name, len, val, cval, vlen, last) BIND(C, name="write_csv_point_")
         USE ISO_C_BINDING
 #       if defined( _WIN32 ) && USE_DL_LOADER
@@ -83,8 +76,7 @@ extern AED_REAL csv_point_at[MaxPointCSV];
 extern int csv_point_nlevs;
 extern int csv_lake_file;
 
-void init_csv_output(const char *out_dir, int lkn);
-void init_csv_output_(const char *out_dir, int *len, int *lkn);
+void init_csv_output(const char *out_dir);
 void write_csv_point(int f, const char *name, AED_REAL val, const char *cval, int last);
 void write_csv_point_(int *f, const char *name, int *len, AED_REAL *val, const char *cval, int *vlen, int *last);
 void write_csv_lake(const char *name, AED_REAL val, const char *cval, int last);
