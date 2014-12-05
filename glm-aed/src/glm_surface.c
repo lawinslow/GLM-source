@@ -514,7 +514,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
          *--------------------------------------------------------------------*/
         for (i = surfLayer-1; i >= (botmLayer+1); i--)
             heat[i] = (Lake[i-1].LayerArea * (Lake[i].Light - Lake[i-1].Light) +
-                       Lake[i].Light * (Lake[i].LayerArea - Lake[i-1].LayerArea)) * 0.1 *AreaFactor;
+                       Lake[i].Light * (Lake[i].LayerArea - Lake[i-1].LayerArea) * 0.1) *AreaFactor;
         heat[botmLayer] = Lake[botmLayer].Light * Lake[botmLayer].LayerArea * AreaFactor;
     }
 
