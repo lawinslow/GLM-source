@@ -65,9 +65,6 @@ END INTERFACE
 /* from glm_ncdf */
 extern int ncid;
 
-/* from glm_lnum */
-extern int lkn;
-
 /* from glm_surf.F90 */
 extern int ice;
 

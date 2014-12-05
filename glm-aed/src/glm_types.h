@@ -37,7 +37,7 @@
 #define MaxPar        37
 #define MaxOut        20     /* Maximum number of outflows */
 #define MaxInf        20     /* Maximum number of inflows */
-#define MaxVars       60     /* Maximum number of variables */
+#define MaxVars       80     /* Maximum number of variables */
 #define MaxDif   (MaxVars+2) /* Maximum number of diffusing substances */
 
 typedef int  LOGICAL;
@@ -116,11 +116,11 @@ typedef char filname[80];
        AED_REAL WQDown[MaxPar][MaxVars]; // downflow water quality
        AED_REAL WQInf[MaxVars];
 
-       LOGICAL  SubmFlag;        // Is this a submerged inflow
-
        int  iCnt;
        int  NoIns;
        int  InPar[MaxPar];
+
+       LOGICAL  SubmFlag;        // Is this a submerged inflow
    } InflowDataType;
 
    /*===========================================================*/

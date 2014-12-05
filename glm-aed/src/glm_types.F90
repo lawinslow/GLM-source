@@ -41,7 +41,7 @@ MODULE glm_types
 !===============================================================================
 !GLOBAL CONSTANTS
    INTEGER,PARAMETER  :: MaxPar=37
-   INTEGER,PARAMETER  :: MaxVars=60    !# Maximum number of variables
+   INTEGER,PARAMETER  :: MaxVars=80    !# Maximum number of variables
 
    AED_REAL,PARAMETER :: missing = MISVAL
 
@@ -54,6 +54,7 @@ MODULE glm_types
       CCHARACTER :: S(40)
    END TYPE StringT
 
+#if 0
    !#===========================================================#!
    !# Structured type for inflow vars
    !# An inflow will be an allocated array of MaxInf of these
@@ -87,7 +88,6 @@ MODULE glm_types
       CINTEGER :: InPar(MaxPar)
 
       CLOGICAL :: SubmFlag          !# is it a submerged inflow
-
    END TYPE InflowDataType
 
    !#===========================================================#!
@@ -101,6 +101,7 @@ MODULE glm_types
       AED_REAL :: Factor      !# scaling factor for outflow
       CLOGICAL :: FloatOff    !#
    END TYPE OutflowDataType
+#endif
 
    !#===========================================================#!
    !# Structured type for key global lake environmental vars
@@ -126,6 +127,7 @@ MODULE glm_types
       AED_REAL :: LayerStress      !# Layer Stress
    END TYPE LakeDataType
 
+#if 1
    !#===========================================================#!
    !# Structured type for Met vars
    TYPE,BIND(C) :: MetDataType
@@ -163,6 +165,7 @@ MODULE glm_types
       AED_REAL :: dailyOutflow     !# Total Daily Outflow (ML/day)
       AED_REAL :: dailyOverflow    !# Total Daily Overflow (ML/day)
    END TYPE SurfaceDataType
+#endif
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -132,7 +132,7 @@ static void create_outflow_csv(int ofidx, const char *out_dir, const char *fname
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void init_csv_output(const char *out_dir, int lkn)
+void init_csv_output(const char *out_dir)
 {
     int i,j;
     char fname[256];
@@ -158,14 +158,14 @@ void init_csv_output(const char *out_dir, int lkn)
         csv_lake_file = open_csv_output(out_dir, csv_lake_fname);
 
         csv_header_start(csv_lake_file);
-        csv_header_var2(csv_lake_file, "Volume", "m3");
-        csv_header_var2(csv_lake_file, "Tot Inflow Vol", "m3");
-        csv_header_var2(csv_lake_file, "Tot Outflow Vol", "m3");
-        csv_header_var2(csv_lake_file, "Overflow Vol", "m3");
-        csv_header_var2(csv_lake_file, "Evapouration", "m3");
-        csv_header_var2(csv_lake_file, "Rain", "m3");
-        csv_header_var2(csv_lake_file, "Lake Level", "m");
-        csv_header_var2(csv_lake_file, "Surface Area", "m2");
+        csv_header_var (csv_lake_file, "Volume"); //, "m3");
+        csv_header_var (csv_lake_file, "Tot Inflow Vol"); //, "m3");
+        csv_header_var (csv_lake_file, "Tot Outflow Vol"); //, "m3");
+        csv_header_var (csv_lake_file, "Overflow Vol"); //, "m3");
+        csv_header_var (csv_lake_file, "Evaporation"); //, "m3");
+        csv_header_var (csv_lake_file, "Rain"); //, "m3");
+        csv_header_var (csv_lake_file, "Lake Level"); //, "m");
+        csv_header_var (csv_lake_file, "Surface Area"); //, "m2");
         csv_header_var (csv_lake_file, "Black Ice");
         csv_header_var (csv_lake_file, "Snow");
         csv_header_var (csv_lake_file, "White Ice");
@@ -178,12 +178,12 @@ void init_csv_output(const char *out_dir, int lkn)
         csv_header_var (csv_lake_file, "Daily Qlw");
         csv_header_var (csv_lake_file, "Light");
         csv_header_var (csv_lake_file, "Benthic Light");
-        csv_header_var2(csv_lake_file, "H_s", "m");
+        csv_header_var (csv_lake_file, "H_s"); //, "m");
         csv_header_var (csv_lake_file, "L");
         csv_header_var (csv_lake_file, "T");
-        if (lkn) csv_header_var(csv_lake_file, "LakeNumber");
+        csv_header_var(csv_lake_file, "LakeNumber");
         csv_header_var(csv_lake_file, "Max dT/dz");
-        csv_header_var (csv_lake_file, "coef_wind_drag");
+        csv_header_var (csv_lake_file, "CD");
         csv_header_end(csv_lake_file);
     } else
         csv_lake_file = -1;
@@ -199,7 +199,8 @@ void init_csv_output(const char *out_dir, int lkn)
                 create_outflow_csv(j, out_dir, fname);
             }
 
-            create_outflow_csv(MaxOut, out_dir, csv_ovrfl_fname);
+            if ( csv_ovrfl_fname != NULL )
+                create_outflow_csv(MaxOut, out_dir, csv_ovrfl_fname);
         }
 
         // Now map the wq state var names to their indices

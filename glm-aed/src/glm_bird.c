@@ -96,51 +96,6 @@ int config_bird(int namlst)
 }
 
 
-#if 0
-/******************************************************************************
- * Calculate the Zenith Angle in degrees.                                     *
- * NB lat is in radians, lon in degrees [thats how they are in GLM]           *
- ******************************************************************************/
-AED_REAL zenith_angle(AED_REAL lon, AED_REAL lat, int day, int iclock, AED_REAL TZ)
-{
-    AED_REAL Phi_day;          // Day Angle :- Position of the earth in sun's orbit
-    AED_REAL SolarDeclination; // Solar Declination
-    AED_REAL EquationOfTime;   // Equation of Time
-    AED_REAL Phi_hr;           // Hour Angle
-
-    /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-    AED_REAL Hour = iclock / 3600.;
-
-    /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
-
-    // Day Angle :- Position of the earth in sun's orbit
-    Phi_day = (two_Pi*(day-1)/365);
-
-    // Solar Declination (in radians)
-    SolarDeclination = ( 0.006918 - 0.399912*cos(  Phi_day) +
-                                    0.070257*sin(  Phi_day) -
-                                    0.006758*cos(2*Phi_day) +
-                                    0.000907*sin(2*Phi_day) -
-                                    0.002697*cos(3*Phi_day) +
-                                    0.00148 *sin(3*Phi_day) );
-
-    // Equation of Time
-    EquationOfTime = ( 0.0000075 + 0.001868*cos(  Phi_day) -
-                                   0.032077*sin(  Phi_day) -
-                                   0.014615*cos(2*Phi_day) -
-                                   0.040849*sin(2*Phi_day) ) * 229.18;
-
-    // Hour Angle (in degrees)
-    Phi_hr = 15 * (Hour-12.5) + lon - TZ * 15 + (EquationOfTime/4);
-
-    // Zenith Angle
-    return acos( cos(SolarDeclination) * cos(lat) * cos(Phi_hr*deg2rad) +
-                 sin(SolarDeclination) * sin(lat) ) * rad2deg;
-}
-#endif
-
-
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
@@ -166,7 +121,6 @@ AED_REAL calc_bird(AED_REAL lon, AED_REAL lat, int jday, int iclock, AED_REAL TZ
     AED_REAL Phi_db = 0.;      // Direct Beam Horizontal Radiation
     AED_REAL Phi_as = 0.;
     AED_REAL GHI = 0.;         // Global Horizontal Irradiation
-//  AED_REAL DiffuseRad = 0.;  // Diffused Radiation
 
     /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -227,9 +181,6 @@ AED_REAL calc_bird(AED_REAL lon, AED_REAL lat, int jday, int iclock, AED_REAL TZ
 
         // Global Horizontal Irradiation
         GHI = (Phi_db + Phi_as)/(1 - Albedo * rs) ;
-
-        // Diffused Radiation
-//      DiffuseRad = GHI - Phi_db;
     }
 
     return GHI;
