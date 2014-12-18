@@ -42,6 +42,11 @@ Run a test case
 	cd glm-aed/test/BigMuskie/
 	../../src/glm
 
+
+
+
+**NOTE, below is no longer relevant. This is handled very well in [GLMr](https://github.com/GLEON/GLMr) and is the preferred way of distribution to novice and intermediate users**
+
 ## updates for mac 2014-09-17
 today the dependencies for macGLM1.3.2 were modified so that the baked in dylib dependencies could be put in a sim/bin directory instead of root/hydro. 
 
