@@ -4,6 +4,9 @@ glm
 win-bin
 ubuntu
 .*.swp
-**/*.make
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+install_manifest.txt
 .DS*
 
