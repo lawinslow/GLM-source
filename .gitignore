@@ -4,5 +4,6 @@ glm
 win-bin
 ubuntu
 .*.swp
+**/*.make
 .DS*
 
