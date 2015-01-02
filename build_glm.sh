@@ -94,7 +94,7 @@ make || exit 1
 
 cd ${CURDIR}/glm-aed
 
-if [ "$OSTYPE" != "darwin13" ]  && [ "$OSTYPE" != "Linux" ] ; then
+if [ "$OSTYPE" != "Darwin" ]  && [ "$OSTYPE" != "Linux" ] ; then
   VERSION=`grep GLM_VERSION src/glm.h | cut -f2 -d\"`
   echo glm version $VERSION
   VERSDEB=`head -1 debian/changelog | cut -f2 -d\( | cut -f1 -d-`
