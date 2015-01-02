@@ -67,6 +67,8 @@ SUBROUTINE aed2_define_silica(data, namlst)
    INTEGER  :: status
 
    AED_REAL          :: rsi_initial=4.5
+   AED_REAL          :: rsi_min=zero_
+   AED_REAL          :: rsi_max=nan_
    AED_REAL          :: Fsed_rsi = 3.5
    AED_REAL          :: Ksed_rsi = 30.0
    AED_REAL          :: theta_sed_rsi = 1.0
@@ -93,7 +95,7 @@ SUBROUTINE aed2_define_silica(data, namlst)
 
    ! Register state variables
    data%id_rsi = aed2_define_variable('rsi','mmol/m**3', 'silica',     &
-                                    rsi_initial,minimum=zero_)
+                                    rsi_initial,minimum=rsi_min,maximum=rsi_max)
 
    ! Register external state variable dependencies
    IF (data%use_oxy) &

@@ -888,7 +888,6 @@ SUBROUTINE aed2_calculate_benthic_phytoplankton(data,column,layer_idx)
 
    ENDDO
 
-
 END SUBROUTINE aed2_calculate_benthic_phytoplankton
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -504,14 +504,12 @@ SUBROUTINE aed2_calculate_benthic_organic_matter(data,column,layer_idx)
    _FLUX_VAR_(data%id_poc) = _FLUX_VAR_(data%id_poc) + (poc_flux)
    _FLUX_VAR_(data%id_doc) = _FLUX_VAR_(data%id_doc) + (doc_flux)
 
-
    ! Set sedimentation flux (mmmol/m2) as calculated by organic matter.
    IF (data%use_sedmtn_model) THEN
       _STATE_VAR_S_(data%id_Psed_poc) = Psed_poc
       _STATE_VAR_S_(data%id_Psed_pon) = Psed_pon
       _STATE_VAR_S_(data%id_Psed_pop) = Psed_pop
    ENDIF
-
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
@@ -524,7 +522,6 @@ SUBROUTINE aed2_calculate_benthic_organic_matter(data,column,layer_idx)
    _DIAG_VAR_S_(data%id_sed_dop) = -dop_flux
    _DIAG_VAR_S_(data%id_sed_poc) = -poc_flux
    _DIAG_VAR_S_(data%id_sed_doc) = -doc_flux
-
 
 END SUBROUTINE aed2_calculate_benthic_organic_matter
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

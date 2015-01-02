@@ -1,16 +1,8 @@
-fabm-git
 glm
-glm-aed
-glm-egs
-glm-manual
-glm-tests
-libutil*
-libplot
-libaed2
 *.tar.gz
 *.diff
 win-bin
 ubuntu
 .*.swp
 .DS*
-FABM-new
+

@@ -43,7 +43,7 @@ MODULE aed2_carbon
       INTEGER  :: id_wind
       INTEGER  :: id_ch4ox
       INTEGER  :: id_sed_dic
-      INTEGER  :: id_atm_co2_exch
+      INTEGER  :: id_atm_co2_exch,id_atm_ch4_exch
 
       !# Model parameters
       AED_REAL :: Fsed_dic,Ksed_dic,theta_sed_dic
@@ -171,6 +171,8 @@ SUBROUTINE aed2_define_carbon(data, namlst)
 
    data%id_atm_co2_exch = aed2_define_sheet_diag_variable('atm_co2_exch',            &
                              'mmol/m**2/d', 'CO2 exchange across atm/water interface')
+   data%id_atm_ch4_exch = aed2_define_sheet_diag_variable('atm_ch4_exch',            &
+                             'mmol/m**2/d', 'CH4 exchange across atm/water interface')
 
    !# Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
@@ -251,17 +253,18 @@ SUBROUTINE aed2_calculate_surface_carbon(data,column,layer_idx)
    AED_REAL :: temp, salt, wind
 
    ! State
-   AED_REAL :: dic,ph
+   AED_REAL :: dic,ph,ch4
 
    ! Temporary variables
-   AED_REAL :: pCO2,FCO2
-   AED_REAL :: Ko, KCO2
-   AED_REAL :: Tabs,windHt
+   AED_REAL :: pCO2,FCO2,FCH4
+   AED_REAL :: Ko,kCH4,KCO2, CH4solub
+   AED_REAL :: Tabs,windHt,atm
+   AED_REAL :: A1,A2,A3,A4,B1,B2,B3,logC
 
 !-------------------------------------------------------------------------------
 !BEGIN
 
-   IF(.NOT.data%simDIC) RETURN
+   IF(.NOT.data%simDIC .AND. .NOT.data%simCH4) RETURN
 
 
    !Get dependent state variables from physical driver
@@ -270,38 +273,85 @@ SUBROUTINE aed2_calculate_surface_carbon(data,column,layer_idx)
    wind = _STATE_VAR_S_(data%id_wind) ! Wind speed at 10 m above surface (m/s)
    windHt = 10.
 
-    ! Retrieve current (local) state variable values.
-   dic = _STATE_VAR_(data%id_dic)! Concentration of carbon in surface layer
-   ph = _STATE_VAR_(data%id_pH)! Concentration of carbon in surface layer
 
-   kCO2 = aed2_gas_piston_velocity(windHt,wind,temp,salt)
-
-   ! Solubility, Ko (mol/L/atm)
    Tabs = temp + 273.15
-   Ko = -58.0931+90.5069*(100.0/Tabs) + 22.294*log(Tabs/100.0) &
+
+   ! CO2 flux
+   IF(data%simDIC) THEN
+
+      ! Retrieve current (local) state variable values.
+     dic = _STATE_VAR_(data%id_dic)! Concentration of carbon in surface layer
+     ph = _STATE_VAR_(data%id_pH)  ! Concentration of carbon in surface layer
+
+     kCO2 = aed2_gas_piston_velocity(windHt,wind,temp,salt,schmidt_model=2)
+
+     ! Solubility, Ko (mol/L/atm)
+     Ko = -58.0931+90.5069*(100.0/Tabs) + 22.294*log(Tabs/100.0) &
           + 0.027766*salt - 0.025888*salt*(Tabs/100.0)
-   Ko = Ko + 0.0050578*salt*(Tabs/100.0)*(Tabs/100.0)
-   Ko = exp(Ko)
+     Ko = Ko + 0.0050578*salt*(Tabs/100.0)*(Tabs/100.0)
+     Ko = exp(Ko)
 
-   ! pCO2 in surface water layer
-   pCO2 = aed2_carbon_co2(data%ionic,temp,dic,ph) / Ko
+     ! pCO2 in surface water layer
+     pCO2 = aed2_carbon_co2(data%ionic,temp,dic,ph) / Ko
 
-   ! FCO2 = kCO2 * Ko * (pCO2 - PCO2a)
-   ! pCO2a = 367e-6 (Keeling & Wharf, 1999)
+     ! FCO2 = kCO2 * Ko * (pCO2 - PCO2a)
+     ! pCO2a = 367e-6 (Keeling & Wharf, 1999)
 
-   !------ Yanti correction (20/5/2013) ----------------------------------------
-   ! pCO2 is actually in uatm (=ppm)
-   ! mmol/m2/s = m/s * mmol/L/atm * atm
-   FCO2 = kCO2 * Ko * (pCO2 - data%atmco2)
+     !------ Yanti correction (20/5/2013) ----------------------------------------
+     ! pCO2 is actually in uatm (=ppm)
+     ! mmol/m2/s = m/s * mmol/L/atm * atm
+     FCO2 = kCO2 * Ko * (pCO2 - data%atmco2)
 
-   ! FCO2 = - kCO2 * Ko*1e6 * ((pCO2 * 1e-6) - data%atmco2) ! dCO2/dt
-   !----------------------------------------------------------------------------
+     ! FCO2 = - kCO2 * Ko*1e6 * ((pCO2 * 1e-6) - data%atmco2) ! dCO2/dt
+     !----------------------------------------------------------------------------
 
-   ! Transfer surface exchange value to AED2 (mmmol/m2) converted by driver.
-   _FLUX_VAR_T_(data%id_dic) = -FCO2
+     ! Transfer surface exchange value to AED2 (mmmol/m2) converted by driver.
+     _FLUX_VAR_T_(data%id_dic) = -FCO2
 
-   ! Also store oxygen flux across the atm/water interface as diagnostic variable (mmmol/m2).
-   _DIAG_VAR_S_(data%id_atm_co2_exch) = FCO2
+     ! Also store oxygen flux across the atm/water interface as diagnostic variable (mmmol/m2).
+     _DIAG_VAR_S_(data%id_atm_co2_exch) = FCO2
+   END IF
+
+   ! CH4 flux
+   IF(data%simCH4) THEN
+     ! Algorithm from Arianto Santoso <abs11@students.waikato.ac.nz>
+
+     ! Concentration of methane in surface layer
+     ch4 = _STATE_VAR_(data%id_ch4)
+
+     ! Piston velocity for CH4
+     kCH4 = aed2_gas_piston_velocity(windHt,wind,temp,salt,schmidt_model=4)
+
+     ! Solubility, Ko (mol/L/atm)
+
+     atm = 1.76 * 1e-6 !## current atmospheric CH4 data from NOAA (in ppm)
+
+     A1 = -415.2807
+     A2 = 596.8104
+     A3 = 379.2599
+     A4 = -62.0757
+     B1 = -0.05916
+     B2 = 0.032174
+     B3 = -0.0048198
+
+     logC = (log(atm)) + A1 + (A2 * (100./Tabs)) + (A3 * log (Tabs/100.)) + (A4 * (Tabs/100.)) + &
+                 salt * (B1 + (B2  * (Tabs/100.)) + (B3 * (Tabs/100.)*(Tabs/100.)))
+
+     CH4solub = exp(logC) * 1e-3
+
+
+     ! mmol/m2/s = m/s * mmol/m3
+     FCH4 = kCH4 *  (ch4 - CH4solub)
+
+     !----------------------------------------------------------------------------
+
+     ! Transfer surface exchange value to AED2 (mmmol/m2) converted by driver.
+     _FLUX_VAR_T_(data%id_ch4) = -FCH4
+
+     ! Also store ch4 flux across the atm/water interface as diagnostic variable (mmmol/m2).
+     _DIAG_VAR_S_(data%id_atm_ch4_exch) = FCH4
+   END IF
+
 
 END SUBROUTINE aed2_calculate_surface_carbon
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -507,9 +557,5 @@ PURE AED_REAL FUNCTION aed2_carbon_co2(ionic, temp, dic, pH)
 
 END FUNCTION aed2_carbon_co2
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-
-
 
 END MODULE aed2_carbon
