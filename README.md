@@ -22,6 +22,7 @@ not sure if all of this was needed too for [R] ncdf4 package:
 	sudo apt-get install netcdf-bin
 
 
+
 Lastly, GLM also requires the intel fortran support libraries which do not have a .deb install package so cannot be checked for. We built and tested against l_fcompxe_2013.2.146_redist.tgz which is available here: http://software.intel.com/en-us/articles/redistributable-libraries-for-the-intel-c-and-fortran-composer-xe-2013-for-linux
 
 We install the libraries in /opt/intel  after which we copy the libifort.conf file from the Support directory  (in dropbox) to /etc/ld.so.conf.d and run :
