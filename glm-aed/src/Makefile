@@ -183,8 +183,16 @@ else
   # OPT_FFLAGS=
 endif
 
+
 LIBS+=-lnetcdf
-#LIBS+=-L/opt/local/lib
+# If variable NETCDFLIB is not empty, use it to 
+# set path to the library 
+ifneq ($(NETCDFLIB),)
+  LIBS+=-L$(NETCDFLIB)
+endif
+
+
+
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
