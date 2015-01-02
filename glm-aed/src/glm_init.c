@@ -629,6 +629,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 //                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
         prime_glm_wq(wq_lib);
         wq_init_glm(wq_nml_file, &l, &MaxLayers, &Num_WQ_Vars, &Kw); // Reads WQ namelist file
+        fprintf(stderr, "Num_WQ_Vars = %d\n", Num_WQ_Vars);
+        if ( Num_WQ_Vars > MaxVars ) {
+            fprintf(stderr, "Sorry, this version of GLM only supports %d water quality variables\n", MaxVars);
+            exit(1);
+        }
     }
 
     initialise_lake(namlst);
@@ -646,7 +651,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             WQ_VarsIdx[j-3] = wq_var_index_c(inflow_vars[j], &k);
         }
 
-        wq_set_glm_data(Lake, &MaxLayers, &NumLayers, &MetData, &SurfData, &dt);
+        wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
     }
 
     get_namelist(namlst, debugging);
@@ -809,7 +814,6 @@ void create_lake(int namlst)
         dbgprt( " i = %2d A[i+1] = %24.18e A[i] = %24.18e ALOG10 = %24.18e\n", i, A[i+1], A[i], log10(A[i+1]/A[i]));
         dbgprt( " i = %2d H[i+1] = %24.18e H[i] = %24.18e ALOG10 = %24.18e\n", i, H[i+1], H[i], log10(H[i+1]/H[i]));
         dbgprt( " i = %2d  beta_b[i] = %24.18e\n", i, beta_b[i]);
-
     }
     // The values of a and b exponents for layer 0 are not used as the
     // area and volume are assumed to vary linearly from the

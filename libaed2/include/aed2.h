@@ -13,7 +13,7 @@
 #ifndef _AED2_H_
 #define _AED2_H_
 
-#define AED2_VERSION  "1.0.1"
+#define AED2_VERSION  "1.0.4"
 
 #define MAX_MODELS 40
 

@@ -1,15 +1,17 @@
-# 2014/09/22
+# 2014/12/05
 # Version 2.0.0
 #
+# -- Since 1.4.0
+#
+# Updated to latest fabm (as at 20141205)
+# Changed the WQ array index order to accommodate the new FABM
+# Added atmospheric stability to surface calcs
+# Added bird model for solar radiation
 # Added layer stress, seepage and runoff
+# Added below surface inflows.
 # Selectable use of FABM-AED or AED2
 # Added support for libAED2 - this is the new default WQ method
-#
-# Since 1.4.0
-#
-# Added support for libaed2 :
 #  WQ is selectable from glm2.nml file or from command line as either fabm or aed2
-#
 # Added support for bottom stress
 #
 #

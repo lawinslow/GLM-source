@@ -80,6 +80,8 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
    INTEGER  :: status
 
    AED_REAL          :: frp_initial   = 4.5
+   AED_REAL          :: frp_min   = zero_
+   AED_REAL          :: frp_max   = nan_
    ! Benthic
    AED_REAL          :: Fsed_frp      = 3.5
    AED_REAL          :: Ksed_frp      = 30.0
@@ -99,7 +101,7 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
 
    AED_REAL, parameter :: secs_pr_day = 86400.
 
-   NAMELIST /aed2_phosphorus/ frp_initial,Fsed_frp,Ksed_frp,theta_sed_frp,      &
+   NAMELIST /aed2_phosphorus/ frp_initial,frp_min,frp_max, Fsed_frp,Ksed_frp,theta_sed_frp, &
                              phosphorus_reactant_variable,Fsed_frp_variable,   &
                              simPO4Adsorption,ads_use_external_tss,            &
                              po4sorption_target_variable, PO4AdsorptionModel,  &
@@ -129,7 +131,7 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
 
    ! Register main state variable
    data%id_frp = aed2_define_variable( 'frp', 'mmol/m**3', 'phosphorus',     &
-                                    frp_initial,minimum=zero_)
+                                    frp_initial,minimum=frp_min,maximum=frp_max)
 
    ! Register external state variable dependencies (for benthic flux)
    data%ben_use_oxy = phosphorus_reactant_variable .NE. '' !This means oxygen module switched on

@@ -1,3 +1,12 @@
-**/*.o
-**/.DS_Store
-.DS_Store
+glm
+*.tar.gz
+*.diff
+win-bin
+ubuntu
+.*.swp
+**/CMakeCache.txt
+**/CMakeFiles
+*/cmake_install.cmake
+install_manifest.txt
+.DS*
+

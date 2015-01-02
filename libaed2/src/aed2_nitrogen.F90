@@ -56,7 +56,6 @@ MODULE aed2_nitrogen
 
    END TYPE
 
-
 !===============================================================================
 CONTAINS
 
@@ -78,7 +77,11 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
    INTEGER  :: status
 
    AED_REAL          :: nit_initial=4.5
+   AED_REAL          :: nit_min=zero_
+   AED_REAL          :: nit_max=nan_
    AED_REAL          :: amm_initial=4.5
+   AED_REAL          :: amm_min=zero_
+   AED_REAL          :: amm_max=nan_
    AED_REAL          :: Rnitrif = 0.01
    AED_REAL          :: Rdenit = 0.01
    AED_REAL          :: Fsed_amm = 3.5
@@ -98,7 +101,9 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
 
 
    AED_REAL, parameter :: secs_pr_day = 86400.
-   NAMELIST /aed2_nitrogen/ nit_initial,amm_initial,Rnitrif,Rdenit,Fsed_amm,Fsed_nit, &
+   NAMELIST /aed2_nitrogen/ nit_initial,nit_min, nit_max,                 &
+                    amm_initial, amm_min, amm_max,                        &
+                    Rnitrif,Rdenit,Fsed_amm,Fsed_nit,                     &
                     Knitrif,Kdenit,Ksed_amm,Ksed_nit,                     &
                     theta_nitrif,theta_denit,theta_sed_amm,theta_sed_nit, &
                     nitrif_reactant_variable,denit_product_variable,      &
@@ -128,9 +133,9 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
 
    ! Register state variables
    data%id_amm = aed2_define_variable('amm','mmol/m**3','ammonium',            &
-                                    amm_initial,minimum=zero_)
+                                    amm_initial,minimum=amm_min, maximum=amm_max)
    data%id_nit = aed2_define_variable('nit','mmol/m**3','nitrate',             &
-                                    nit_initial,minimum=zero_)
+                                    nit_initial,minimum=nit_min, maximum=nit_max)
    ! Register external state variable dependencies
    data%use_oxy = nitrif_reactant_variable .NE. '' !This means oxygen module switched on
    IF (data%use_oxy) THEN
@@ -179,7 +184,6 @@ SUBROUTINE aed2_calculate_nitrogen(data,column,layer_idx)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-
    ! Retrieve current (local) state variable values.
    amm = _STATE_VAR_(data%id_amm)! ammonium
    nit = _STATE_VAR_(data%id_nit)! nitrate
@@ -244,7 +248,7 @@ SUBROUTINE aed2_calculate_benthic_nitrogen(data,column,layer_idx)
    AED_REAL :: Fsed_amm, Fsed_nit
 
    ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
+!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -257,23 +261,23 @@ SUBROUTINE aed2_calculate_benthic_nitrogen(data,column,layer_idx)
    nit = _STATE_VAR_(data%id_nit)! nitrate
 
    IF (data%use_sed_model) THEN
-       Fsed_amm = _STATE_VAR_S_(data%id_Fsed_amm)
-       Fsed_nit = _STATE_VAR_S_(data%id_Fsed_nit)
-!print *,'Fsed_amm = ',Fsed_amm,' Fsed_nit = ',Fsed_nit
+      Fsed_amm = _STATE_VAR_S_(data%id_Fsed_amm)
+      Fsed_nit = _STATE_VAR_S_(data%id_Fsed_nit)
    ELSE
-       Fsed_amm = data%Fsed_amm
-       Fsed_nit = data%Fsed_nit
+      Fsed_amm = data%Fsed_amm
+      Fsed_nit = data%Fsed_nit
    ENDIF
 
    IF (data%use_oxy) THEN
       ! Sediment flux dependent on oxygen and temperature
-       oxy = _STATE_VAR_(data%id_oxy)
-       amm_flux = Fsed_amm * data%Ksed_amm/(data%Ksed_amm+oxy) * (data%theta_sed_amm**(temp-20.0))
-       nit_flux = Fsed_nit * oxy/(data%Ksed_nit+oxy) * (data%theta_sed_nit**(temp-20.0))
+      oxy = _STATE_VAR_(data%id_oxy)
+      amm_flux = Fsed_amm * data%Ksed_amm/(data%Ksed_amm+oxy) * (data%theta_sed_amm**(temp-20.0))
+      nit_flux = Fsed_nit * oxy/(data%Ksed_nit+oxy) * (data%theta_sed_nit**(temp-20.0))
    ELSE
       ! Sediment flux dependent on temperature only.
-       amm_flux = Fsed_amm * (data%theta_sed_amm**(temp-20.0))
-       nit_flux = Fsed_nit * (data%theta_sed_nit**(temp-20.0))
+      oxy = 0.
+      amm_flux = Fsed_amm * (data%theta_sed_amm**(temp-20.0))
+      nit_flux = Fsed_nit * (data%theta_sed_nit**(temp-20.0))
    ENDIF
 
    ! TODO:
@@ -293,7 +297,6 @@ SUBROUTINE aed2_calculate_benthic_nitrogen(data,column,layer_idx)
    ! Also store sediment flux as diagnostic variable.
    _DIAG_VAR_S_(data%id_sed_amm) = amm_flux
    _DIAG_VAR_S_(data%id_sed_nit) = nit_flux
-
 
 END SUBROUTINE aed2_calculate_benthic_nitrogen
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

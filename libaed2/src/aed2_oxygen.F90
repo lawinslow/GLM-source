@@ -81,13 +81,15 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
 !LOCALS
    INTEGER  :: status
    AED_REAL :: oxy_initial=300.
+   AED_REAL :: oxy_min=0.
+   AED_REAL :: oxy_max=nan_
    AED_REAL :: Fsed_oxy = 48.0
    AED_REAL :: Ksed_oxy = 30.0
    AED_REAL :: theta_sed_oxy = 1.0
    CHARACTER(len=64) :: Fsed_oxy_variable=''
 
    AED_REAL,PARAMETER :: secs_pr_day = 86400.
-   NAMELIST /aed2_oxygen/ oxy_initial,Fsed_oxy,Ksed_oxy,theta_sed_oxy,  &
+   NAMELIST /aed2_oxygen/ oxy_initial,oxy_min,oxy_max,Fsed_oxy,Ksed_oxy,theta_sed_oxy,  &
                          Fsed_oxy_variable
 !
 !-------------------------------------------------------------------------------
@@ -107,7 +109,7 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
 
    ! Register state variables
    data%id_oxy = aed2_define_variable('oxy','mmol/m**3','oxygen',   &
-                                    oxy_initial,minimum=zero_)
+                                    oxy_initial,minimum=oxy_min,maximum=oxy_max)
 
    ! Register link to external pools
 
@@ -123,7 +125,7 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
 !  data%id_atm_oxy_exch3d = aed2_define_sheet_diag_variable( &
 !                    'atm_oxy_exch3d', 'mmol/m**2/d', 'Oxygen exchange across atm/water interface')
 
-   data%id_oxy_sat = aed2_define_diag_variable(                  &
+   data%id_oxy_sat = aed2_define_sheet_diag_variable(                  &
                      'sat', 'mmol/m**2/d', 'Oxygen saturation')
 
    ! Register environmental dependencies
@@ -191,7 +193,7 @@ SUBROUTINE aed2_calculate_surface_oxygen(data,column,layer_idx)
 
    ! Also store oxygen flux across the atm/water interface as diagnostic variable (mmmol/m2).
    _DIAG_VAR_S_(data%id_atm_oxy_exch) = oxy_atm_flux
-   _DIAG_VAR_(data%id_oxy_sat) =  Coxy_air
+   _DIAG_VAR_S_(data%id_oxy_sat) =  Coxy_air
 
 END SUBROUTINE aed2_calculate_surface_oxygen
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -272,7 +274,6 @@ SUBROUTINE aed2_calculate_benthic_oxygen(data,column,layer_idx)
 
     ! Sediment flux dependent on oxygen and temperature
    oxy_flux = Fsed_oxy * oxy/(data%Ksed_oxy+oxy) * (data%theta_sed_oxy**(temp-20.0))
-
 
    ! Set bottom fluxes for the pelagic (change per surface area per second)
    ! Transfer sediment flux value to AED2.

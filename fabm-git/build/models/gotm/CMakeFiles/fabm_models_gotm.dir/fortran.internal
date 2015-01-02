@@ -1,6 +1,0 @@
-# The fortran modules provided by this target.
-provides
- gotm_ergom
- gotm_fasham
- gotm_model_library
- gotm_npzd

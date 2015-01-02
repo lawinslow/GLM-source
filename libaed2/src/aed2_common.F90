@@ -59,7 +59,7 @@ MODULE aed2_common
    !#---------------------------------------------------------------------------
 
    PUBLIC aed2_calculate, aed2_calculate_surface, aed2_calculate_benthic
-   PUBLIC aed2_light_extinction, aed2_delete
+   PUBLIC aed2_light_extinction, aed2_delete, aed2_equilibrate
 
    !# Re-export these from aed2_core.
    PUBLIC aed2_model_data_t, aed2_variable_t, aed2_column_t
