@@ -45,14 +45,16 @@ UTILDIR=../../libutil
 
 TARGETS=glm
 DEFINES=
-FINCLUDES=
+FINCLUDES=-I$(UTILDIR)/include
 CINCLUDES=-I$(UTILDIR)/include
 LIBS=-L$(UTILDIR) -lutil
+GLM_DEPS=../../libutil/libutil.a
 ifeq ($(WITH_PLOTS),true)
   DEFINES+=-DPLOTS
   ifeq ($(WITH_XPLOTS),true)
     DEFINES+=-DXPLOTS
   endif
+  GLM_DEPS+=../../libplot/libplot.a
 endif
 ifeq ($(SINGLE),true)
   DEFINES += -DSINGLE=1
@@ -86,19 +88,7 @@ ifeq ($(FABM),true)
   endif
   DEFINES+=-DFABM
 
-  ifeq ($(FABM_NEW_BUILD),true)
-    ifeq ($(COMPILATION_MODE),production)
-      FABMLIB=fabm
-      WITH_CHECKS=false
-    endif
-    ifeq ($(COMPILATION_MODE),debug)
-      FABMLIB=fabm_debug
-      WITH_CHECKS=true
-    endif
-
-    FINCLUDES+=-I$(FABMDIR)/include -I$(FABMDIR)/src/drivers/glm -I$(FABMDIR)/build/modules
-    FABMLIBS=-L$(FABMDIR)/build -l$(FABMLIB)
-  else
+  ifeq ($(FABM_OLD_BUILD),true)
     ifeq ($(COMPILATION_MODE),production)
       FABMLIB=fabm_prod
       WITH_CHECKS=false
@@ -110,6 +100,18 @@ ifeq ($(FABM),true)
 
     FINCLUDES+=-I$(FABMDIR)/include -I$(FABMDIR)/src/drivers/glm -I$(FABMDIR)/modules/glm/$(FORTRAN_COMPILER)
     FABMLIBS=-L$(FABMDIR)/lib/glm/$(FORTRAN_COMPILER) -l$(FABMLIB)
+  else
+    ifeq ($(COMPILATION_MODE),production)
+      FABMLIB=fabm
+      WITH_CHECKS=false
+    endif
+    ifeq ($(COMPILATION_MODE),debug)
+      FABMLIB=fabm_debug
+      WITH_CHECKS=true
+    endif
+
+    FINCLUDES+=-I$(FABMDIR)/include -I$(FABMDIR)/src/drivers/glm -I$(FABMDIR)/build/modules
+    FABMLIBS=-L$(FABMDIR)/build -l$(FABMLIB)
   endif
 
   ifeq ($(USE_DL),true)
@@ -125,9 +127,10 @@ ifeq ($(AED2),true)
   endif
 
   AED2LIB=aed2
+  FINCLUDES+=-I$(AED2DIR)/include -I$(AED2DIR)
   AED2LIBS=-L$(AED2DIR) -l$(AED2LIB)
 
-  ifneq ($(USE_DL),true)
+  ifeq ($(USE_DL),true)
     AED2TARGETS=libglm_wq_aed2.so
   endif
 endif
@@ -146,7 +149,7 @@ ifeq ($(F90),ifort)
   ifeq ($(WITH_CHECKS),true)
     FFLAGS+=-check
   endif
-  #FFLAGS+=-real-size 64
+  FFLAGS+=-real-size 64
   LIBS+=-L/opt/intel/lib
   LIBS+=-lifcore -lsvml
   LIBS+=-limf -lintlc
@@ -246,11 +249,8 @@ endif
 all: $(TARGETS)
 
 
-glm: $(OBJS) ../../libplot/libplot.a ../../libutil/libutil.a
+glm: $(OBJS) $(GLM_DEPS)
 	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
-
-glm_test_bird: glm_test_bird.o glm_bird.o glm_util.o ../../libplot/libplot.a ../../libutil/libutil.a
-	$(CC) -o glm_test_bird -Wl,--export-dynamic glm_test_bird.o glm_bird.o glm_util.o $(LIBS)
 
 clean:
 	@touch 1.o 1.mod 1.t 1__genmod.f90 glm 1.so glm_test_bird
@@ -271,7 +271,7 @@ distclean: clean
 
 #                        -E -Bdynamic -undefined suppress -o $@ $^ -L/opt/intel/lib/intel64/ $(LIBS)
 
-# Dependancy rules
+# Dependency rules
 
 libglm_wq_aed2.so: glm_aed2.o glm_plugin.o
 	$(LD) -shared $(LDFLAGS) \
@@ -282,10 +282,6 @@ libglm_wq_fabm.so: glm_fabm.o ode_solvers.o glm_plugin.o
                         -o $@ $^ -L/opt/intel/lib/intel64/ $(LIBS) $(FABMLIBS)
 
 glm_aed2.o: glm_aed2.F90 glm_types.o
-	$(F90) -fPIC $(FFLAGS) -I$(AED2DIR)/include -I$(AED2DIR) \
-                                      $(EXTRA_FFLAGS) -D_FORTRAN_VERSION_ -c $< -o $@
-
-
 glm_fabm.o: glm_fabm.F90 glm_types.o ode_solvers.o
 glm_types.o: glm_types.F90 glm.h
 ode_solvers.o: ode_solvers.F90

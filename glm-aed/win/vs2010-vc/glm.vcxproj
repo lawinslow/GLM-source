@@ -98,7 +98,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;glm-fabm.lib;fabm-glm.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.0.0beta1</Version>
+      <Version>2.0.0beta6</Version>
       <AdditionalLibraryDirectories>..\..\..\fabm-git\compilers\vs2010\glm\$(Platform)-$(Configuration);..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -119,7 +119,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;glm-fabm.lib;fabm-glm.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.0.0beta1</Version>
+      <Version>2.0.0beta6</Version>
       <AdditionalLibraryDirectories>..\..\..\fabm-git\compilers\vs2010\glm\$(Platform)-$(Configuration);..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBCMTD;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -136,7 +136,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;glm-fabm.lib;fabm-glm.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.0.0beta1</Version>
+      <Version>2.0.0beta6</Version>
       <AdditionalLibraryDirectories>..\..\..\fabm-git\compilers\vs2010\glm\$(Platform)-$(Configuration);..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBCMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
@@ -156,12 +156,14 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;glm-fabm.lib;fabm-glm.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.0.0beta1</Version>
+      <Version>2.0.0beta6</Version>
       <AdditionalLibraryDirectories>..\..\..\fabm-git\compilers\vs2010\glm\$(Platform)-$(Configuration);..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreSpecificDefaultLibraries>LIBCMT;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\..\src\glm_bird.c" />
+    <ClCompile Include="..\..\src\glm_const.c" />
     <ClCompile Include="..\..\src\glm_csv.c" />
     <ClCompile Include="..\..\src\glm_deep.c" />
     <ClCompile Include="..\..\src\glm_flow.c" />
@@ -178,8 +180,10 @@
     <ClCompile Include="..\..\src\glm_ncdf.c" />
     <ClCompile Include="..\..\src\glm_output.c" />
     <ClCompile Include="..\..\src\glm_plot.c" />
+    <ClCompile Include="..\..\src\glm_stress.c" />
     <ClCompile Include="..\..\src\glm_surface.c" />
     <ClCompile Include="..\..\src\glm_util.c" />
+    <ClCompile Include="..\..\src\glm_wqual.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\glm.h" />
@@ -204,20 +208,12 @@
     <ClInclude Include="..\..\src\libplot.h" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\fabm-git\compilers\vs2010\fabm-glm.vfproj">
-      <Project>{7d63f885-f1d8-469c-a076-488a23eb592b}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
     <ProjectReference Include="..\..\..\libplot\win\vs2010\libplot.vcxproj">
       <Project>{c16ec5b0-c713-4564-a4d0-497ee322e68b}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
     <ProjectReference Include="..\..\..\libutil\win\vs2010\libutil.vcxproj">
       <Project>{8ef4b62a-1caf-4c2a-af8f-fbaf3350ea84}</Project>
-      <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
-    </ProjectReference>
-    <ProjectReference Include="glm-fabm.vfproj">
-      <Project>{078dd61c-c7b7-4728-b574-6c23f753b7a4}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
   </ItemGroup>

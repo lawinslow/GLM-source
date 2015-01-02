@@ -1,0 +1,10 @@
+   AED2          Type      Old-FABM           New-FABM
+('temperature')           varname_temp      standard_variables%temperature
+('salinity')              varname_salt      standard_variables%practical_salinity
+('wind_speed')   sheet    varname_wind_sf   standard_variables%wind_speed
+('par')                   varname_par       standard_variables%downwelling_photosynthetic_radiative_flux
+('par_sf')       sheet    varname_par_sf    standard_variables%surface_downwelling_photosynthetic_radiative_flux
+('tss')                   varname_tss       standard_variables%mass_concentration_of_suspended_matter
+('layer_ht')              varname_layer_ht  standard_variables%cell_thickness
+('sed_zone')     sheet    varname_sed_zone  standard_variables%env_sed_zone
+('extc_coef')             varname_extc      standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux

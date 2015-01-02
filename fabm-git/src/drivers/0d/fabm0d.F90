@@ -1,4 +1,5 @@
 #include "fabm_driver.h"
+#include "fabm_0d.h"
 !-----------------------------------------------------------------------
 !BOP
 !
@@ -15,14 +16,14 @@
    use input
    use eqstate,only:rho_feistel
 
-   use shared
-   use output
-
+   use fabm
    use fabm_driver
    use fabm_types
    use fabm_expressions
-   use fabm
    use fabm_config
+
+   use shared
+   use output
 
    implicit none
    private
@@ -40,10 +41,12 @@
 !  private data members initialised via namelists
    real(rk)                  :: dt
 
+!  FABM yalmm configuration file
+   character(len=PATH_MAX)   :: fabm_yaml_file='fabm.yaml'
+
    ! Bio model info
    integer  :: ode_method
    logical  :: repair_state
-   integer(timestepkind)::nsave
    integer  :: swr_method
    real(rk) :: cloud
    real(rk) :: par_fraction
@@ -52,19 +55,12 @@
 
    ! Environment
    real(rk),target :: current_depth,dens,decimal_yearday
-   real(rk)        :: par_sf,par_bt,par_ct,column_depth
+   real(rk)        :: swr_sf,par_sf,par_bt,par_ct,extinction
 
    real(rk),allocatable :: expression_data(:)
 
-   type (type_bulk_variable_id), save :: id_dens
+   type (type_bulk_variable_id), save :: id_dens, id_par
    logical                            :: compute_density
-
-   type type_input_data
-      character(len=attribute_length) :: variable_name = ''
-      real(rk)                        :: value         = 0.0_rk
-      type (type_input_data),pointer  :: next          => null()
-   end type
-   type (type_input_data), pointer, save :: first_input_data => null()
 
    interface
       function short_wave_radiation(jul,secs,dlon,dlat,cloud,bio_albedo) result(swr)
@@ -87,6 +83,60 @@
 !-----------------------------------------------------------------------
 !BOP
 !
+! !IROUTINE: Parse the command line
+!
+! !INTERFACE:
+   subroutine  cmdline
+   implicit none
+
+!   character(len=*), parameter :: version = '1.0'
+   character(len=32) :: arg
+   integer :: i
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+   do i = 1, command_argument_count()
+      call get_command_argument(i, arg)
+
+      select case (arg)
+#if 0
+      case ('-v', '--version')
+         print '(2a)', 'fabm0d version ', version
+         stop
+#endif
+      case ('-h', '--help')
+         call print_help()
+         stop
+      case ('-y', '--yaml')
+         call get_command_argument(i+1, fabm_yaml_file)
+!         print '(a)', fabm_yaml_file
+      case default
+#if 0
+         print '(a,a,/)', 'Unrecognized command-line option: ', arg
+         call print_help()
+         stop
+#endif
+      end select
+   end do
+
+   contains
+
+   subroutine print_help()
+      print '(a)', 'usage: fabm0d [OPTIONS]'
+      print '(a)', ''
+      print '(a)', 'Without further options, fabm0d run using default input filenames.'
+      print '(a)', ''
+      print '(a)', 'fabm0d options:'
+      print '(a)', ''
+      print '(a)', '  -h, --help        print usage information and exit'
+      print '(a)', '  -y, --yaml file   use <file> as FABM yaml configuration file - default fabm.yaml'
+   end subroutine print_help
+
+   end subroutine  cmdline
+
+!-----------------------------------------------------------------------
+!BOP
+!
 ! !IROUTINE: Initialise the model
 !
 ! !INTERFACE:
@@ -103,7 +153,7 @@
 !
 !
 ! !LOCAL VARIABLES:
-   character(len=PATH_MAX)   :: env_file,output_file
+   character(len=PATH_MAX)   :: env_file
    integer                   :: i
    real(rk)                  :: depth
    real(rk),parameter        :: invalid_latitude = -100._rk,invalid_longitude = -400.0_rk
@@ -114,11 +164,11 @@
    namelist /environment/ env_file,swr_method, &
                           latitude,longitude,cloud,par_fraction, &
                           depth,par_background_extinction,apply_self_shading
-   namelist /output/      output_file,output_format,nsave,add_environment, &
-                          add_diagnostic_variables, add_conserved_quantities
 !EOP
 !-----------------------------------------------------------------------
 !BOC
+   call cmdline
+
    LEVEL1 'init_run'
    STDERR LINE
 
@@ -157,14 +207,7 @@
    apply_self_shading = .true.
    read(namlst,nml=environment,err=92)
 
-   ! Read output namelist
-   output_file = ''
-   output_format=ASCII_FMT
-   nsave = 1
-   add_environment = .false.
-   add_conserved_quantities = .false.
-   add_diagnostic_variables=.false.
-   read(namlst,nml=output     ,err=93)
+   call configure_output(namlst)
 
    ! Close the namelist file.
    close (namlst)
@@ -218,13 +261,6 @@
       end if
    end if
 
-   if (output_file=='') then
-      FATAL 'run.nml: "output_file" must be set to a valid file path in "output" namelist.'
-      stop 'init_run'
-   end if
-
-   LEVEL2 'done.'
-
    ! Configure the time module to use actual start and stop dates.
    timefmt = 2
 
@@ -254,21 +290,26 @@
    call init_time(MinN,MaxN)
 
    ! Open the file with observations of the local environment.
-   LEVEL2 'Reading local environment data from:'
+   LEVEL1 'init environment'
+   LEVEL2 'reading local environment data from:'
    LEVEL3 trim(env_file)
    call init_input()
-   call register_input_0d(env_file,1,par_sf)
-   call register_input_0d(env_file,2,temp)
-   call register_input_0d(env_file,3,salt)
+   call register_input_0d(env_file,1,swr_sf,'shortwave radiation')
+   call register_input_0d(env_file,2,temp,'temperature')
+   call register_input_0d(env_file,3,salt,'salinity')
 
-   ! Build FABM model tree. Use fabm.yaml if available, otherwise fall back to fabm.nml.
-   inquire(file='fabm.yaml',exist=file_exists)
+   ! Build FABM model tree. Use 'fabm_yaml_file' if available, otherwise fall back to fabm.nml.
+   LEVEL1 'initialize FABM'
+   LEVEL2 'reading configuration from:'
+   inquire(file=trim(fabm_yaml_file),exist=file_exists)
    if (file_exists) then
       ! From YAML file fabm.yaml
+      LEVEL3 trim(fabm_yaml_file)
       allocate(model)
-      call fabm_create_model_from_yaml_file(model)
+      call fabm_create_model_from_yaml_file(model,path=trim(fabm_yaml_file))
    else
       ! From namelists in fabm.nml
+      LEVEL3 'fabm.nml'
       model => fabm_create_model_from_file(namlst)
    end if
 
@@ -277,31 +318,42 @@
 
    ! Create state variable vector, using the initial values specified by the model,
    ! and link state data to FABM.
-   allocate(cc(size(model%state_variables)+size(model%bottom_state_variables)))
+   allocate(cc(size(model%state_variables)+size(model%bottom_state_variables)+size(model%surface_state_variables)))
    do i=1,size(model%state_variables)
       cc(i) = model%state_variables(i)%initial_value
       call fabm_link_bulk_state_data(model,i,cc(i))
    end do
 
-   ! Create benthos variable vector, using the initial values specified by the model,
+   ! Create bottom-bound state variable vector, using the initial values specified by the model,
    ! and link state data to FABM.
    do i=1,size(model%bottom_state_variables)
       cc(size(model%state_variables)+i) = model%bottom_state_variables(i)%initial_value
       call fabm_link_bottom_state_data(model,i,cc(size(model%state_variables)+i))
    end do
 
+   ! Create surface-bound state variable vector, using the initial values specified by the model,
+   ! and link state data to FABM.
+   do i=1,size(model%surface_state_variables)
+      cc(size(model%state_variables)+size(model%bottom_state_variables)+i) = model%surface_state_variables(i)%initial_value
+      call fabm_link_surface_state_data(model,i,cc(size(model%state_variables)+size(model%bottom_state_variables)+i))
+   end do
+
    id_dens = fabm_get_bulk_variable_id(model,standard_variables%density)
-   compute_density = fabm_variable_needs_values(id_dens)
+   compute_density = fabm_variable_needs_values(model,id_dens)
    if (compute_density) call fabm_link_bulk_data(model,id_dens,dens)
+
+   id_par = fabm_get_bulk_variable_id(model,standard_variables%downwelling_photosynthetic_radiative_flux)
 
    ! Link environmental data to FABM
    call fabm_link_bulk_data(model,standard_variables%temperature,temp)
    call fabm_link_bulk_data(model,standard_variables%practical_salinity,salt)
-   call fabm_link_bulk_data(model,standard_variables%downwelling_photosynthetic_radiative_flux,par)
+   if (fabm_variable_needs_values(model,id_par)) call fabm_link_bulk_data(model,id_par,par)
    call fabm_link_bulk_data(model,standard_variables%pressure,current_depth)
    call fabm_link_bulk_data(model,standard_variables%cell_thickness,column_depth)
    call fabm_link_bulk_data(model,standard_variables%depth,current_depth)
+   call fabm_link_bulk_data(model,standard_variables%attenuation_coefficient_of_photosynthetic_radiative_flux,extinction)
    call fabm_link_horizontal_data(model,standard_variables%surface_downwelling_photosynthetic_radiative_flux,par_sf)
+   call fabm_link_horizontal_data(model,standard_variables%surface_downwelling_shortwave_flux,swr_sf)
    call fabm_link_horizontal_data(model,standard_variables%cloud_area_fraction,cloud)
    call fabm_link_horizontal_data(model,standard_variables%bottom_depth,column_depth)
    call fabm_link_horizontal_data(model,standard_variables%bottom_depth_below_geoid,column_depth)
@@ -311,9 +363,6 @@
 
    ! Read forcing data specified in input.yaml.
    call init_yaml()
-
-   ! Allocate memory for the value of any requested vertical integrals/averages of FABM variables.
-   call check_fabm_expressions()
 
    ! Check whether all dependencies of biogeochemical models have now been fulfilled.
    call fabm_check_ready(model)
@@ -326,10 +375,10 @@
    call get_rhs(.true.,size(cc,1),cc,rhs)
 
    ! Output variable values at initial time
-   call init_output(output_file,start)
+   LEVEL1 'init_output'
+   call init_output(start)
    call do_output(0_timestepkind)
 
-   LEVEL2 'done.'
    STDERR LINE
 
    return
@@ -339,8 +388,6 @@
 91 FATAL 'I could not read the "model_setup" namelist'
    stop 'init_run'
 92 FATAL 'I could not read the "environment" namelist'
-   stop 'init_run'
-93 FATAL 'I could not read the "output" namelist'
    stop 'init_run'
 
    end subroutine init_run
@@ -381,8 +428,10 @@
       type (type_key_value_pair),pointer :: pair
 
       pair => mapping%first
+      if (associated(pair)) call driver%log_message('Forcing data specified in input.yaml:')
       do while (associated(pair))
          variable_name = trim(pair%key)
+         if (variable_name=='') call driver%fatal_error('init_yaml_input','Empty variable name specified.')
          select type (dict=>pair%value)
             class is (type_dictionary)
                call parse_input_variable(variable_name,dict)
@@ -399,16 +448,16 @@
       character(len=*),      intent(in) :: variable_name
       type (type_dictionary),intent(in) :: mapping
 
-      type (type_error), pointer        :: config_error
-      class (type_node),  pointer :: node
-      class (type_scalar),pointer :: scalar
-      real(rk)            :: relaxation_time
-      character(len=1024) :: path
-      integer             :: column
-      logical             :: is_state_variable
-      type (type_input_data),pointer :: input_data
+      type (type_error),         pointer :: config_error
+      class (type_node),         pointer :: node
+      class (type_scalar),       pointer :: scalar
+      character(len=1024)                :: path,message
+      integer                            :: column
+      real(rk)                           :: scale_factor
+      real(rk)                           :: relaxation_time
+      logical                            :: is_state_variable
+      type (type_input_data),    pointer :: input_data
       type (type_key_value_pair),pointer :: pair
-
       type (type_bulk_variable_id)       :: bulk_id
       type (type_horizontal_variable_id) :: horizontal_id
       type (type_scalar_variable_id)     :: scalar_id
@@ -429,19 +478,12 @@
          end if
       end if
 
-      ! Create an object to hold information on this input variable.
-      if (associated(first_input_data)) then
-         input_data => first_input_data
-         do while (associated(input_data%next))
-            input_data => input_data%next
-         end do
-         allocate(input_data%next)
-         input_data => input_data%next
-      else
-         allocate(first_input_data)
-         input_data => first_input_data
-      end if
+      ! Prepend to list of input data.
+      allocate(input_data)
+      input_data%next => first_input_data
+      first_input_data => input_data
       input_data%variable_name = variable_name
+      call driver%log_message('  '//trim(input_data%variable_name))
 
       scalar => mapping%get_scalar('constant_value',required=.false.,error=config_error)
       if (associated(scalar)) then
@@ -449,23 +491,37 @@
          input_data%value = mapping%get_real('constant_value',error=config_error)
          if (associated(config_error)) call fatal_error('parse_input_variable',config_error%message)
 
+         ! Make sure keys related to time-varying input are not present.
          node => mapping%get('file')
          if (associated(node)) call fatal_error('parse_input_variable','input.yaml, variable "'//trim(variable_name)//'": keys "constant_value" and "file" cannot both be present.')
          node => mapping%get('column')
          if (associated(node)) call fatal_error('parse_input_variable','input.yaml, variable "'//trim(variable_name)//'": keys "constant_value" and "column" cannot both be present.')
+         node => mapping%get('scale_factor')
+         if (associated(node)) call fatal_error('parse_input_variable','input.yaml, variable "'//trim(variable_name)//'": keys "constant_value" and "scale_factor" cannot both be present.')
+         write (message,'(g13.6)') input_data%value
+         call driver%log_message('    constant_value = '//adjustl(message))
       else
-         ! Input variable is set to a time-varying value. Obtain path and column number.
+         ! Input variable is set to a time-varying value. Obtain path, column number and scale factor.
          path = mapping%get_string('file',error=config_error)
          if (associated(config_error)) call fatal_error('parse_input_variable',config_error%message)
          column = mapping%get_integer('column',default=1,error=config_error)
          if (associated(config_error)) call fatal_error('parse_input_variable',config_error%message)
-         call register_input_0d(path,column,input_data%value)
+         scale_factor = mapping%get_real('scale_factor',default=1.0_rk,error=config_error)
+         if (associated(config_error)) call fatal_error('parse_input_variable',config_error%message)
+         call register_input_0d(path,column,input_data%value,variable_name,scale_factor=scale_factor)
+         call driver%log_message('    file = '//trim(path))
+         write (message,'(i0)') column
+         call driver%log_message('    column = '//adjustl(message))
+         write (message,'(g13.6)') scale_factor
+         call driver%log_message('    scale factor = '//adjustl(message))
       end if
 
       if (is_state_variable) then
+         ! This is a state variable. Obtain associated relaxation time.
          relaxation_time = mapping%get_real('relaxation_time',default=1.e15_rk,error=config_error)
          if (associated(config_error)) call fatal_error('parse_input_variable',config_error%message)
       else
+         ! This is not a state variable. Make sure no relaxation time is specified.
          node => mapping%get('relaxation_time')
          if (associated(node)) call fatal_error('parse_input_variable','input.yaml, variable "'//trim(variable_name)//'": key "relaxation_time" is not supported because "'//trim(variable_name)//'" is not a state variable.')
       end if
@@ -491,7 +547,7 @@
    subroutine start_time_step(n)
       integer(timestepkind),intent(in) :: n
 
-      real(rk)                         :: extinction,bio_albedo
+      real(rk)                         :: bio_albedo
 
       ! Update time in time manager
       call update_time(n)
@@ -502,31 +558,34 @@
       ! Update environment (i.e., read from input files)
       call do_input(julianday,secondsofday)
 
+      ! Calculate light extinction
+      extinction = 0.0_rk
+      if (apply_self_shading) call fabm_get_light_extinction(model,extinction)
+      extinction = extinction + par_background_extinction
+
       ! Calculate photosynthetically active radiation at surface, if it is not provided in the input file.
       if (swr_method==0) then
          ! Calculate photosynthetically active radiation from geographic location, time, cloud cover.
          call fabm_get_albedo(model,bio_albedo)
-         par_sf = short_wave_radiation(julianday,secondsofday,longitude,latitude,cloud,bio_albedo)
+         swr_sf = short_wave_radiation(julianday,secondsofday,longitude,latitude,cloud,bio_albedo)
       end if
 
       ! Multiply by fraction of short-wave radiation that is photosynthetically active.
-      par_sf = par_fraction*par_sf
+      par_sf = par_fraction*swr_sf
 
       ! Apply light attentuation with depth, unless local light is provided in the input file.
       if (swr_method/=2) then
          ! Either we calculate surface PAR, or surface PAR is provided.
          ! Calculate the local PAR at the given depth from par fraction, extinction coefficient, and depth.
-         extinction = 0.0_rk
-         if (apply_self_shading) call fabm_get_light_extinction(model,extinction)
-         extinction = extinction + par_background_extinction
          par_ct = par_sf*exp(-0.5_rk*column_depth*extinction)
          par_bt = par_sf*exp(-column_depth*extinction)
-
       else
          par_ct = par_sf
          par_bt = par_sf
       end if
       call update_depth(CENTER)
+
+      call fabm_get_light(model)
 
       ! Compute density from temperature and salinity, if required by biogeochemistry.
       if (compute_density) dens = rho_feistel(salt,temp,5._rk*column_depth,.true.)
@@ -576,13 +635,14 @@
       do i=1,size(model%bottom_state_variables)
          call fabm_link_bottom_state_data(model,i,cc(size(model%state_variables)+i))
       end do
+      do i=1,size(model%surface_state_variables)
+         call fabm_link_surface_state_data(model,i,cc(size(model%state_variables)+size(model%bottom_state_variables)+i))
+      end do
 
       call do_repair_state('0d::time_loop(), after ode_solver()')
 
       ! Do output
-      if (mod(n,nsave)==0) then
-         call do_output(n)
-      end if
+      call do_output(n)
 
    end do
    STDERR LINE
@@ -728,8 +788,9 @@
    do n=1,size(model%bottom_state_variables)
       call fabm_link_bottom_state_data(model,n,cc(size(model%state_variables)+n))
    end do
-
-   call update_fabm_expressions()
+   do n=1,size(model%surface_state_variables)
+      call fabm_link_surface_state_data(model,n,cc(size(model%state_variables)+size(model%bottom_state_variables)+n))
+   end do
 
    ! Shortcut to the number of pelagic state variables.
    n = size(model%state_variables)
@@ -788,19 +849,20 @@
    do n=1,size(model%bottom_state_variables)
       call fabm_link_bottom_state_data(model,n,cc(size(model%state_variables)+n))
    end do
-
-   call update_fabm_expressions()
+   do n=1,size(model%surface_state_variables)
+      call fabm_link_surface_state_data(model,n,cc(size(model%state_variables)+size(model%bottom_state_variables)+n))
+   end do
 
    ! Shortcut to the number of pelagic state variables.
    n = size(model%state_variables)
 
-   ! Calculate temporal derivatives due to surface exchange.
+   ! Calculate temporal derivatives due to surface-bound processes.
    call update_depth(SURFACE)
-   call fabm_get_surface_exchange(model,rhs(1:n))
+   call fabm_do_surface(model,rhs(1:n),rhs(n+size(model%bottom_state_variables)+1:))
 
-   ! Calculate temporal derivatives due to benthic processes.
+   ! Calculate temporal derivatives due to bottom-bound processes.
    call update_depth(BOTTOM)
-   call fabm_do_benthos(model,rhs(1:n),rhs(n+1:))
+   call fabm_do_bottom(model,rhs(1:n),rhs(n+1:n+size(model%bottom_state_variables)))
 
    ! For pelagic variables: surface and bottom flux (rate per surface area) to concentration (rate per volume)
    rhs(1:n) = rhs(1:n)/column_depth
@@ -811,49 +873,6 @@
 
    end subroutine get_rhs
 !EOC
-
-   subroutine check_fabm_expressions()
-      class (type_expression),pointer :: expression
-      integer :: n
-
-      n = 0
-      expression => model%root%first_expression
-      do while (associated(expression))
-         select type (expression)
-            class is (type_vertical_integral)
-                n = n + 1
-         end select
-         expression => expression%next
-      end do
-
-      allocate(expression_data(n))
-      expression_data = _ZERO_
-
-      n = 0
-      expression => model%root%first_expression
-      do while (associated(expression))
-         select type (expression)
-            class is (type_vertical_integral)
-               n = n + 1
-               call fabm_link_horizontal_data(model,trim(expression%output_name),expression_data(n))
-         end select
-         expression => expression%next
-      end do
-   end subroutine
-
-   subroutine update_fabm_expressions()
-      class (type_expression),pointer :: expression
-
-      expression => model%root%first_expression
-      do while (associated(expression))
-         select type (expression)
-            class is (type_vertical_integral)
-               expression%out%p = expression%in%p
-               if (.not.expression%average) expression%out%p = expression%out%p*(min(expression%maximum_depth,column_depth)-expression%minimum_depth)
-         end select
-         expression => expression%next
-      end do
-   end subroutine
 
 !-----------------------------------------------------------------------
 

@@ -117,7 +117,7 @@ void read_daily_inflow(int julian, int NumInf, AED_REAL *flow, AED_REAL *temp,
         salt[i] = get_csv_val_r(csv,inf[i].salt_idx);
 
         for (j = 0; j < n_invars; j++) {
-            if (WQ_VarsIdx[j]<0) k = j; else k = WQ_VarsIdx[j];
+            if (WQ_VarsIdx[j] < 0) k = j; else k = WQ_VarsIdx[j];
             if (inf[i].in_vars[k] == -1 )
                 WQ_INF_(wq, i, k) = 0.;
             else
@@ -149,7 +149,7 @@ void read_daily_outflow(int julian, int NumOut, AED_REAL *draw)
  ******************************************************************************/
 void read_daily_met(int julian, MetDataType *met)
 {
-    int csv, i, idx;
+    int csv, i, idx, err = 0;
     AED_REAL now, tomorrow, t_val, sol;
 
     now = julian;
@@ -160,6 +160,9 @@ void read_daily_met(int julian, MetDataType *met)
 
     csv = metf;
     find_day(csv, time_idx, julian);
+
+    for (i = 0; i < n_steps; i++)
+        memset(&submet[i], 0, sizeof(MetDataType));
 
     i = 0;
     while ( (t_val = get_csv_val_r(csv, time_idx)) < tomorrow) {
@@ -173,9 +176,19 @@ void read_daily_met(int julian, MetDataType *met)
         idx = floor((t_val-floor(t_val))*24+1.e-8); // add 1.e-8 to compensate for rounding error
         // fprintf(stderr, "Read met for %16.8f ; %15.12f (%2d)\n", t_val, (t_val-floor(t_val))*24., idx);
         if ( idx != i ) {
+            if ( !err ) {
+               int dd,mm,yy;
+               calendar_date(now,&yy,&mm,&dd);
+               fprintf(stderr, "Possible sequence issue in met for day %4d-%02d-%02d\n", yy,mm,dd);
+            }
+            idx = i;
+            err = 1;
+        }
+        if (idx >= n_steps) {
             int dd,mm,yy;
             calendar_date(now,&yy,&mm,&dd);
-            fprintf(stderr, "Possible sequence issue in met for day %4d-%02d-%02d\n", yy,mm,dd);
+            fprintf(stderr, "Step error for %4d-%02d-%02d!\n", yy,mm,dd);
+            break;
         }
 
         // Rain is the exception - goes as is
@@ -399,7 +412,7 @@ void open_inflow_file(int idx, const char *fname,
     for (j = 0; j < nvars; j++) {
         k = find_csv_var(inf[idx].inf, vars[j]);
         if (k == -1)
-            fprintf(stderr,"No match for '%s' in file '%s'\n",vars[j],fname);
+            fprintf(stderr, "No match for '%s' in file '%s'\n", vars[j], fname);
         else {
             if ( k != inf[idx].flow_idx && k != inf[idx].temp_idx &&
                                            k != inf[idx].salt_idx ) {

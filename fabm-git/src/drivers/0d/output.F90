@@ -1,4 +1,5 @@
 #include "fabm_driver.h"
+#include "fabm_0d.h"
 !-----------------------------------------------------------------------
 !BOP
 !
@@ -27,28 +28,30 @@
 
    private
 
-   public init_output,do_output,clean_output
+   public configure_output,init_output,do_output,clean_output
 
-   integer, parameter, public :: ASCII_FMT=1
-   integer, parameter, public :: NETCDF_FMT=2
+   integer, parameter :: ASCII_FMT  = 1
+   integer, parameter :: NETCDF_FMT = 2
 
-   integer, public :: output_format
-   logical, public :: add_environment
-   logical, public :: add_conserved_quantities
-   logical, public :: add_diagnostic_variables
+   character(len=PATH_MAX) :: output_file
+   integer :: output_format
+   logical :: add_environment
+   logical :: add_conserved_quantities
+   logical :: add_diagnostic_variables
+   integer(timestepkind) :: nsave
 
-   integer, parameter         :: out_unit = 12
+   integer                    :: out_unit = -1
 
    character, parameter       :: separator = char(9)
 
-   real(rk), allocatable     :: totals(:),totals0(:)
+   real(rk), allocatable, dimension(:) :: totals,totals0,totals_hz
 
-   integer                   :: ncid=-1
 #ifdef NETCDF4
+   integer                   :: ncid = -1
    integer                   :: setn
    integer                   :: time_id
    integer                   :: par_id,temp_id,salt_id
-   integer, allocatable, dimension(:)  :: statevar_ids,diagnostic_ids,conserved_ids,conserved_change_ids
+   integer, allocatable, dimension(:) :: statevar_ids,diagnostic_ids,conserved_ids,conserved_change_ids
 #endif
 !EOP
 !-----------------------------------------------------------------------
@@ -57,22 +60,69 @@
 
 !-----------------------------------------------------------------------
 !BOP
-! !IROUTINE: prepare for output
+! !IROUTINE: configure output from namelists or YAML
 !
 ! !INTERFACE:
-   subroutine init_output(output_file,start)
+   subroutine configure_output(namlst)
 !
 ! !DESCRIPTION:
 ! TODO
 !
 ! !INPUT PARAMETERS:
-   character(len=*), intent(in) :: output_file,start
+   integer, intent(in) :: namlst
 !
 ! !REVISION HISTORY:
 !  Original author(s): Karsten Bolding
 !
 ! !LOCAL PARAMETERS:
-   integer         :: i,iret
+   namelist /output/ output_file,output_format,nsave,add_environment, &
+                     add_diagnostic_variables, add_conserved_quantities
+!
+!EOP
+!-----------------------------------------------------------------------
+!BOC
+   ! Read output namelist
+   output_file = ''
+   output_format = ASCII_FMT
+   nsave = 1
+   add_environment = .false.
+   add_conserved_quantities = .false.
+   add_diagnostic_variables = .false.
+
+   read(namlst,nml=output,err=93)
+
+   if (output_file=='') then
+      FATAL 'run.nml: "output_file" must be set to a valid file path in "output" namelist.'
+      stop 'configure_output'
+   end if
+
+   return
+
+93 FATAL 'run.nml: I could not read the "output" namelist.'
+   stop 'configure_output'
+
+   end subroutine configure_output
+!EOC
+
+!-----------------------------------------------------------------------
+!BOP
+! !IROUTINE: prepare for output
+!
+! !INTERFACE:
+   subroutine init_output(start)
+!
+! !DESCRIPTION:
+! TODO
+!
+! !INPUT PARAMETERS:
+   character(len=*), intent(in) :: start
+!
+! !REVISION HISTORY:
+!  Original author(s): Karsten Bolding
+!
+! !LOCAL PARAMETERS:
+   integer                        :: i,iret
+   type (type_input_data),pointer :: input_data,input_data2
 #ifdef NETCDF4
    integer         :: lon_dim,lat_dim,time_dim
    integer         :: lon_id,lat_id
@@ -81,12 +131,13 @@
 !EOP
 !-----------------------------------------------------------------------
 !BOC
+   LEVEL2 'writing results to:'
+   LEVEL3 trim(output_file)
    select case (output_format)
-      case(ASCII_FMT)
-         open(out_unit,file=trim(output_file),action='write', &
-              status='replace',err=96)
-         LEVEL2 'Writing results to:'
-         LEVEL3 trim(output_file)
+      case (ASCII_FMT)
+         out_unit = get_free_unit()
+         open(out_unit,file=trim(output_file),action='write',status='replace',err=96)
+         LEVEL3 'ASCII format'
 
          ! Write header to the output file.
          write(out_unit,FMT='(''# '',A)') title
@@ -101,6 +152,9 @@
          end do
          do i=1,size(model%bottom_state_variables)
             write(out_unit,FMT=100,ADVANCE='NO') separator,trim(model%bottom_state_variables(i)%long_name),trim(model%bottom_state_variables(i)%units)
+         end do
+         do i=1,size(model%surface_state_variables)
+            write(out_unit,FMT=100,ADVANCE='NO') separator,trim(model%surface_state_variables(i)%long_name),trim(model%surface_state_variables(i)%units)
          end do
          if (add_diagnostic_variables) then
             do i=1,size(model%diagnostic_variables)
@@ -119,7 +173,7 @@
       case (NETCDF_FMT)
 #ifdef NETCDF4
          setn=0
-         LEVEL2 'NetCDF version: ',trim(NF90_INQ_LIBVERS())
+         LEVEL3 'NetCDF version: ',trim(NF90_INQ_LIBVERS())
          iret = nf90_create(output_file,NF90_CLOBBER,ncid)
          call check_err(iret)
 !        define dimensions
@@ -143,6 +197,22 @@
          call check_err(iret)
 
 !        define variables
+         input_data => first_input_data
+         do while (associated(input_data))
+            ! First check if an input variable of this name has already been added to NetCDF.
+            ! If so, this predefined one takes precedence, and we do nothing.
+            input_data2 => first_input_data
+            do while (.not.associated(input_data2,input_data))
+               if (input_data2%variable_name==input_data%variable_name) exit
+               input_data2 => input_data2%next
+            end do
+
+            if (associated(input_data2,input_data)) then
+               iret = nf90_def_var(ncid,input_data%variable_name,NF90_REAL,dims,input_data%ncid)
+               call check_err(iret)
+            end if
+            input_data => input_data%next
+         end do
          iret = nf90_def_var(ncid,'par',NF90_REAL,dims,par_id)
          call check_err(iret)
          iret = nf90_def_var(ncid,'temp',NF90_REAL,dims,temp_id)
@@ -150,7 +220,7 @@
          iret = nf90_def_var(ncid,'salt',NF90_REAL,dims,salt_id)
          call check_err(iret)
 
-         allocate(statevar_ids(size(model%state_variables)+size(model%bottom_state_variables)))
+         allocate(statevar_ids(size(model%state_variables)+size(model%bottom_state_variables)+size(model%surface_state_variables)))
          allocate(diagnostic_ids(size(model%diagnostic_variables)+size(model%horizontal_diagnostic_variables)))
          allocate(conserved_ids(size(model%conserved_quantities)))
          allocate(conserved_change_ids(size(model%conserved_quantities)))
@@ -160,6 +230,9 @@
          end do
          do i=1,size(model%bottom_state_variables)
             call create_variable(model%bottom_state_variables(i),statevar_ids(i+size(model%state_variables)))
+         end do
+         do i=1,size(model%surface_state_variables)
+            call create_variable(model%surface_state_variables(i),statevar_ids(i+size(model%state_variables)+size(model%bottom_state_variables)))
          end do
 
          do i=1,size(model%diagnostic_variables)
@@ -201,8 +274,9 @@
    end select
 
    ! Allocate space for totals of conserved quantities.
-   allocate(totals0(1:size(model%conserved_quantities)))  ! at initial time
-   allocate(totals(1:size(model%conserved_quantities)))   ! at current time
+   allocate(totals0  (size(model%conserved_quantities)))  ! at initial time
+   allocate(totals   (size(model%conserved_quantities)))  ! at current time
+   allocate(totals_hz(size(model%conserved_quantities)))  ! at current time, on top/bottom interfaces only
 
    return
 96 FATAL 'I could not open ',trim(output_file)
@@ -246,9 +320,12 @@
 ! !LOCAL PARAMETERS:
    integer         :: i,j,iret
    integer         :: start(3)
+   type (type_input_data),pointer :: input_data
 !EOP
 !-----------------------------------------------------------------------
 !BOC
+   if (mod(n,nsave)/=0) return
+
    select case (output_format)
       case(ASCII_FMT)
          call write_time_string(julianday,secondsofday,timestr)
@@ -258,7 +335,7 @@
             write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,temp
             write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,salt
          end if
-         do i=1,(size(model%state_variables)+size(model%bottom_state_variables))
+         do i=1,size(cc)
             write (out_unit,FMT='(A,E16.8E3)',ADVANCE='NO') separator,cc(i)
          end do
          if (add_diagnostic_variables) then
@@ -286,6 +363,14 @@
 
          start(1) = 1; start(2) = 1; start(3) = setn
 
+         input_data => first_input_data
+         do while (associated(input_data))
+            if (input_data%ncid/=-1) then
+               iret = nf90_put_var(ncid,input_data%ncid,input_data%value,start)
+               call check_err(iret)
+            end if
+            input_data => input_data%next
+         end do
          iret = nf90_put_var(ncid,par_id,par,start)
          call check_err(iret)
          iret = nf90_put_var(ncid,temp_id,temp,start)
@@ -293,14 +378,8 @@
          iret = nf90_put_var(ncid,salt_id,salt,start)
          call check_err(iret)
 
-         do i=1,size(model%state_variables)
+         do i=1,size(cc)
             iret = nf90_put_var(ncid,statevar_ids(i),cc(i),start)
-            call check_err(iret)
-         end do
-
-         j=size(model%state_variables)
-         do i=1,size(model%bottom_state_variables)
-            iret = nf90_put_var(ncid,statevar_ids(i+j),cc(i+j),start)
             call check_err(iret)
          end do
 
@@ -316,6 +395,8 @@
          end do
 
          call fabm_get_conserved_quantities(model,totals)
+         call fabm_get_horizontal_conserved_quantities(model,totals_hz)
+         totals = totals + totals_hz/column_depth
          if (n==0_timestepkind) totals0 = totals
          do i=1,size(model%conserved_quantities)
             iret = nf90_put_var(ncid,conserved_ids(i),totals(i),start)
@@ -364,14 +445,14 @@
 !EOP
 !-----------------------------------------------------------------------
 !BOC
-   if (ncid .ne. -1) then
+
+   if (out_unit/=-1) close(out_unit)
 #ifdef NETCDF4
+   if (ncid/=-1) then
       iret = nf90_close(ncid)
       call check_err(iret)
-#endif
-   else
-      close(out_unit)
    end if
+#endif
 
    end subroutine clean_output
 !EOC

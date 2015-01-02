@@ -46,7 +46,6 @@
 //#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
 #define dbgprt(...) /* __VA_ARGS__ */
 
-#define OLD_ 0
 
 AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
                           AED_REAL *Q_sensible,
@@ -104,13 +103,18 @@ AED_REAL calculate_qsw(int kDays, int mDays, int iclock,
  *                                                                            *
  *  Ref: TVA, [1972,p5.12]                                                    *
  *                                                                            *
- * -- Ratio of the molecular (or molar) weight of water to dry air [-]:       */
-const AED_REAL mwrw2a    =    18.016    /    28.966;      // = 0.62197
-/*                                                                            *
+ * -- Ratio of the molecular (or molar) weight of water to dry air [-]:       *
+ *    mwrw2a    =    18.016    /    28.966;      // = 0.62197                 *
+ *                                                                            *
  * -- The universal gas constant  [J mol^-1 K^-1] = 8.31436;                  *
  * -- Gas constant for dry air in terms of mass of gas rather than moles      *
- * -- [J kg^-1 K^-1]:                                                         */
-const AED_REAL c_gas   = 1.0E3 *    8.31436     /    28.966;
+ * -- [J kg^-1 K^-1]:                                                         *
+ *    c_gas   = 1.0E3 *    8.31436     /    28.966;                           *
+ *                                                                            *
+ ******************************************************************************/
+const AED_REAL mwrw2a  = 18.016 / 28.966;               // = 0.62197
+const AED_REAL c_gas   = 1.0E3 * 8.31436 / 28.966;
+
 /******************************************************************************/
 AED_REAL atm_density(AED_REAL atmosPressure, // (total) atmospheric pressure     [Pa]
                      AED_REAL vapPressure,   // water vapour (partial) pressure  [Pa]
@@ -126,7 +130,6 @@ AED_REAL atm_density(AED_REAL atmosPressure, // (total) atmospheric pressure    
     AED_REAL r = mwrw2a * vapPressure/(atmosPressure - vapPressure);
 
     return 1.0/c_gas * (1 + r)/(1 + r/mwrw2a) * atmosPressure/(AirTemp + Kelvin);
-
 }
 
 
@@ -297,6 +300,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         Q_sensibleheat = -CH * (rho_air * 1005.) * WindSp * (Lake[surfLayer].Temp - MetData.AirTemp);
 
         // If chosen by user, do atmospheric stability correction routine
+//fprintf(stderr, "coef_wind_drag = %e Q_l %e Q_s %e\n", coef_wind_drag, Q_latentheat, Q_sensibleheat);
         if (atm_stab)
             coef_wind_drag =
                atmos_stability(&Q_latentheat,
@@ -307,19 +311,8 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                                 p_atm*100.,
                                 satvap,
                                 MetData.SatVapDef);
+//fprintf(stderr, " and now = %e Q_l %e Q_s %e\n", coef_wind_drag, Q_latentheat, Q_sensibleheat);
 
-#if OLD_
-         Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+Lake[surfLayer].Temp), 4.0);
-
-        // Long Wave absorption (ie. longwave in) affects only top layer
-        if (LWModel  ==  LW_CC){
-            CLOUD = MetData.LongWave;
-            Q_lw_in = (1.0 + 0.275 * CLOUD) * Stefan_Boltzman * pow((Kelvin+MetData.AirTemp), 4.0) *
-                  (1.0 - 0.261 * exp(-0.000777E-4 * pow(MetData.AirTemp, 2.0)));
-            Q_longwave = Q_lw_out + Q_lw_in;
-        } else if (LWModel  ==  LW_IN) {
-            Q_lw_in = MetData.LongWave;
-#else
         // Long Wave emission (ie. longwave out) affects only top layer.
         Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+Lake[surfLayer].Temp), 4.0);
 
@@ -354,11 +347,11 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
             Q_longwave = Q_lw_out + Q_lw_in;
         } else if (LWModel  ==  LW_IN) {
             Q_lw_in = (1 - 0.03) * MetData.LongWave;
-#endif
             Q_longwave = Q_lw_out+Q_lw_in;
         } else if (LWModel  ==  LW_NET)
             Q_longwave = MetData.LongWave;
 
+//fprintf(stderr, "%e %e \n%e %e \n%e\n", Q_latentheat, Q_sensibleheat, Q_longwave, Lake[surfLayer].LayerArea, AreaFactor);
         heat[surfLayer] = heat[surfLayer]+(Q_latentheat+Q_sensibleheat+Q_longwave)*Lake[surfLayer].LayerArea*AreaFactor;
 
         // Daily heat budget (J/day)
@@ -514,7 +507,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
          *--------------------------------------------------------------------*/
         for (i = surfLayer-1; i >= (botmLayer+1); i--)
             heat[i] = (Lake[i-1].LayerArea * (Lake[i].Light - Lake[i-1].Light) +
-                       Lake[i].Light * (Lake[i].LayerArea - Lake[i-1].LayerArea)) * 0.1 *AreaFactor;
+                       Lake[i].Light * (Lake[i].LayerArea - Lake[i-1].LayerArea)) * 0.1 * AreaFactor;
         heat[botmLayer] = Lake[botmLayer].Light * Lake[botmLayer].LayerArea * AreaFactor;
     }
 
@@ -875,7 +868,7 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
                 break;
             case 2: { // Briegleb et al. (1986), B scheme in Scinocca et al 2006.
                     AED_REAL sza = zenith_angle(Longitude, Latitude, mDays, iclock, timezone);  //degrees
-                    if (sza < 80){
+                    if (sza < 80) {
                         AED_REAL csza = cos(Pi * sza/180);
                         Albedo1 = ((2.6 / (1.1 * pow(csza, 1.7) - 0.065)) +
                                   (15 * (csza-0.1) * (csza-0.5) * (csza-1))) /100.;
@@ -893,7 +886,7 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
                                         0.001 * 6 * pow(1-csza, 0.829));
                 }
                 break;
-             default : break;
+            default : break;
         }
     }
 
@@ -977,14 +970,17 @@ void recalc_surface_salt()
 /******************************************************************************
  ******************************************************************************/
 
-#define gamma_air 0.0
-#define k_air     0.0
-#define mu_air    0.0
+//#define gamma_air 0.0
+//#define k_air     0.0
+//#define mu_air    0.0
+#define gamma_air 0.1
+#define k_air     0.0548
+#define mu_air    0.077
 
 #define WIND_HEIGHT 10.0
 #define HUMIDITY_HEIGHT 10.0
 
-#define SIGN(a,b)  ( ((b) > 0.) ? abs(a) : -abs(a) )
+#define SIGN(a,b)  ( ((b) >= 0.) ? fabs(a) : -fabs(a) )
 
 static AED_REAL psi_m(AED_REAL zL);
 static AED_REAL psi_hw(AED_REAL zL);
@@ -1049,7 +1045,8 @@ AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
     if (rho_a - rho_o > zero) {
         alpha_e = 0.137*0.5*(gamma_air/cp_air)* pow((9.81*(rho_a-rho_o)/(rho_a*mu_air*k_air)), (1/3.0));
         Q_sensible_still = -alpha_e * dT;
-        Q_latentheat_still = -alpha_e * dq * latent;
+    //  Q_latentheat_still = -alpha_e * dq * latent;
+        Q_latentheat_still = -alpha_e * dq * (latent*1e-3);
     } else {
         Q_sensible_still = zero;
         Q_latentheat_still = zero;
@@ -1120,7 +1117,7 @@ AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
     L = -rho_air *Ux*Ux*Ux * T_virt / (vonK * 9.81
                             * ((SH/cp_air) + 0.61*(AirTemp+Kelvin)*LH));
     if (abs(L) < 0.5)
-        L = SIGN(1.0*1.0e-20,dT);
+        L = SIGN(1.0e-20, dT);
     zL = HUMIDITY_HEIGHT/L;
 
     // Start Iterative Sequence for Heat Flux Calculations
@@ -1181,7 +1178,8 @@ AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
             - vonK*P1*rCDN/CHWN)/(vonK*vonK));
 
     *Q_sensible = -CHW * rho_air * cp_air * U_sensH * dT;
-    *Q_latentheat = -CHW * rho_air * U_sensH * dq * latent;
+//  *Q_latentheat = -CHW * rho_air * U_sensH * dq * latent;
+    *Q_latentheat = -CHW * rho_air * U_sensH * dq * (latent*1e-3);
 
     // Limit minimum to still air value
     if (Q_sensible_still < *Q_sensible)

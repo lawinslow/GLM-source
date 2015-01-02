@@ -2,10 +2,10 @@
 !-----------------------------------------------------------------------
 !BOP
 !
-! !MODULE: fabm_examples_duplicator
+! !MODULE: examples_duplicator
 !
 ! !INTERFACE:
-   module fabm_examples_duplicator
+   module examples_duplicator
 !
 ! !DESCRIPTION:
 !
@@ -66,10 +66,11 @@
    ! Read the namelist
    if (configunit>0) read(configunit,nml=examples_duplicator,err=99)
 
-   if (model=='')        call self%fatal_error('fabm_examples_duplicator::initialize','parameter "model" must be provided.')
-   if (number==0)        call self%fatal_error('fabm_examples_duplicator::initialize','parameter "number" must be provided.')
-   if (configfile=='')   call self%fatal_error('fabm_examples_duplicator::initialize','parameter "configfile" must be provided.')
-   if (maximum<=minimum) call self%fatal_error('fabm_examples_duplicator::initialize','parameters "minimum" and "maximum" must be provided, and "maximum" must exceed "minimum".')
+   if (model=='')        call self%fatal_error('initialize','parameter "model" must be provided.')
+   if (number==0)        call self%fatal_error('initialize','parameter "number" must be provided.')
+   if (configfile=='')   call self%fatal_error('initialize','parameter "configfile" must be provided.')
+   if (maximum<=minimum) call self%fatal_error('initialize','parameters "minimum" and "maximum" must be provided, &
+                                                            &and "maximum" must exceed "minimum".')
 
    childunit = get_free_unit()
 
@@ -79,7 +80,7 @@
 
       ! Create the child model.
       call factory%create(model,childmodel)
-      if (.not.associated(childmodel)) call self%fatal_error('fabm_examples_duplicator::initialize','Model class named "'//model//'" was not found.')
+      if (.not.associated(childmodel)) call self%fatal_error('initialize','Model class named "'//model//'" was not found.')
 
       ! Generate a parameter value and transfer it to the child model.
       call random_number(value)
@@ -90,20 +91,21 @@
       open(unit=childunit,file=configfile,action='read',status='old')
       call self%add_child(childmodel,instancename,configunit=childunit)
       close(childunit)
-   end do
 
-   !if (.not.self%found) call self%fatal_error('fabm_examples_duplicator::initialize','Parameter "'//trim(self%parameter)//'" was not registered by model "'//trim(model)//'".')
+      if (.not.childmodel%parameters%retrieved%contains(parameter)) &
+         call self%fatal_error('initialize','Parameter "'//trim(parameter)//'" was not registered by model "'//trim(model)//'".')
+   end do
 
    return
 
-99 call self%fatal_error('fabm_examples_duplicator::initialize','Error reading namelist examples_duplicator')
+99 call self%fatal_error('initialize','Error reading namelist examples_duplicator')
 
    end subroutine initialize
 !EOC
 
 !-----------------------------------------------------------------------
 
-   end module fabm_examples_duplicator
+   end module examples_duplicator
 
 !-----------------------------------------------------------------------
 ! Copyright by the GOTM-team under the GNU Public License - www.gnu.org

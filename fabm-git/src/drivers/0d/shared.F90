@@ -1,6 +1,6 @@
 module shared
-   use fabm
-   use fabm_types
+   use fabm,only: type_model
+   use fabm_types,only: attribute_length,rk
 
    implicit none
 
@@ -11,7 +11,15 @@ module shared
    real(rk),allocatable :: cc(:)
 
    real(rk),target :: temp,salt,par
-   real(rk)        :: latitude,longitude
+   real(rk)        :: latitude,longitude,column_depth
    character(len=80) :: title
+
+   type type_input_data
+      character(len=attribute_length) :: variable_name = ''
+      real(rk)                        :: value         = 0.0_rk
+      integer                         :: ncid          = -1
+      type (type_input_data),pointer  :: next          => null()
+   end type
+   type (type_input_data), pointer, save :: first_input_data => null()
 
 end module

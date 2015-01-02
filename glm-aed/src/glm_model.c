@@ -87,6 +87,7 @@ void do_model_non_avg(int jstart, int nsave);
 int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL SWnew);
 void end_model(void);
 
+
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
@@ -130,7 +131,7 @@ void init_model(int *jstart, int *nsave)
 #endif
 
     //# Create the output files.
-    init_output(*jstart, out_dir, out_fn, MaxLayers, Longitude, Latitude, lkn);
+    init_output(*jstart, out_dir, out_fn, MaxLayers, Longitude, Latitude);
 
     /*------------------------------------------------------------------------*
      * Main run-time code begins here                                         *
@@ -203,8 +204,6 @@ void do_model(int jstart, int nsave)
     AED_REAL SaltNew[MaxInf], TempNew[MaxInf], WQNew[MaxInf * MaxVars];
     AED_REAL SaltOld[MaxInf], TempOld[MaxInf], WQOld[MaxInf * MaxVars];
 
-    AED_REAL LakeNum = missing;
-
     int jday, ntot, stepnum;
 
     int i, j;
@@ -250,7 +249,7 @@ void do_model(int jstart, int nsave)
             Inflows[i].TemInf   = (TempOld[i] + TempNew[i]) / 2.0;
             Inflows[i].SalInf   = (SaltOld[i] + SaltNew[i]) / 2.0;
             for (j = 0; j < Num_WQ_Vars; j++)
-                Inflows[i].WQInf[j] = (WQ_INF_(WQOld,i, j) + WQ_INF_(WQNew,i, j)) / 2.0;
+                Inflows[i].WQInf[j] = (WQ_INF_(WQOld,i, j) + WQ_INF_(WQNew, i, j)) / 2.0;
         }
 
         read_daily_outflow(jday, NumOut, DrawNew);
@@ -275,6 +274,9 @@ void do_model(int jstart, int nsave)
         }
         SWnew = MetNew.ShortWave;
 
+#if DEBUG
+        fprintf(stderr, "------- next day - do_model -------\n");
+#endif
         stepnum = do_subdaily_loop(stepnum, jday, nsave, SWold, SWnew);
 
         //# End of forcing-mixing-diffusion loop
@@ -308,9 +310,7 @@ void do_model(int jstart, int nsave)
 #endif
             printf("Running day %8d, %4.2f%% of days complete%c", jday, ntot*100./nDays,  EOLN);
 
-        LakeNum = calculate_lake_number();
-
-        write_diags(jday, LakeNum);
+        write_diags(jday, calculate_lake_number());
     }   //# do while (ntot < ndays)
     /*----------########### End of main daily loop ################-----------*/
 }
@@ -331,8 +331,6 @@ void do_model_non_avg(int jstart, int nsave)
     *           look into that later ....                                     *
     ***************************************************************************/
     AED_REAL SaltNew[MaxInf], TempNew[MaxInf], WQNew[MaxInf * MaxVars];
-
-    AED_REAL LakeNum = missing;
 
     int jday, ntot, stepnum;
 
@@ -371,7 +369,7 @@ void do_model_non_avg(int jstart, int nsave)
             Inflows[i].TemInf   = TempNew[i];
             Inflows[i].SalInf   = SaltNew[i];
             for (j = 0; j < Num_WQ_Vars; j++)
-                Inflows[i].WQInf[j] = WQ_INF_(WQNew,i, j);
+                Inflows[i].WQInf[j] = WQ_INF_(WQNew, i, j);
         }
 
         read_daily_outflow(jday, NumOut, DrawNew);
@@ -381,6 +379,9 @@ void do_model_non_avg(int jstart, int nsave)
         read_daily_met(jday, &MetData);
         SWnew = MetData.ShortWave;
 
+#if DEBUG
+        fprintf(stderr, "------- next day - do_model_non_avg -------\n");
+#endif
         stepnum = do_subdaily_loop(stepnum, jday, nsave, SWold, SWnew);
 
         //# End of forcing-mixing-diffusion loop
@@ -405,9 +406,8 @@ void do_model_non_avg(int jstart, int nsave)
 #endif
             printf("Running day %8d, %4.2f%% of days complete%c", jday, ntot*100./nDays,  EOLN);
 
-        LakeNum = calculate_lake_number();
+        write_diags(jday, calculate_lake_number());
 
-        write_diags(jday, LakeNum);
     }   //# do while (ntot < ndays)
     /*----------########### End of main daily loop ################-----------*/
 }
@@ -456,12 +456,13 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
     iclock = 0;
     Benthic_Light_pcArea = 0.;
     while (iclock < 86400) { //# iclock = seconds counter
-
         if ( subdaily ) {
             read_sub_daily_met(jday, iclock, &MetData);
             SWnew = MetData.ShortWave;
         }
+
         stepnum++;
+
         //printf("LongWave = %10.5f\n",MetData.LongWave);
         //printf("AirTemp = %10.5f\n",MetData.AirTemp);
         //printf("WindSpeed = %10.5f\n",MetData.WindSpeed);

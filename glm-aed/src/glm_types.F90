@@ -40,8 +40,6 @@ MODULE glm_types
 
 !===============================================================================
 !GLOBAL CONSTANTS
-   INTEGER,PARAMETER  :: MaxPar=37
-   INTEGER,PARAMETER  :: MaxVars=60    !# Maximum number of variables
 
    AED_REAL,PARAMETER :: missing = MISVAL
 
@@ -53,54 +51,6 @@ MODULE glm_types
       CINTEGER :: Len
       CCHARACTER :: S(40)
    END TYPE StringT
-
-   !#===========================================================#!
-   !# Structured type for inflow vars
-   !# An inflow will be an allocated array of MaxInf of these
-   TYPE,BIND(C) :: InflowDataType
-      AED_REAL :: Alpha             !# half angle of stream
-      AED_REAL :: DragCoeff         !# streambed drag coefficient
-      AED_REAL :: Phi               !# streambed slope
-      AED_REAL :: FlowRate          !# inflow flow rate
-      AED_REAL :: Factor            !# scaling factor for inflow
-      AED_REAL :: TemInf            !# inflow temperature
-      AED_REAL :: SalInf            !# inflow salinity
-      AED_REAL :: Dlwst
-      AED_REAL :: HFlow
-      AED_REAL :: TotIn
-      AED_REAL :: DIIns(MaxPar)     !# inflow density
-      AED_REAL :: DDown(MaxPar)     !# downflow insertion depth
-      AED_REAL :: QIns(MaxPar)      !# inflow volume
-      AED_REAL :: QDown(MaxPar)     !# downflow volume
-      AED_REAL :: TIns(MaxPar)      !# inflow temperature
-      AED_REAL :: TDown(MaxPar)     !# downflow temperature
-      AED_REAL :: SIns(MaxPar)      !# inflow salinity
-      AED_REAL :: SDown(MaxPar)     !# downflow salinity
-      AED_REAL :: DOld(MaxPar)
-
-      AED_REAL :: WQIns(MaxVars,MaxPar)  !# inflow water quality
-      AED_REAL :: WQDown(MaxVars,MaxPar) !# downflow water quality
-      AED_REAL :: WQInf(MaxVars)
-
-      CINTEGER :: iCnt
-      CINTEGER :: NoIns
-      CINTEGER :: InPar(MaxPar)
-
-      CLOGICAL :: SubmFlag          !# is it a submerged inflow
-
-   END TYPE InflowDataType
-
-   !#===========================================================#!
-   !# Structured type for outflow vars
-   !# An outflow will be an allocated array of MaxOut of these
-   TYPE,BIND(C) :: OutflowDataType
-      AED_REAL :: OLev        !# distance below surface level
-      AED_REAL :: OLen        !# basin length at the outlet
-      AED_REAL :: OWid        !# basin width at the outlet
-      AED_REAL :: Draw        !# outflow volumes
-      AED_REAL :: Factor      !# scaling factor for outflow
-      CLOGICAL :: FloatOff    !#
-   END TYPE OutflowDataType
 
    !#===========================================================#!
    !# Structured type for key global lake environmental vars
@@ -126,6 +76,7 @@ MODULE glm_types
       AED_REAL :: LayerStress      !# Layer Stress
    END TYPE LakeDataType
 
+#if 1
    !#===========================================================#!
    !# Structured type for Met vars
    TYPE,BIND(C) :: MetDataType
@@ -163,6 +114,7 @@ MODULE glm_types
       AED_REAL :: dailyOutflow     !# Total Daily Outflow (ML/day)
       AED_REAL :: dailyOverflow    !# Total Daily Overflow (ML/day)
    END TYPE SurfaceDataType
+#endif
 
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

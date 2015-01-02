@@ -70,13 +70,13 @@ extern AED_REAL XLW, XCO, XEV, QSW;
  * Initialise output streams                                                  *
  ******************************************************************************/
 void init_output(int jstart, const char *out_dir, const char *out_fn,
-                   int oMaxLayers, AED_REAL Longitude, AED_REAL Latitude, int o_lkn)
+                   int oMaxLayers, AED_REAL Longitude, AED_REAL Latitude)
 {
     char ts[20];
     char path[1024];
     struct stat sb;
 
-    if ( stat(out_dir, &sb) ) {
+    if ( out_dir != NULL && stat(out_dir, &sb) ) {
         fprintf(stderr, "Directory \"%s\" does not exist - attempting to create it\n", out_dir);
         if ( mkdir(out_dir, S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH) ) {
             fprintf(stderr, "mkdir failed\n");
@@ -89,13 +89,12 @@ void init_output(int jstart, const char *out_dir, const char *out_fn,
         }
     }
 
-    lkn = o_lkn;
     MaxLayers = oMaxLayers;
     write_time_string(ts,jstart,0);
     snprintf(path, 1024, "%s/%s.nc", out_dir, out_fn);
     ncid = init_glm_ncdf(path, "glm run", Latitude, Longitude, MaxLayers, ts);
 
-    init_csv_output(out_dir, lkn);
+    init_csv_output(out_dir);
 
     //# Initialize WQ output (creates NetCDF variables)
     if (wq_calc) wq_init_glm_output(&ncid, &x_dim, &y_dim, &z_dim, &time_dim);
@@ -222,15 +221,10 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
             write_csv_point(i, "", 0.0, NULL, TRUE);
     }
 
-    //# if we are doing point output we already have the date
-    if ( csv_point_nlevs <= 0 )
-        write_time_string(ts, jday, iclock);
-
 #ifdef PLOTS
 # ifdef XPLOTS
     if ( xdisp ) {
-        for (i = 0; i < nplots; i++)
-            flush_plot(theplots[i]);
+        for (i = 0; i < nplots; i++) flush_plot(theplots[i]);
     }
 # endif
 #endif
@@ -256,7 +250,7 @@ void write_diags(int jday, AED_REAL LakeNum)
     write_csv_lake("Tot Inflow Vol",  SurfData.dailyInflow,      NULL, FALSE);
     write_csv_lake("Tot Outflow Vol", SurfData.dailyOutflow,     NULL, FALSE);
     write_csv_lake("Overflow Vol",    SurfData.dailyOverflow,    NULL, FALSE);
-    write_csv_lake("Evapouration",    SurfData.dailyEvap,        NULL, FALSE);
+    write_csv_lake("Evaporation",     SurfData.dailyEvap,        NULL, FALSE);
     write_csv_lake("Rain",            SurfData.dailyRain,        NULL, FALSE);
     write_csv_lake("Lake Level",      Lake[surfLayer].Height,    NULL, FALSE);
     write_csv_lake("Surface Area",    Lake[surfLayer].LayerArea, NULL, FALSE);
@@ -277,7 +271,7 @@ void write_diags(int jday, AED_REAL LakeNum)
     write_csv_lake("L",               L,                         NULL, FALSE);
     write_csv_lake("T",               T,                         NULL, FALSE);
 
-    if (lkn) write_csv_lake("LakeNumber", LakeNum, NULL, FALSE);
+    write_csv_lake("LakeNumber",      LakeNum,                   NULL, FALSE);
     write_csv_lake("Max dT/dz",    max_dtdz_at(Lake, NumLayers), NULL, FALSE);
     write_csv_lake("coef_wind_drag", coef_wind_drag,             NULL, TRUE);
 }

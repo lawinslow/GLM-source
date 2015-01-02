@@ -29,6 +29,7 @@ module fabm_particle
 
    use fabm_types
    use fabm_standard_variables
+   use fabm_properties
 
    implicit none
 
@@ -44,17 +45,24 @@ module fabm_particle
    end type
 
    type type_model_id
-      type (type_model_reference),pointer :: reference => null()
-      type (type_state_variable_id),allocatable :: state(:)
+      type (type_model_reference),pointer               :: reference => null()
+      type (type_state_variable_id),        allocatable :: state(:)
+      type (type_bottom_state_variable_id), allocatable :: bottom_state(:)
+      type (type_surface_state_variable_id),allocatable :: surface_state(:)
    end type
 
-   type,extends(type_coupling) :: type_coupling_from_model
-      type (type_model_reference),pointer :: model_reference => null()
-      type (type_bulk_standard_variable) :: standard_variable
+   type type_coupling_from_model
+      character(attribute_length)             :: master = ''
+      character(attribute_length)             :: slave = ''
+      type (type_model_reference),    pointer :: model_reference => null()
+      type (type_bulk_standard_variable)      :: standard_variable
+      integer                                 :: domain
+      type (type_coupling_from_model),pointer :: next => null()
    end type
 
    type,extends(type_base_model) :: type_particle_model
-      type (type_model_reference),pointer :: first_model_reference => null()
+      type (type_model_reference),    pointer :: first_model_reference => null()
+      type (type_coupling_from_model),pointer :: first_model_coupling  => null()
    contains
       ! Used by inheriting biogeochemical models:
       procedure :: register_model_dependency
@@ -130,8 +138,7 @@ module fabm_particle
       class (type_model_id),      intent(inout) :: master_model
       character(len=*),           intent(in)    :: master_variable
 
-      class (type_coupling_from_model), pointer :: coupling
-      class (type_coupling), pointer :: plain_coupling
+      type (type_coupling_from_model), pointer :: coupling
 
       ! Create object describing the coupling, and send it to FABM.
       ! This must be a pointer, because FABM will manage its memory and deallocate when appropriate.
@@ -139,9 +146,9 @@ module fabm_particle
       coupling%slave = slave_variable%link%name
       coupling%master = master_variable
       coupling%model_reference => master_model%reference
-      plain_coupling => coupling
-      call self%couplings%add(plain_coupling)
-   end subroutine
+      coupling%next => self%first_model_coupling
+      self%first_model_coupling => coupling
+   end subroutine request_coupling_to_model_name
 
    subroutine request_coupling_to_model_sn(self,slave_variable,master_model,master_variable)
       class (type_particle_model),  intent(inout) :: self
@@ -149,8 +156,7 @@ module fabm_particle
       class (type_model_id),        intent(inout) :: master_model
       type (type_bulk_standard_variable),intent(in)    :: master_variable
 
-      class (type_coupling_from_model), pointer :: coupling
-      class (type_coupling), pointer :: plain_coupling
+      type (type_coupling_from_model), pointer :: coupling
 
       ! Create object describing the coupling, and send it to FABM.
       ! This must be a pointer, because FABM will manage its memory and deallocate when appropriate.
@@ -158,93 +164,122 @@ module fabm_particle
       coupling%slave = slave_variable%link%name
       coupling%standard_variable = master_variable
       coupling%model_reference => master_model%reference
-      plain_coupling => coupling
-      call self%couplings%add(plain_coupling)
-   end subroutine
+      coupling%next => self%first_model_coupling
+      select type (slave_variable)
+         class is (type_dependency_id)
+            coupling%domain = domain_bulk
+         class is (type_horizontal_dependency_id)
+            coupling%domain = domain_horizontal
+         class default
+            call self%fatal_error('request_coupling_to_model_sn','Provided variable id must be of type type_dependency_id or type_horizontal_dependency_id.')
+      end select
+      self%first_model_coupling => coupling
+   end subroutine request_coupling_to_model_sn
 
    subroutine before_coupling(self)
       class (type_particle_model),intent(inout) :: self
 
-      type (type_model_reference),pointer :: reference
-      class (type_coupling),      pointer :: coupling
-      type (type_aggregate_variable),pointer :: aggregate_variable
+      type (type_model_reference),    pointer :: reference
+      class (type_property),          pointer :: master_name
+      type (type_aggregate_variable), pointer :: aggregate_variable
+      type (type_coupling_from_model),pointer :: coupling
 
       reference => self%first_model_reference
       do while (associated(reference))
          ! First find a coupling for the referenced model.
-         coupling => self%couplings%find(reference%name,remove=.true.)
-         if (.not.associated(coupling)) call self%fatal_error('before_coupling','Model reference "'//trim(reference%name)//'" was not coupled.')
+         master_name => self%couplings%find_in_tree(reference%name)
+         if (.not.associated(master_name)) call self%fatal_error('before_coupling','Model reference "'//trim(reference%name)//'" was not coupled.')
 
          ! Now find the actual model that was coupled.
-         reference%model => self%find_model(coupling%master,recursive=.true.)
-         if (.not.associated(reference%model)) call self%fatal_error('before_coupling','Referenced model "'//trim(reference%name)//'" not found.')
-
-         ! Now deallocate coupling (self%couplings%find rendered control to us)
-         deallocate(coupling)
+         select type (master_name)
+            class is (type_string_property)
+               reference%model => self%find_model(master_name%value,recursive=.true.)
+               if (.not.associated(reference%model)) call self%fatal_error('before_coupling','Referenced model "'//trim(master_name%value)//'" not found.')
+         end select
 
          reference => reference%next
       end do
 
-      call build_state_id_list(self)
+      reference => self%first_model_reference
+      do while (associated(reference))
+         call build_state_id_list(self,reference,domain_bulk)
+         call build_state_id_list(self,reference,domain_surface)
+         call build_state_id_list(self,reference,domain_bottom)
+         reference => reference%next
+      end do
 
       ! Resolve all couplings to variables in specific other models.
-      coupling => self%couplings%first
+      coupling => self%first_model_coupling
       do while (associated(coupling))
-         select type (coupling)
-            class is (type_coupling_from_model)
-               if (coupling%master/='') then
-                  coupling%master = trim(coupling%model_reference%model%name)//'_'//trim(coupling%master)
-               else
-                  aggregate_variable => get_aggregate_variable(coupling%model_reference%model,coupling%standard_variable)
+         if (coupling%master/='') then
+            call self%couplings%set_string(trim(coupling%slave),trim(coupling%model_reference%model%get_path())//'/'//trim(coupling%master))
+         else
+            aggregate_variable => get_aggregate_variable(coupling%model_reference%model,coupling%standard_variable)
+            select case (coupling%domain)
+               case (domain_bulk)
                   aggregate_variable%bulk_required = .true.
-                  coupling%master = trim(coupling%model_reference%model%name)//'_'//trim(aggregate_variable%standard_variable%name)
-               end if
-         end select
+                  call self%couplings%set_string(trim(coupling%slave),trim(coupling%model_reference%model%get_path())//'/'//trim(aggregate_variable%standard_variable%name))
+               case (domain_horizontal)
+                  aggregate_variable%horizontal_required = .true.
+                  call self%couplings%set_string(trim(coupling%slave),trim(coupling%model_reference%model%get_path())//'/'//trim(aggregate_variable%standard_variable%name)//'_at_interfaces')
+            end select
+         end if
          coupling => coupling%next
       end do
-   end subroutine
+   end subroutine before_coupling
 
-   subroutine build_state_id_list(self)
+   subroutine build_state_id_list(self,reference,domain)
       class (type_particle_model),intent(inout) :: self
+      type (type_model_reference),intent(inout) :: reference
+      integer,                    intent(in)    :: domain
 
-      type (type_model_reference),pointer :: reference
       type (type_link),           pointer :: link
       integer                             :: n
       character(len=10)                   :: strindex
 
-      reference => self%first_model_reference
-      do while (associated(reference))
-         ! Count number of state variables in target model.
-         n = 0
-         link => reference%model%first_link
-         do while (associated(link))
-            select type (object=>link%target)
-               class is (type_bulk_variable)
-                  if (object%presence==presence_internal.and.link%owner.and..not.object%state_indices%is_empty()) n = n + 1
+      ! Count number of state variables in target model.
+      n = 0
+      link => reference%model%links%first
+      do while (associated(link))
+         if (index(link%name,'/')==0.and.link%target%domain==domain.and.link%original%presence==presence_internal &
+             .and.(.not.link%original%state_indices%is_empty().or.link%original%fake_state_variable)) n = n + 1
+         link => link%next
+      end do
+
+      ! Allocate array to hold state variable identifiers.
+      select case (domain)
+         case (domain_bulk)
+            allocate(reference%id%state(n))
+         case (domain_bottom)
+            allocate(reference%id%bottom_state(n))
+         case (domain_surface)
+            allocate(reference%id%surface_state(n))
+      end select
+
+      ! Connect target state variables to identifiers in model reference.
+      n = 0
+      link => reference%model%links%first
+      do while (associated(link))
+         if (index(link%name,'/')==0.and.link%target%domain==domain.and.link%original%presence==presence_internal &
+             .and.(.not.link%original%state_indices%is_empty().or.link%original%fake_state_variable)) then
+            n = n + 1
+            write (strindex,'(i0)') n
+            select case (domain)
+               case (domain_bulk)
+                  call self%register_state_dependency(reference%id%state(n),trim(reference%name)//'_state'//trim(strindex), &
+                     link%target%units,trim(reference%name)//' state variable '//trim(strindex))
+                  call self%request_coupling_to_model(reference%id%state(n),reference%id,link%name)
+               case (domain_bottom)
+                  call self%register_state_dependency(reference%id%bottom_state(n),trim(reference%name)//'_bottom_state'//trim(strindex), &
+                     link%target%units,trim(reference%name)//' bottom state variable '//trim(strindex))
+                  call self%request_coupling_to_model(reference%id%bottom_state(n),reference%id,link%name)
+               case (domain_surface)
+                  call self%register_state_dependency(reference%id%surface_state(n),trim(reference%name)//'_surface_state'//trim(strindex), &
+                     link%target%units,trim(reference%name)//' surface state variable '//trim(strindex))
+                  call self%request_coupling_to_model(reference%id%surface_state(n),reference%id,link%name)
             end select
-            link => link%next
-         end do
-
-         ! Allocate array to hold state variable identifiers.
-         allocate(reference%id%state(n))
-
-         ! Connect target state variables to identifiers in model reference.
-         n = 0
-         link => reference%model%first_link
-         do while (associated(link))
-            select type (object=>link%target)
-               class is (type_bulk_variable)
-                  if (object%presence==presence_internal.and.link%owner.and..not.object%state_indices%is_empty()) then
-                     n = n + 1
-                     write (strindex,'(i0)') n
-                     call self%register_state_dependency(reference%id%state(n),trim(reference%name)//'_state'//trim(strindex),object%units,trim(reference%name)//' state variable '//trim(strindex))
-                     call self%request_coupling_to_model(reference%id%state(n),reference%id,link%name)
-                  end if
-            end select
-            link => link%next
-         end do
-
-         reference => reference%next
+         end if
+         link => link%next
       end do
 
    end subroutine build_state_id_list

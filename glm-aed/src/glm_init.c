@@ -55,14 +55,14 @@
 
 extern int *WQ_VarsIdx;
 
-static AED_REAL        base_elev;
-static AED_REAL        crest_elev;
-static int             crest_sto_idx;
+static AED_REAL   base_elev;
+static AED_REAL   crest_elev;
+static int        crest_sto_idx;
 extern LOGICAL    seepage;
 extern AED_REAL   seepage_rate;
 
 char glm_nml_file[256] = "glm2.nml";
-char           *wq_lib = "aed2";
+char *wq_lib = "aed2";
 
 static void create_lake(int namlst);
 static void initialise_lake(int namlst);
@@ -80,21 +80,19 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     /*---------------------------------------------
      * glm setup
      *-------------------------------------------*/
-    char           *sim_name;
+    char           *sim_name = NULL;
     int             max_layers;
     AED_REAL        min_layer_vol;
     AED_REAL        min_layer_thick;
     AED_REAL        max_layer_thick;
 //  AED_REAL        Kw;
     extern AED_REAL Benthic_Imin;
-    AED_REAL        coef_inf_entrain;
 //  AED_REAL        coef_mix_conv;
 //  AED_REAL        coef_mix_eta;
 //  AED_REAL        coef_mix_ct;
 //  AED_REAL        coef_mix_cs;
 //  AED_REAL        coef_mix_kh;
 //  AED_REAL        coef_mix_hyp;
-//  CLOGICAL        mobility_off;
 //  CLOGICAL        non_avg;
 //  int             deep_mixing;
     /*-------------------------------------------*/
@@ -103,11 +101,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
      * wq setup
      *-------------------------------------------*/
 //  char           *wq_lib = "aed2";
+    char           *wq_nml_file = "aed2.nml";
 //  int             ode_method;
 //  int             split_factor;
 //  LOGICAL         bioshade_feedback;
 //  LOGICAL         repair_state;
-    char           *wq_nml_file = "aed2.nml";
+//  CLOGICAL        mobility_off;
 //  LOGICAL         multi_ben;
     /*-------------------------------------------*/
 
@@ -125,9 +124,9 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     /*---------------------------------------------
      * output
      *-------------------------------------------*/
-    char           *out_dir;
-    char           *out_fn;
-    LOGICAL         out_lkn;
+    char           *out_dir = NULL;
+    char           *out_fn  = NULL;
+//  LOGICAL         out_lkn;
 //  int             nsave;
     int             csv_point_nlevs  = 0;
     char           *csv_point_fname  = NULL;
@@ -182,6 +181,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     char          **inflow_fl      = NULL;
     int             inflow_varnum;
     char          **inflow_vars    = NULL;
+    AED_REAL        coef_inf_entrain;
     char           *timefmt_i      = NULL;
     extern AED_REAL timezone_i;
     /*-------------------------------------------*/
@@ -195,7 +195,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     AED_REAL       *bsn_len_outl = NULL;
     AED_REAL       *bsn_wid_outl = NULL;
     char          **outflow_fl   = NULL;
-    AED_REAL       *outflow_factor;
+    AED_REAL       *outflow_factor=NULL;
     char           *timefmt_o    = NULL;
     extern AED_REAL timezone_o;
     /*-------------------------------------------*/
@@ -214,14 +214,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "max_layer_thick",   TYPE_DOUBLE,           &max_layer_thick   },
           { "Kw",                TYPE_DOUBLE,           &Kw                },
           { "Benthic_Imin",      TYPE_DOUBLE,           &Benthic_Imin      },
-          { "coef_inf_entrain",  TYPE_DOUBLE,           &coef_inf_entrain  },
           { "coef_mix_conv",     TYPE_DOUBLE,           &coef_mix_conv     },
           { "coef_wind_stir",    TYPE_DOUBLE,           &coef_wind_stir    },
           { "coef_mix_turb",     TYPE_DOUBLE,           &coef_mix_turb     },
           { "coef_mix_shear",    TYPE_DOUBLE,           &coef_mix_shear    },
           { "coef_mix_KH",       TYPE_DOUBLE,           &coef_mix_KH       },
           { "coef_mix_hyp",      TYPE_DOUBLE,           &coef_mix_hyp      },
-          { "mobility_off",      TYPE_BOOL,             &mobility_off      },
           { "non_avg",           TYPE_BOOL,             &non_avg           },
           { "deep_mixing",       TYPE_INT,              &deep_mixing       },
           { NULL,                TYPE_END,              NULL               }
@@ -229,11 +227,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     NAMELIST wq_setup[] = {
           { "wq_setup",          TYPE_START,            NULL               },
           { "wq_lib",            TYPE_STR,              &wq_lib            },
+          { "wq_nml_file",       TYPE_STR,              &wq_nml_file       },
           { "ode_method",        TYPE_INT,              &ode_method        },
           { "split_factor",      TYPE_INT,              &split_factor      },
           { "bioshade_feedback", TYPE_BOOL,             &bioshade_feedback },
           { "repair_state",      TYPE_BOOL,             &repair_state      },
-          { "wq_nml_file",       TYPE_STR,              &wq_nml_file       },
+          { "mobility_off",      TYPE_BOOL,             &mobility_off      },
           { "multi_ben",         TYPE_BOOL,             &multi_ben         },
           { NULL,                TYPE_END,              NULL               }
     };
@@ -251,7 +250,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "output",            TYPE_START,            NULL               },
           { "out_dir",           TYPE_STR,              &out_dir           },
           { "out_fn",            TYPE_STR,              &out_fn            },
-          { "out_lkn",           TYPE_BOOL,             &out_lkn           },
+//        { "out_lkn",           TYPE_BOOL,             &out_lkn           },
           { "nsave",             TYPE_INT,               nsave             },
           { "csv_point_nlevs",   TYPE_INT,              &csv_point_nlevs   },
           { "csv_point_fname",   TYPE_STR,              &csv_point_fname   },
@@ -306,6 +305,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "inflow_fl",         TYPE_STR|MASK_LIST,    &inflow_fl         },
           { "inflow_varnum",     TYPE_INT,              &inflow_varnum     },
           { "inflow_vars",       TYPE_STR|MASK_LIST,    &inflow_vars       },
+          { "coef_inf_entrain",  TYPE_DOUBLE,           &coef_inf_entrain  },
           { "time_fmt",          TYPE_STR,              &timefmt_i         },
           { "timezone",          TYPE_DOUBLE,           &timezone_i        },
           { NULL,                TYPE_END,              NULL               }
@@ -319,14 +319,10 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "bsn_wid_outl",      TYPE_DOUBLE|MASK_LIST, &bsn_wid_outl      },
           { "outflow_fl",        TYPE_STR|MASK_LIST,    &outflow_fl        },
           { "outflow_factor",    TYPE_DOUBLE|MASK_LIST, &outflow_factor    },
-          { "time_fmt",          TYPE_STR,              &timefmt_o         },
-          { "timezone",          TYPE_DOUBLE,           &timezone_o        },
-          { NULL,                TYPE_END,              NULL               }
-    };
-    NAMELIST seepage_nml[] = {
-          { "seepage",           TYPE_START,            NULL               },
           { "seepage",           TYPE_BOOL,             &seepage           },
           { "seepage_rate",      TYPE_DOUBLE,           &seepage_rate      },
+          { "time_fmt",          TYPE_STR,              &timefmt_o         },
+          { "timezone",          TYPE_DOUBLE,           &timezone_o        },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST diffuser[] = {
@@ -367,13 +363,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     DMax = max_layer_thick;
     NumLayers = 0;
 
-    einff = coef_inf_entrain;
-
     wq_calc   = TRUE;
 
-    fprintf(stderr,
-        "0) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
+//  fprintf(stderr,
+//      "0) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
+//                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
     if ( get_namelist(namlst, wq_setup) ) {
         fprintf(stderr, "No WQ config\n");
         wq_lib            = "aed2";
@@ -382,13 +376,13 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
-    } else {
-        fprintf(stderr, "WQ Config :\n  wq_lib   = '%s'\n  wq_nml_file = '%s'\n",
-             wq_lib,
-             wq_nml_file);
-    fprintf(stderr,
-        "1) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
+//  } else {
+//      fprintf(stderr, "WQ Config :\n  wq_lib   = '%s'\n  wq_nml_file = '%s'\n",
+//           wq_lib,
+//           wq_nml_file);
+//  fprintf(stderr,
+//      "1) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
+//                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
     }
 
     //-------------------------------------------------
@@ -536,7 +530,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         NumInf = num_inflows;
 
         for (i = 0; i < NumInf; i++) {
-            Inflows[i].SubmFlag = (subm_flag == NULL)?FALSE:subm_flag[i];
+            Inflows[i].SubmFlag = (subm_flag != NULL)?subm_flag[i]:FALSE;
             Inflows[i].Alpha = strm_hf_angle[i] * Pi/PiDeg;
             Inflows[i].Phi = strmbd_slope[i] * Pi/PiDeg;
             Inflows[i].DragCoeff = strmbd_drag[i];
@@ -545,8 +539,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             open_inflow_file(i, inflow_fl[i], inflow_varnum, (const char**)inflow_vars, timefmt_i);
         }
     }
+    einff = coef_inf_entrain;
 
     //-------------------------------------------------
+    seepage = FALSE; seepage_rate = 0.0;
+
     if ( get_namelist(namlst, outflow) ) {
         fprintf(stderr, "No outflow config, assuming no outflows\n");
         NumOut = 0;
@@ -588,12 +585,6 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     }
 
     //-------------------------------------------------
-    if ( get_namelist(namlst, seepage_nml) ) {
-        seepage = FALSE;
-        seepage_rate = 0.0;
-    }
-
-    //-------------------------------------------------
     for (i = 1; i < MaxDif; i++) mol_diffusivity[i] = 1.25E-09;
     mol_diffusivity[0] = 0.00000014;
     NumDif = 2;
@@ -626,8 +617,6 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
     *jstart = julian_day(jyear, 1, jday);
 
-    lkn  = out_lkn;
-
     //--------------------------------------------------------------------------
 
     Num_WQ_Vars = 0;
@@ -635,13 +624,17 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     if ( wq_calc ) {
         int l = strlen(wq_nml_file);
 
-    fprintf(stderr,
-        "2) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
+//  fprintf(stderr,
+//      "2) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
+//                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
         prime_glm_wq(wq_lib);
         wq_init_glm(wq_nml_file, &l, &MaxLayers, &Num_WQ_Vars, &Kw); // Reads WQ namelist file
+        fprintf(stderr, "Num_WQ_Vars = %d\n", Num_WQ_Vars);
+        if ( Num_WQ_Vars > MaxVars ) {
+            fprintf(stderr, "Sorry, this version of GLM only supports %d water quality variables\n", MaxVars);
+            exit(1);
+        }
     }
-    NumDif = Num_WQ_Vars + 2;
 
     initialise_lake(namlst);
 
@@ -658,7 +651,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             WQ_VarsIdx[j-3] = wq_var_index_c(inflow_vars[j], &k);
         }
 
-        wq_set_glm_data(Lake, &MaxLayers, &NumLayers, &MetData, &SurfData, &dt);
+        wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
     }
 
     get_namelist(namlst, debugging);
@@ -821,7 +814,6 @@ void create_lake(int namlst)
         dbgprt( " i = %2d A[i+1] = %24.18e A[i] = %24.18e ALOG10 = %24.18e\n", i, A[i+1], A[i], log10(A[i+1]/A[i]));
         dbgprt( " i = %2d H[i+1] = %24.18e H[i] = %24.18e ALOG10 = %24.18e\n", i, H[i+1], H[i], log10(H[i+1]/H[i]));
         dbgprt( " i = %2d  beta_b[i] = %24.18e\n", i, beta_b[i]);
-
     }
     // The values of a and b exponents for layer 0 are not used as the
     // area and volume are assumed to vary linearly from the

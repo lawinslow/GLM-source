@@ -116,11 +116,11 @@ typedef char filname[80];
        AED_REAL WQDown[MaxPar][MaxVars]; // downflow water quality
        AED_REAL WQInf[MaxVars];
 
-       LOGICAL  SubmFlag;        // Is this a submerged inflow
-
        int  iCnt;
        int  NoIns;
        int  InPar[MaxPar];
+
+       LOGICAL  SubmFlag;        // Is this a submerged inflow
    } InflowDataType;
 
    /*===========================================================*/

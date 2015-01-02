@@ -556,7 +556,7 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
      * STEP 4 - KELVIN-HELMHOLTZ MIXING                                       *
      *                                                                        *
      * Check if the interface is unstable, such that shear would induce       *
-     * billows. This is doen in a separate routine                            *
+     * billows. This is done in a separate routine                            *
      * Only call the routine if the user has bothered to make CKH>0           *
      **************************************************************************/
      if (coef_mix_KH > zero)

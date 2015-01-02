@@ -97,6 +97,8 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
 
 /*----------------------------------------------------------------------------*/
 
+    for (i = 0; i < MAX_PLOTS+1; i++) theplots[i] = -1;
+
     if ( (namlst = open_namelist(plots_nml_name)) < 0 ) {
         fprintf(stderr,"Error opening namelist file plots.nml\n");
         return;
@@ -187,6 +189,7 @@ void put_xplot_val(char *name, int wlev, AED_REAL *val)
     j = 0;
     while (j < nplots) {
         if ( strcasecmp(name, vars[j]) == 0 ) {
+//          fprintf(stderr, "plotting \"%s\" (%e)\n", name, (val!=NULL)?val[0]:-1.);
             if (strcasecmp(name, "temp") == 0) which = 1;
             else if (strcasecmp(name, "salt") == 0) which = 2;
             else if (strcasecmp(name, "rad") == 0) which = 3;

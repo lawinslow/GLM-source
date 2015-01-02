@@ -105,7 +105,8 @@ void read_time_string(const char *timestr, int *jul, int *secs)
     *jul = 0; *secs = 0;
     n = sscanf(timestr, "%4d-%2d-%2d %2d:%2d:%2d", &yy, &mm, &dd, &hh, &min, &ss);
     if ( n > 2 ) *jul = julian_day(yy, mm, dd);
-    if ( n > 5 ) *secs = 3600 * hh + 60 * min + ss;
+    if ( n > 4 ) *secs = 3600 * hh + 60 * min;
+    if ( n > 5 ) *secs += ss;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -218,7 +219,8 @@ void read_time_formatted(const char *timestr, timefmt *tf, int *jul, int *secs)
 
     n = sscanf(timestr, tf->fmt, &v[0], &v[1], &v[2], &v[3], &v[4], &v[5]);
     if ( n > 2 ) *jul = julian_day(v[tf->Ypos], v[tf->Mpos], v[tf->Dpos]);
-    if ( n > 5 ) *secs = 3600 * v[tf->hpos] + 60 * v[tf->mpos] + v[tf->spos];
+    if ( n > 4 ) *secs = 3600 * v[tf->hpos] + 60 * v[tf->mpos];
+    if ( n > 5 ) *secs += v[tf->spos];
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
