@@ -77,3 +77,6 @@ Running day  2455195, 100.00% of days complete
 ```
 Now we need to try this on other computers. 
 The goal is to be able to set up glm for macs using a thumb drive (as we can with windows).
+
+
+When we get a new dump of code on dropbox, we remove the .git subfolders: `rm -R -f */.git`
