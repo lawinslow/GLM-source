@@ -52,7 +52,6 @@ MODULE glm_types
       CCHARACTER :: S(40)
    END TYPE StringT
 
-#if 0
    !#===========================================================#!
    !# Structured type for key global lake environmental vars
    !# A Lake will be an allocated array of MaxLayers of these
