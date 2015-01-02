@@ -1,5 +1,0 @@
-# The fortran modules provided by this target.
-provides
- bb_filter_feeder
- bb_model_library
- bb_passive
