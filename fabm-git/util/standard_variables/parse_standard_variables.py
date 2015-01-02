@@ -82,13 +82,16 @@ fout = open(output_F90,'w')
 fout_assignments = open(output_F90_assignments,'w')
 fwiki = open(output_wiki,'w')
 for domain,items in selection.iteritems():
-    fwiki.write('== %s variables ==\n\n{|\n|-\n! Variable\n! Units\n! Corresponding name in [http://cf-pcmdi.llnl.gov/documents/cf-standard-names/ CF convention]\n' % (domain[0].upper()+domain[1:]))
+    fwiki.write('## %s variables\n' % (domain[0].upper()+domain[1:]))
+    fwiki.write('|Variable|Units|Corresponding name in [CF convention](http://cfconventions.org/standard-names-26.html)|\n')
+    fwiki.write('|---|---|---|\n')
     fout.write('! %s variables\n' % (domain[0].upper()+domain[1:]))
     for i,item in enumerate(sorted(items,cmp=lambda x,y:cmp(x['name'],y['name']))):
         # Collect variable attribute]
         data = [('name',"'%s'" % item['name']),('units',"'%s'" % item['units'])]
         if 'cf_names' in item: data.append(('cf_names',"'%s'" % ','.join(item['cf_names'])))
         if item.get('aggregate_variable',domain=='conserved'): data.append(('aggregate_variable','.true.'))
+        if domain=='conserved': data.append(('conserved','.true.'))
 
         # Declare standard variable in Fortran.
         fout.write('type (%s) :: %s\n' % (domain2type[domain],item['name']))
@@ -98,12 +101,8 @@ for domain,items in selection.iteritems():
         fout_assignments.write('\n')
 
         # Create wiki entry for this variable.
-        fwiki.write('|-\n| %s\n| %s\n' % (item['name'],item['units']))
-        if 'cf_names' in item:
-            fwiki.write('| %s\n' % item['cf_names'][0])
-        else:
-            fwiki.write('| \n')
+        fwiki.write('|%s|%s|%s|\n' % (item['name'],item['units'],item.get('cf_names',('',))[0]))
 
     # Close entries for this variable category
-    fwiki.write('|}\n\n')
+    fwiki.write('\n\n')
     fout.write('\n')

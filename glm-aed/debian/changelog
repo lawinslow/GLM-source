@@ -1,16 +1,8 @@
-glm (2.0.0beta1-0) UNRELEASED; urgency=low
+glm (2.0.0beta6-0) UNRELEASED; urgency=low
 
-  * new version 2.0.0alpha4
-  * new version 2.0.0alpha6
-  * new version 2.0.0alpha7
-  * new version 2.0.0alpha9
-  * new version 2.0.0alphaA
-  * new version 2.0.0alphaB
-  * new version 2.0.0alphaC
-  * new version 2.0.0alphaD
-  * new version 2.0.0beta1
+  * new version 2.0.0beta6
 
- -- Casper Boon <casper@eridanus>  Wed, 22 Oct 2014 13:58:41 +0800
+ -- Casper Boon <casper@eridanus>  Thu, 27 Nov 2014 15:02:37 +0800
 
 glm (1.4.0-0) UNRELEASED; urgency=low
 

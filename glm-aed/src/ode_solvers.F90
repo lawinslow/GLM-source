@@ -38,6 +38,13 @@
 
 # define REALTYPE AED_REAL
 
+!#define _ARRSZ_ 1:numc,1:nlev
+!#define _ARRIDX_ ci,i
+
+#define _ARRSZ_ 1:nlev,1:numc
+#define _ARRIDX_ i,ci
+
+
 #if SINGLE
 # define _POINT_NEG_NINE_ 1.-9
 #else
@@ -281,21 +288,16 @@ END SUBROUTINE init_ode_solver
 !  Original author(s): Hans Burchard, Karsten Bolding
 !
 ! !LOCAL VARIABLES:
-  LOGICAL  :: first
-  REALTYPE :: rhs(1:numc,1:nlev)
+  REALTYPE :: rhs(_ARRSZ_)
   INTEGER  :: i,ci
 !EOP
 !-----------------------------------------------------------------------
 !BOC
-   first=.true.
-!   STDERR 'euler_forward ',first
-   call right_hand_side(first,numc,nlev,cc,rhs)
-   first=.false.
-!   STDERR 'euler_forward ',first
+   call right_hand_side(.true.,numc,nlev,cc,rhs)
 
-   do ci=1,nlev
-      do i=1,numc
-         cc(i,ci)=cc(i,ci)+dt*rhs(i,ci)
+   do i=1,nlev
+      do ci=1,numc
+         cc(_ARRIDX_)=cc(_ARRIDX_)+dt*rhs(_ARRIDX_)
       end do
    end do
 
@@ -355,28 +357,25 @@ END SUBROUTINE init_ode_solver
 !  Original author(s): Hans Burchard, Karsten Bolding
 !
 ! !LOCAL VARIABLES:
-  LOGICAL  :: first
-  REALTYPE :: rhs(1:numc,1:nlev),rhs1(1:numc,1:nlev)
-  REALTYPE :: cc1(1:numc,1:nlev)
+  REALTYPE :: rhs(_ARRSZ_),rhs1(_ARRSZ_)
+  REALTYPE :: cc1(_ARRSZ_)
   INTEGER  :: i,ci
 !EOP
 !-----------------------------------------------------------------------
 !BOC
-   first=.true.
-   call right_hand_side(first,numc,nlev,cc,rhs)
-   first=.false.
+   call right_hand_side(.true.,numc,nlev,cc,rhs)
 
-   do ci=1,nlev
-      do i=1,numc
-         cc1(i,ci)=cc(i,ci)+dt*rhs(i,ci)
+   do i=1,nlev
+      do ci=1,numc
+         cc1(_ARRIDX_)=cc(_ARRIDX_)+dt*rhs(_ARRIDX_)
       end do
    end do
 
-   call right_hand_side(first,numc,nlev,cc1,rhs1)
+   call right_hand_side(.false.,numc,nlev,cc1,rhs1)
 
-   do ci=1,nlev
-      do i=1,numc
-         cc(i,ci)=cc(i,ci)+dt*0.5*(rhs(i,ci)+rhs1(i,ci))
+   do i=1,nlev
+      do ci=1,numc
+         cc(_ARRIDX_)=cc(_ARRIDX_)+dt*0.5*(rhs(_ARRIDX_)+rhs1(_ARRIDX_))
       end do
    end do
 
@@ -449,9 +448,9 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: rhs(1:numc,1:nlev),rhs1(1:numc,1:nlev)
-  REALTYPE :: rhs2(1:numc,1:nlev),rhs3(1:numc,1:nlev)
-  REALTYPE :: cc1(1:numc,1:nlev)
+  REALTYPE :: rhs(_ARRSZ_),rhs1(_ARRSZ_)
+  REALTYPE :: rhs2(_ARRSZ_),rhs3(_ARRSZ_)
+  REALTYPE :: cc1(_ARRSZ_)
   INTEGER  :: i,ci
 !EOP
 !-----------------------------------------------------------------------
@@ -460,33 +459,33 @@ END SUBROUTINE init_ode_solver
    call right_hand_side(first,numc,nlev,cc,rhs)
    first=.false.
 
-   do ci=1,nlev
-      do i=1,numc
-         cc1(i,ci)=cc(i,ci)+dt*rhs(i,ci)
+   do i=1,nlev
+      do ci=1,numc
+         cc1(_ARRIDX_)=cc(_ARRIDX_)+dt*rhs(_ARRIDX_)
       end do
    end do
 
    call right_hand_side(first,numc,nlev,cc1,rhs1)
 
-   do ci=1,nlev
-      do i=1,numc
-         cc1(i,ci)=cc(i,ci)+dt*rhs1(i,ci)
+   do i=1,nlev
+      do ci=1,numc
+         cc1(_ARRIDX_)=cc(_ARRIDX_)+dt*rhs1(_ARRIDX_)
       end do
    end do
 
    call right_hand_side(first,numc,nlev,cc1,rhs2)
 
-   do ci=1,nlev
-      do i=1,numc
-         cc1(i,ci)=cc(i,ci)+dt*rhs2(i,ci)
+   do i=1,nlev
+      do ci=1,numc
+         cc1(_ARRIDX_)=cc(_ARRIDX_)+dt*rhs2(_ARRIDX_)
       end do
    end do
 
    call right_hand_side(first,numc,nlev,cc1,rhs3)
 
-   do ci=1,nlev
-      do i=1,numc
-         cc(i,ci)=cc(i,ci)+dt*1./3.*(0.5*rhs(i,ci)+rhs1(i,ci)+rhs2(i,ci)+0.5*rhs3(i,ci))
+   do i=1,nlev
+      do ci=1,numc
+         cc(_ARRIDX_)=cc(_ARRIDX_)+dt*1./3.*(0.5*rhs(_ARRIDX_)+rhs1(_ARRIDX_)+rhs2(_ARRIDX_)+0.5*rhs3(_ARRIDX_))
       end do
    end do
 
@@ -542,7 +541,7 @@ END SUBROUTINE init_ode_solver
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
   REALTYPE :: ppsum,ddsum
-  REALTYPE :: pp(1:numc,1:numc,1:nlev),dd(1:numc,1:numc,1:nlev)
+  REALTYPE :: pp(1:numc,_ARRSZ_),dd(1:numc,_ARRSZ_)
   INTEGER  :: i,j,ci
 !EOP
 !-----------------------------------------------------------------------
@@ -555,15 +554,15 @@ END SUBROUTINE init_ode_solver
    call right_hand_side(first,numc,nlev,cc,pp,dd)
    first=.false.
 
-   do ci=1,nlev
-      do i=1,numc
+   do i=1,nlev
+      do ci=1,numc
          ppsum=_ZERO_
          ddsum=_ZERO_
          do j=1,numc
             ppsum=ppsum+pp(i,j,ci)
             ddsum=ddsum+dd(i,j,ci)
          end do
-         cc(i,ci)=(cc(i,ci)+dt*ppsum)/(1.+dt*ddsum/cc(i,ci))
+         cc(_ARRIDX_)=(cc(_ARRIDX_)+dt*ppsum)/(1.+dt*ddsum/cc(_ARRIDX_))
       end do
    end do
 
@@ -632,9 +631,9 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: ppsum(1:numc,1:nlev),ddsum(1:numc,1:nlev)
-  REALTYPE :: pp(1:numc,1:numc,1:nlev),dd(1:numc,1:numc,1:nlev)
-  REALTYPE :: cc1(1:numc,1:nlev)
+  REALTYPE :: ppsum(_ARRSZ_),ddsum(_ARRSZ_)
+  REALTYPE :: pp(1:numc,_ARRSZ_),dd(1:numc,_ARRSZ_)
+  REALTYPE :: cc1(_ARRSZ_)
   INTEGER  :: i,j,ci
 !EOP
 !-----------------------------------------------------------------------
@@ -649,13 +648,13 @@ END SUBROUTINE init_ode_solver
 
    do ci=1,nlev
       do i=1,numc
-         ppsum(i,ci)=_ZERO_
-         ddsum(i,ci)=_ZERO_
+         ppsum(_ARRIDX_)=_ZERO_
+         ddsum(_ARRIDX_)=_ZERO_
          do j=1,numc
-            ppsum(i,ci)=ppsum(i,ci)+pp(i,j,ci)
-            ddsum(i,ci)=ddsum(i,ci)+dd(i,j,ci)
+            ppsum(_ARRIDX_)=ppsum(_ARRIDX_)+pp(i,j,ci)
+            ddsum(_ARRIDX_)=ddsum(_ARRIDX_)+dd(i,j,ci)
          end do
-         cc1(i,ci)=(cc(i,ci)+dt*ppsum(i,ci))/(1.+dt*ddsum(i,ci)/cc(i,ci))
+         cc1(_ARRIDX_)=(cc(_ARRIDX_)+dt*ppsum(_ARRIDX_))/(1.+dt*ddsum(_ARRIDX_)/cc(_ARRIDX_))
       end do
    end do
 
@@ -664,10 +663,10 @@ END SUBROUTINE init_ode_solver
    do ci=1,nlev
       do i=1,numc
          do j=1,numc
-            ppsum(i,ci)=ppsum(i,ci)+pp(i,j,ci)
-            ddsum(i,ci)=ddsum(i,ci)+dd(i,j,ci)
+            ppsum(_ARRIDX_)=ppsum(_ARRIDX_)+pp(i,j,ci)
+            ddsum(_ARRIDX_)=ddsum(_ARRIDX_)+dd(i,j,ci)
          end do
-         cc(i,ci)=(cc(i,ci)+0.5*dt*ppsum(i,ci))/(1.+0.5*dt*ddsum(i,ci)/cc1(i,ci))
+         cc(_ARRIDX_)=(cc(_ARRIDX_)+0.5*dt*ppsum(_ARRIDX_))/(1.+0.5*dt*ddsum(_ARRIDX_)/cc1(_ARRIDX_))
       end do
    end do
 
@@ -713,12 +712,12 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: ppsum(1:numc,1:nlev),ddsum(1:numc,1:nlev)
-  REALTYPE :: ppsum1(1:numc,1:nlev),ddsum1(1:numc,1:nlev)
-  REALTYPE :: ppsum2(1:numc,1:nlev),ddsum2(1:numc,1:nlev)
-  REALTYPE :: ppsum3(1:numc,1:nlev),ddsum3(1:numc,1:nlev)
-  REALTYPE :: pp(1:numc,1:numc,1:nlev),dd(1:numc,1:numc,1:nlev)
-  REALTYPE :: cc1(1:numc,1:nlev)
+  REALTYPE :: ppsum(_ARRSZ_),ddsum(_ARRSZ_)
+  REALTYPE :: ppsum1(_ARRSZ_),ddsum1(_ARRSZ_)
+  REALTYPE :: ppsum2(_ARRSZ_),ddsum2(_ARRSZ_)
+  REALTYPE :: ppsum3(_ARRSZ_),ddsum3(_ARRSZ_)
+  REALTYPE :: pp(1:numc,_ARRSZ_),dd(1:numc,_ARRSZ_)
+  REALTYPE :: cc1(_ARRSZ_)
   INTEGER  :: i,j,ci
 !EOP
 !-----------------------------------------------------------------------
@@ -733,13 +732,13 @@ END SUBROUTINE init_ode_solver
 
    do ci=1,nlev
       do i=1,numc
-         ppsum(i,ci)=_ZERO_
-         ddsum(i,ci)=_ZERO_
+         ppsum(_ARRIDX_)=_ZERO_
+         ddsum(_ARRIDX_)=_ZERO_
          do j=1,numc
-            ppsum(i,ci)=ppsum(i,ci)+pp(i,j,ci)
-            ddsum(i,ci)=ddsum(i,ci)+dd(i,j,ci)
+            ppsum(_ARRIDX_)=ppsum(_ARRIDX_)+pp(i,j,ci)
+            ddsum(_ARRIDX_)=ddsum(_ARRIDX_)+dd(i,j,ci)
          end do
-         cc1(i,ci)=(cc(i,ci)+dt*ppsum(i,ci))/(1.+dt*ddsum(i,ci)/cc(i,ci))
+         cc1(_ARRIDX_)=(cc(_ARRIDX_)+dt*ppsum(_ARRIDX_))/(1.+dt*ddsum(_ARRIDX_)/cc(_ARRIDX_))
       end do
    end do
 
@@ -747,13 +746,13 @@ END SUBROUTINE init_ode_solver
 
    do ci=1,nlev
       do i=1,numc
-         ppsum1(i,ci)=_ZERO_
-         ddsum1(i,ci)=_ZERO_
+         ppsum1(_ARRIDX_)=_ZERO_
+         ddsum1(_ARRIDX_)=_ZERO_
          do j=1,numc
-            ppsum1(i,ci)=ppsum1(i,ci)+pp(i,j,ci)
-            ddsum1(i,ci)=ddsum1(i,ci)+dd(i,j,ci)
+            ppsum1(_ARRIDX_)=ppsum1(_ARRIDX_)+pp(i,j,ci)
+            ddsum1(_ARRIDX_)=ddsum1(_ARRIDX_)+dd(i,j,ci)
          end do
-         cc1(i,ci)=(cc(i,ci)+dt*ppsum1(i,ci))/(1.+dt*ddsum1(i,ci)/cc1(i,ci))
+         cc1(_ARRIDX_)=(cc(_ARRIDX_)+dt*ppsum1(_ARRIDX_))/(1.+dt*ddsum1(_ARRIDX_)/cc1(_ARRIDX_))
       end do
    end do
 
@@ -761,13 +760,13 @@ END SUBROUTINE init_ode_solver
 
    do ci=1,nlev
       do i=1,numc
-         ppsum2(i,ci)=_ZERO_
-         ddsum2(i,ci)=_ZERO_
+         ppsum2(_ARRIDX_)=_ZERO_
+         ddsum2(_ARRIDX_)=_ZERO_
          do j=1,numc
-            ppsum2(i,ci)=ppsum2(i,ci)+pp(i,j,ci)
-            ddsum2(i,ci)=ddsum2(i,ci)+dd(i,j,ci)
+            ppsum2(_ARRIDX_)=ppsum2(_ARRIDX_)+pp(i,j,ci)
+            ddsum2(_ARRIDX_)=ddsum2(_ARRIDX_)+dd(i,j,ci)
          end do
-         cc1(i,ci)=(cc(i,ci)+dt*ppsum2(i,ci))/(1.+dt*ddsum2(i,ci)/cc1(i,ci))
+         cc1(_ARRIDX_)=(cc(_ARRIDX_)+dt*ppsum2(_ARRIDX_))/(1.+dt*ddsum2(_ARRIDX_)/cc1(_ARRIDX_))
       end do
    end do
 
@@ -775,15 +774,15 @@ END SUBROUTINE init_ode_solver
 
    do ci=1,nlev
       do i=1,numc
-         ppsum3(i,ci)=_ZERO_
-         ddsum3(i,ci)=_ZERO_
+         ppsum3(_ARRIDX_)=_ZERO_
+         ddsum3(_ARRIDX_)=_ZERO_
          do j=1,numc
-            ppsum3(i,ci)=ppsum3(i,ci)+pp(i,j,ci)
-            ddsum3(i,ci)=ddsum3(i,ci)+dd(i,j,ci)
+            ppsum3(_ARRIDX_)=ppsum3(_ARRIDX_)+pp(i,j,ci)
+            ddsum3(_ARRIDX_)=ddsum3(_ARRIDX_)+dd(i,j,ci)
          end do
-         ppsum(i,ci)=1./3.*(0.5*ppsum(i,ci)+ppsum1(i,ci)+ppsum2(i,ci)+0.5*ppsum3(i,ci))
-         ddsum(i,ci)=1./3.*(0.5*ddsum(i,ci)+ddsum1(i,ci)+ddsum2(i,ci)+0.5*ddsum3(i,ci))
-         cc(i,ci)=(cc(i,ci)+dt*ppsum(i,ci))/(1.+dt*ddsum(i,ci)/cc1(i,ci))
+         ppsum(_ARRIDX_)=1./3.*(0.5*ppsum(_ARRIDX_)+ppsum1(_ARRIDX_)+ppsum2(_ARRIDX_)+0.5*ppsum3(_ARRIDX_))
+         ddsum(_ARRIDX_)=1./3.*(0.5*ddsum(_ARRIDX_)+ddsum1(_ARRIDX_)+ddsum2(_ARRIDX_)+0.5*ddsum3(_ARRIDX_))
+         cc(_ARRIDX_)=(cc(_ARRIDX_)+dt*ppsum(_ARRIDX_))/(1.+dt*ddsum(_ARRIDX_)/cc1(_ARRIDX_))
       end do
    end do
 
@@ -842,7 +841,7 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: pp(1:numc,1:numc,1:nlev),dd(1:numc,1:numc,1:nlev)
+  REALTYPE :: pp(1:numc,_ARRSZ_),dd(1:numc,_ARRSZ_)
   REALTYPE :: a(1:numc,1:numc),r(1:numc)
   INTEGER  :: i,j,ci
 !EOP
@@ -863,9 +862,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp(i,j,ci)/cc(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc(i,ci)
+         a(i,i)=dt*a(i,i)/cc(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc(:,ci))
    end do
@@ -948,10 +947,10 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: pp(1:numc,1:numc,1:nlev),dd(1:numc,1:numc,1:nlev)
-  REALTYPE :: pp1(1:numc,1:numc,1:nlev),dd1(1:numc,1:numc,1:nlev)
+  REALTYPE :: pp(1:numc,_ARRSZ_),dd(1:numc,_ARRSZ_)
+  REALTYPE :: pp1(1:numc,_ARRSZ_),dd1(1:numc,_ARRSZ_)
   REALTYPE :: a(1:numc,1:numc),r(1:numc)
-  REALTYPE :: cc1(1:numc,1:nlev)
+  REALTYPE :: cc1(_ARRSZ_)
   INTEGER  :: i,j,ci
 !EOP
 !-----------------------------------------------------------------------
@@ -971,9 +970,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp(i,j,ci)/cc(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc(i,ci)
+         a(i,i)=dt*a(i,i)/cc(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc1(:,ci))
    end do
@@ -990,9 +989,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp(i,j,ci)/cc1(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc1(i,ci)
+         a(i,i)=dt*a(i,i)/cc1(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc(:,ci))
    end do
@@ -1039,12 +1038,12 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: pp(1:numc,1:numc,1:nlev),dd(1:numc,1:numc,1:nlev)
-  REALTYPE :: pp1(1:numc,1:numc,1:nlev),dd1(1:numc,1:numc,1:nlev)
-  REALTYPE :: pp2(1:numc,1:numc,1:nlev),dd2(1:numc,1:numc,1:nlev)
-  REALTYPE :: pp3(1:numc,1:numc,1:nlev),dd3(1:numc,1:numc,1:nlev)
+  REALTYPE :: pp(1:numc,_ARRSZ_),dd(1:numc,_ARRSZ_)
+  REALTYPE :: pp1(1:numc,_ARRSZ_),dd1(1:numc,_ARRSZ_)
+  REALTYPE :: pp2(1:numc,_ARRSZ_),dd2(1:numc,_ARRSZ_)
+  REALTYPE :: pp3(1:numc,_ARRSZ_),dd3(1:numc,_ARRSZ_)
   REALTYPE :: a(1:numc,1:numc),r(1:numc)
-  REALTYPE :: cc1(1:numc,1:nlev)
+  REALTYPE :: cc1(_ARRSZ_)
   INTEGER  :: i,j,ci
 !EOP
 !-----------------------------------------------------------------------
@@ -1064,9 +1063,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp(i,j,ci)/cc(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc(i,ci)
+         a(i,i)=dt*a(i,i)/cc(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc1(:,ci))
    end do
@@ -1080,9 +1079,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd1(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp1(i,j,ci)/cc1(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc1(i,ci)
+         a(i,i)=dt*a(i,i)/cc1(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp1(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp1(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc1(:,ci))
    end do
@@ -1096,9 +1095,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd2(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp2(i,j,ci)/cc1(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc1(i,ci)
+         a(i,i)=dt*a(i,i)/cc1(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp2(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp2(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc1(:,ci))
    end do
@@ -1115,9 +1114,9 @@ END SUBROUTINE init_ode_solver
             a(i,i)=a(i,i)+dd(i,j,ci)
             if (i.ne.j) a(i,j)=-dt*pp(i,j,ci)/cc1(j,ci)
          end do
-         a(i,i)=dt*a(i,i)/cc1(i,ci)
+         a(i,i)=dt*a(i,i)/cc1(_ARRIDX_)
          a(i,i)=1.+a(i,i)
-         r(i)=cc(i,ci)+dt*pp(i,i,ci)
+         r(i)=cc(_ARRIDX_)+dt*pp(i,_ARRIDX_)
       end do
       call matrix(numc,a,r,cc(:,ci))
    end do
@@ -1177,7 +1176,7 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  REALTYPE :: derivative(1:numc,1:nlev)
+  REALTYPE :: derivative(_ARRSZ_)
   INTEGER  :: ci
   REALTYPE :: pi
 !EOP
@@ -1264,8 +1263,8 @@ END SUBROUTINE init_ode_solver
 !
 ! !LOCAL VARIABLES:
   LOGICAL  :: first
-  INTEGER  :: i,ci
-  REALTYPE :: pi, rhs(1:numc,1:nlev), cc_med(1:numc,1:nlev), rhs_med(1:numc,1:nlev)
+  INTEGER  :: _ARRIDX_
+  REALTYPE :: pi, rhs(_ARRSZ_), cc_med(_ARRSZ_), rhs_med(_ARRSZ_)
 !EOP
 !-----------------------------------------------------------------------
 !BOC
@@ -1285,7 +1284,7 @@ END SUBROUTINE init_ode_solver
 
       ! Correct for the state variables that will be included in 'p'.
       do i=1,numc
-         if (rhs(i,ci) .lt. 0.) rhs(:,ci) = rhs(:,ci) * cc(i,ci)/cc_med(i,ci)
+         if (rhs(_ARRIDX_) .lt. 0.) rhs(:,ci) = rhs(:,ci) * cc(_ARRIDX_)/cc_med(_ARRIDX_)
       end do
 
       call findp_bisection(numc, cc(:,ci), rhs(:,ci), dt, _POINT_NEG_NINE_, pi)

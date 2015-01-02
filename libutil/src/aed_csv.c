@@ -1,7 +1,7 @@
 /******************************************************************************
- #                                                                            *
- # aed_csv.c                                                                  *
- #                                                                            *
+ *                                                                            *
+ * aed_csv.c                                                                  *
+ *                                                                            *
  * Developed by :                                                             *
  *     AquaticEcoDynamics (AED) Group                                         *
  *     School of Earth & Environment                                          *
@@ -23,7 +23,7 @@
  *                                                                            *
  *  You should have received a copy of the GNU General Public License         *
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.     *
- #                                                                            *
+ *                                                                            *
  ******************************************************************************/
 #include <stdio.h>
 #include <string.h>

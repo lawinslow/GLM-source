@@ -257,6 +257,7 @@ contains
 
       class (type_node),pointer          :: node
 
+      nullify(error)
       nullify(scalar)
       node => self%get(key)
       if (required.and..not.associated(node)) then
@@ -286,6 +287,7 @@ contains
 
       class (type_node),pointer          :: node
 
+      nullify(error)
       nullify(dictionary)
       node => self%get(key)
       if (required.and..not.associated(node)) then
@@ -335,7 +337,8 @@ contains
          value = node%to_logical(value,success)
          if (.not.success) then
             allocate(error)
-            error%message = trim(node%path)//' is set to "'//trim(node%string)//'", which cannot be interpreted as a Boolean value.'
+            error%message = trim(node%path)//' is set to "'//trim(node%string) &
+                          //'", which cannot be interpreted as a Boolean value.'
          end if
       end if
    end function

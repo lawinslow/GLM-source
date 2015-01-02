@@ -226,6 +226,8 @@ s/CALL self%register_bottom_state_dependency(\([^,]*\),/\1 = aed_locate_sheet_va
 s/CALL self%register_horizontal_dependency_sn(\([^,]*\),/\1 = aed_locate_global_sheet(/
 s/CALL self%register_horizontal_dependency(\([^,]*\),/\1 = aed_locate_global_sheet(/
 
+# CALL self%request_coupling is not needed
+/self%request_coupling/d
 
 # replace lower case word "type" with uppercase.
 s/\<type (/TYPE (/
@@ -346,6 +348,8 @@ s/no_river_dilution=.false.,//
 s/no_river_dilution=.true.,//
 s/,no_river_dilution=.*)/)/
 s/, no_river_dilution=.*)/)/
+
+s/\<FABM\>/AED2/
 
 # These are the macros for given variables type
 #define _STATE_VAR_(id)   column(id)%cell(layer_idx)

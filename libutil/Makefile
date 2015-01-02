@@ -31,14 +31,17 @@ incdir=include
 
 SRCS=${srcdir}/namelist.c \
      ${srcdir}/aed_csv.c \
+     ${srcdir}/aed_futils.F90 \
      ${srcdir}/aed_time.c
 
 OBJS=${objdir}/namelist.o \
      ${objdir}/aed_csv.o \
+     ${objdir}/aed_futils.o \
      ${objdir}/aed_time.o
 
 CFLAGS=-Wall -O3 -fPIC
 INCLUDES=-I${incdir}
+FFLAGS=-warn all -i-static -mp1 -stand f03 -fPIC
 
 all: libutil.a
 
@@ -47,7 +50,7 @@ libutil.a: ${objdir} ${OBJS}
 	ranlib libutil.a
 
 clean:
-	@/bin/rm ${objdir}/*.o
+	@/bin/rm ${objdir}/*.o *__genmod.*
 	@/bin/rmdir ${objdir}
 	@/bin/rm libutil.a
 
@@ -59,3 +62,8 @@ ${objdir}:
 ${objdir}/%.o: ${srcdir}/%.c ${incdir}/%.h ${incdir}/libutil.h
 	$(CC) $(CFLAGS) $(INCLUDES) -g -c $< -o $@
 
+${objdir}/%.o: ${srcdir}/%.F90 ${incdir}/%.h ${incdir}/libutil.h
+	$(F90) $(FFLAGS) -D_FORTRAN_VERSION_ -c $< -o $@
+
+${objdir}/%.o: ${srcdir}/%.F90
+	$(F90) $(FFLAGS) -D_FORTRAN_VERSION_ -c $< -o $@

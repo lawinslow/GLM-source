@@ -35,7 +35,7 @@
 #ifndef _FORTRAN_VERSION_
 
 typedef void (*wq_init_glm_t)(char *fname, int *len, int *kk, int *NumFABMVars, AED_REAL *pKw);
-typedef void (*wq_set_glm_data_t)(LakeDataType *Lake, int *MaxLayers, int *NumLayers,
+typedef void (*wq_set_glm_data_t)(LakeDataType *Lake, int *MaxLayers,
                 MetDataType *MetData, SurfaceDataType *SurfData, AED_REAL *dt);
 typedef void (*wq_do_glm_t)(int *wlev, int *pIce);
 typedef void (*wq_clean_glm_t)(void);
@@ -68,7 +68,7 @@ int prime_glm_wq(const char *which);
 
 #if USE_DL_LOADER
 void wq_init_glm(char *fname, int *len, int *kk, int *NumFABMVars, AED_REAL *pKw);
-void wq_set_glm_data(LakeDataType *Lake, int *MaxLayers, int *NumLayers,
+void wq_set_glm_data(LakeDataType *Lake, int *MaxLayers,
                 MetDataType *MetData, SurfaceDataType *SurfData, AED_REAL *dt);
 void wq_do_glm(int *wlev, int *pIce);
 void wq_clean_glm(void);
@@ -79,7 +79,7 @@ void wq_set_flags(int *split_factor, CLOGICAL *mobility, CLOGICAL *bioshade, CLO
                                                        int *ode_method, CLOGICAL *multi_ben, CLOGICAL *do_plots);
 #else
 void fabm_init_glm(char *fname, int *len, int *kk, int *NumFABMVars, AED_REAL *pKw);
-void fabm_set_glm_data(LakeDataType *Lake, int *MaxLayers, int *NumLayers,
+void fabm_set_glm_data(LakeDataType *Lake, int *MaxLayers,
                 MetDataType *MetData, SurfaceDataType *SurfData, AED_REAL *dt);
 void fabm_do_glm(int *wlev, int *pIce);
 void fabm_clean_glm(void);
@@ -90,7 +90,7 @@ void fabm_set_flags(int *split_factor, CLOGICAL *mobility, CLOGICAL *bioshade, C
                                                        int *ode_method, CLOGICAL *multi_ben, CLOGICAL *do_plots);
 
 void aed2_init_glm(char *fname, int *len, int *kk, int *NumFABMVars, AED_REAL *pKw);
-void aed2_set_glm_data(LakeDataType *Lake, int *MaxLayers, int *NumLayers,
+void aed2_set_glm_data(LakeDataType *Lake, int *MaxLayers,
                 MetDataType *MetData, SurfaceDataType *SurfData, AED_REAL *dt);
 void aed2_do_glm(int *wlev, int *pIce);
 void aed2_clean_glm(void);
