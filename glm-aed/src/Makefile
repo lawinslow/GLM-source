@@ -59,12 +59,6 @@ ifeq ($(SINGLE),true)
   DEFINES += -DSINGLE=1
 endif
 
-ifeq ($(OSTYPE),Darwin)
-  FINCLUDES+=-I/Users/hydro/devel/include
-  CINCLUDES+=-I/Users/hydro/devel/include
-  LIBS+=-L/Users/hydro/devel/lib
-endif
-
 ifeq ($(FORTRAN_COMPILER),IFORT11)
   F90=ifort
 endif
