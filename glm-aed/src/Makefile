@@ -188,8 +188,8 @@ endif
 
 
 LIBS+=-lnetcdf
-# If variable NETCDFLIB is not empty, use it to 
-# set path to the library 
+# If variable NETCDFLIB is not empty, use it to
+# set path to the library
 ifneq ($(NETCDFLIB),)
   LIBS+=-L$(NETCDFLIB)
 endif
@@ -254,7 +254,7 @@ all: $(TARGETS)
 
 
 glm: $(OBJS) $(GLM_DEPS)
-	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
+	$(CC) -o glm -Wl $(OBJS) $(LIBS)
 
 
 clean:
