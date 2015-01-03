@@ -613,10 +613,10 @@ static int esc_count = 0;
  ******************************************************************************/
 static int _process_event(XEvent *ev)
 {
-    char         buf;
+    char         buf[26];
     KeySym       ks;
-    XComposeStatus status;
     Window       twin;
+    int          len = 0, i;
 
     twin = _window;
     // remember to restore before leaving - at the moment the only "return"
@@ -627,14 +627,16 @@ static int _process_event(XEvent *ev)
 
     switch (ev->type)
         {
+        case KeymapNotify:
+            XRefreshKeyboardMapping(&ev->xmapping);
+            break;
+
         case KeyPress:
             break;
         case KeyRelease:
-            XLookupString((XKeyEvent *)ev, &buf, 1, &ks, &status);
-            // fprintf(stderr, "Key%s = \'%c\'\n",
-            //                     (ev->type==KeyPress)?"Press":"Release", buf);
+            len = XLookupString(&ev->xkey, buf, 25, &ks, NULL);
             cur_x = ev->xkey.x; cur_y = ev->xkey.y;
-            _dialog_key(_window, buf);
+            for (i = 0; i < len; i++) _dialog_key(_window, buf[i]);
 #if CLICKY_BITS
             if ( buf == 0x1B ) {
                 esc_count++;

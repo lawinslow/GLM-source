@@ -11,7 +11,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\dlfcn.c">
+    <ClCompile Include="..\..\src\glm_bird.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\..\src\glm_const.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\..\src\glm_csv.c">
@@ -62,6 +65,9 @@
     <ClCompile Include="..\..\src\glm_plot.c">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\src\glm_stress.c">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\..\src\glm_surface.c">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -74,6 +80,12 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\src\glm.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\glm_bird.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\glm_const.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\glm_csv.h">
@@ -116,6 +128,9 @@
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\glm_plot.h">
+      <Filter>Resource Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\src\glm_stress.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="..\..\src\glm_surface.h">

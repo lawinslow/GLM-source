@@ -12,7 +12,7 @@
 
 
 export FABM=true
-export FABM_NEW_BUILD=false
+
 export AED2=true
 export USE_DL=false
 
@@ -22,7 +22,7 @@ export FORTRAN_COMPILER=IFORT
 
 if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
    . /opt/intel/bin/compilervars.sh intel64
-#export PATH="/opt/intel/bin:$PATH"
+   export PATH="/opt/intel/bin:$PATH"
    export FC=ifort
 elif [ "$FORTRAN_COMPILER" = "IFORT11" ] ; then
    . /opt/intel/Compiler/11.1/072/bin/ifortvars.sh intel64
@@ -59,9 +59,6 @@ export PLOTDIR=${CURDIR}/libplot
 export AED2DIR=${CURDIR}/libaed2
 
 export COMPILATION_MODE=production
-if [ "$DEBUG" = "true" ] ; then
-  export COMPILATION_MODE=debug
-fi
 
 cd ${AED2DIR}
 make || exit 1
@@ -69,12 +66,13 @@ make || exit 1
 if [ "${FABM}" = "true" ] ; then
   export FABMHOST=glm
   cd ${FABMDIR}
-  if [ "${FABM_NEW_BUILD}" = "true" ] ; then
-    mkdir build
-    cd build
-    export EXTRA_FFLAGS+=-fPIC
+  mkdir build
+  cd build
+  export EXTRA_FFLAGS+=-fPIC
+  if [ "${USE_DL}" = "true" ] ; then
     cmake ${FABMDIR}/src -DBUILD_SHARED_LIBS=1 || exit 1
-    #cmake ${FABMDIR}/src || exit 1
+  else
+    cmake ${FABMDIR}/src || exit 1
   fi
   make || exit 1
 fi

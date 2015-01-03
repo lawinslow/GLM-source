@@ -53,10 +53,10 @@
  !vars  = 'temp','salt','OXY_oxy','PHY_green','PHY_diatom','PHY_crypto','NIT_nit','PHS_frp','PHY_TCHLA'
  !min_z =  0.0, 0.00,   0.0,  0.0,  0.0,   0.0,  0., 0.0,  0.
  !max_z = 27.0, 0.91, 400.0, 10.0, 15.0, 150.0, 60., 1.5, 32.
-  title = 'Temperature', 'Salinity',   'DO',   'Uorb', 'Taub',   'SS1',   'Ret',    'PO4',      'TCHLA'
-  vars  =    'temp',      'salt',   'OXY_oxy', 'Uorb', 'Taub', 'TRC_ss1','TRC_ret','PHS_frp', 'PHY_TCHLA'
-  min_z =       0.0,        0.00,      0.0,       0.0,    0.0,       0.0,       0.,      0.0,       0.
-  max_z =      27.0,        0.91,    400.0,       0.5,    2.0,      10.0,      5e8,      1.5,      32.
+  title = 'Temperature', 'Salinity',  'DO',    'Green',      'Diatom',    'Crypto',    'NO3',    'PO4',    'TCHLA'
+  vars  =    'temp',      'salt',   'OXY_oxy', 'PHY_green', 'PHY_diatom', 'PHY_crypto','NIT_nit','PHS_frp', 'PHY_TCHLA'
+  min_z =       0.0,        0.0,       0.0,       0.0,        0.0,           0.0,         0.0,      0.0,       0.0
+  max_z =      27.0,        0.91,    400.0,      10.0,      200.0,           6.0,        60.0,      1.5,      32.0
 /
 
 !-----------------------------------------------------------

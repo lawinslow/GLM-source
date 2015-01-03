@@ -87,6 +87,7 @@ void do_model_non_avg(int jstart, int nsave);
 int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL SWnew);
 void end_model(void);
 
+
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
@@ -273,6 +274,9 @@ void do_model(int jstart, int nsave)
         }
         SWnew = MetNew.ShortWave;
 
+#if DEBUG
+        fprintf(stderr, "------- next day - do_model -------\n");
+#endif
         stepnum = do_subdaily_loop(stepnum, jday, nsave, SWold, SWnew);
 
         //# End of forcing-mixing-diffusion loop
@@ -375,6 +379,9 @@ void do_model_non_avg(int jstart, int nsave)
         read_daily_met(jday, &MetData);
         SWnew = MetData.ShortWave;
 
+#if DEBUG
+        fprintf(stderr, "------- next day - do_model_non_avg -------\n");
+#endif
         stepnum = do_subdaily_loop(stepnum, jday, nsave, SWold, SWnew);
 
         //# End of forcing-mixing-diffusion loop
@@ -449,12 +456,13 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
     iclock = 0;
     Benthic_Light_pcArea = 0.;
     while (iclock < 86400) { //# iclock = seconds counter
-
         if ( subdaily ) {
             read_sub_daily_met(jday, iclock, &MetData);
             SWnew = MetData.ShortWave;
         }
+
         stepnum++;
+
         //printf("LongWave = %10.5f\n",MetData.LongWave);
         //printf("AirTemp = %10.5f\n",MetData.AirTemp);
         //printf("WindSpeed = %10.5f\n",MetData.WindSpeed);

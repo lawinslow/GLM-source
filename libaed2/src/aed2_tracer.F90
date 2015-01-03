@@ -84,7 +84,7 @@ SUBROUTINE aed2_define_tracer(data, namlst)
    AED_REAL :: trace_initial = zero_
    INTEGER  :: i
    LOGICAL  :: retention_time = .FALSE.
-   LOGICAL  :: resuspension = .TRUE.
+   LOGICAL  :: resuspension = .FALSE.
    CHARACTER(4) :: trac_name
 
    AED_REAL,PARAMETER :: secs_pr_day = 86400.
@@ -127,7 +127,8 @@ SUBROUTINE aed2_define_tracer(data, namlst)
 
    ! Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
-   data%id_taub = aed2_locate_global_sheet('taub')
+   if ( resuspension ) &
+      data%id_taub = aed2_locate_global_sheet('taub')
 
    data%resuspension = resuspension
 
@@ -184,8 +185,10 @@ SUBROUTINE aed2_calculate_benthic_tracer(data,column,layer_idx)
 
    ! Retrieve current environmental conditions for the bottom pelagic layer.
    temp = _STATE_VAR_(data%id_temp) ! local temperature
-   bottom_stress = _STATE_VAR_S_(data%id_taub)
-   bottom_stress = MIN(bottom_stress, 100.)
+   IF ( data%resuspension ) THEN
+      bottom_stress = _STATE_VAR_S_(data%id_taub)
+      bottom_stress = MIN(bottom_stress, 100.)
+   ENDIF
 
    DO i=1,ubound(data%id_ss,1)
       ! Retrieve current (local) state variable values.

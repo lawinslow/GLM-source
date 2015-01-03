@@ -86,7 +86,7 @@ extern AED_REAL Kw;      //* background light attenuation (m**-1)
 extern int wq_calc;      //* are we doing water quality calcs
 
 extern int Num_WQ_Vars;      //* number of water quality variables
-extern AED_REAL *WQ_Vars;    //* water quality array, nlayers, nvars
+extern AED_REAL *WQ_Vars;    //* water quality array : nlayers, nvars
 
 extern CLOGICAL atm_stab;      // Account for non-neutral atmospheric stability
 
@@ -185,7 +185,8 @@ void debug_print_lake(void);
 void debug_initialisation(int which);
 void debug_initialisation_(int *which);
 
-#define _WQ_Vars(i,j) WQ_Vars[_IDX_2d(Num_WQ_Vars,MaxLayers,i,j)]
+//#define _WQ_Vars(var,lyr) WQ_Vars[_IDX_2d(Num_WQ_Vars,MaxLayers,var,lyr)]
+#define _WQ_Vars(var,lyr) WQ_Vars[_IDX_2d(MaxLayers,Num_WQ_Vars,lyr,var)]
 #endif
 
 /*============================================================================*/

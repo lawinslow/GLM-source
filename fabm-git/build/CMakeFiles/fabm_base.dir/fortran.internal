@@ -1,9 +1,0 @@
-# The fortran modules provided by this target.
-provides
- fabm_builtin_models
- fabm_driver
- fabm_expressions
- fabm_particle
- fabm_properties
- fabm_standard_variables
- fabm_types
