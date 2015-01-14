@@ -36,6 +36,9 @@
 ifeq ($(OSTYPE),Darwin)
   WITH_PLOTS=false
   WITH_XPLOTS=false
+else ifeq ($(OSTYPE),Linux)
+  WITH_PLOTS=false
+  WITH_XPLOTS=false
 else
   WITH_PLOTS=true
   WITH_XPLOTS=true
