@@ -768,7 +768,7 @@ void create_lake(int namlst)
     }
 
     for (i = 0; i < bsn_vals; i++) {
-        A[i] /= 1000.0;
+        //A[i] /= 1000.0;
         H[i] -= Base;
 
         if (A[i] <= 0.0 ) kar++;

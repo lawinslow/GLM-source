@@ -170,7 +170,7 @@ void calc_layer_stress(AED_REAL U, AED_REAL F)
             Uorb = MIN( f_Uorb(U, F, h) , 5.0);
             Lake[i].Uorb = Uorb;
 
-            dens = Lake[i].SPDensity + 1000.;
+            dens = Lake[i].SPDensity + rho0;
             Lake[i].LayerStress = dens *
                      ((0.5 * wave_friction_factor(Uorb, F, h) * pow(Uorb, 2)) +
                                                    (f_c(h) * pow(Ucur, 2) / 8));

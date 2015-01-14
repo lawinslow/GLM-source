@@ -41,7 +41,11 @@ OBJS=${objdir}/namelist.o \
 
 CFLAGS=-Wall -O3 -fPIC
 INCLUDES=-I${incdir}
-FFLAGS=-warn all -i-static -mp1 -stand f03 -fPIC
+ifeq ($(F90),ifort)
+  FFLAGS=-warn all -i-static -mp1 -stand f03 -fPIC
+else
+  FFLAGS=-fPIC -Wall -ffree-line-length-none -std=f2003 -fall-intrinsics
+endif
 
 all: libutil.a
 
@@ -49,12 +53,15 @@ libutil.a: ${objdir} ${OBJS}
 	ar rv libutil.a ${OBJS}
 	ranlib libutil.a
 
-clean:
+clean: ${objdir}
+	@touch ${objdir}/1.o
+	@touch 1__genmod.1
 	@/bin/rm ${objdir}/*.o *__genmod.*
 	@/bin/rmdir ${objdir}
-	@/bin/rm libutil.a
 
 distclean: clean
+	@touch libutil.a
+	@/bin/rm libutil.a
 
 ${objdir}:
 	mkdir ${objdir}
