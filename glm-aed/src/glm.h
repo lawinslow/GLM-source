@@ -38,8 +38,7 @@
 #endif
 #define USE_FILLVALUE 1
 
-#define GLM_VERSION  "2.0.0beta6-usgs1"
-
+#define GLM_VERSION  "2.0.0beta7"
 
 #define POINT         0
 #define Z_SHAPE       1
@@ -60,15 +59,16 @@
 #  define _IDX_2d(di,dj,i,j) (((di) * (j-1)) + (i-1) + 1)
 #  define WQ_INF_(a,i,j) a(_IDX_2d(MaxInf,MaxVars,i,j))
 
+#undef AED_REAL
 #  if SINGLE
 #    ifndef AED_REAL
-#    define AED_REAL real(kind=C_FLOAT)
+#      define AED_REAL real(kind=C_FLOAT)
 #    endif
 #    define NF90_REALTYPE NF90_FLOAT
 #    define NC_FILLER NC_FILL_FLOAT
 #  else
 #    ifndef AED_REAL
-#    define AED_REAL REAL(kind=C_DOUBLE)
+#      define AED_REAL REAL(kind=C_DOUBLE)
 #    endif
 #    define NF90_REALTYPE NF90_DOUBLE
 #    define NC_FILLER NC_FILL_DOUBLE
@@ -82,7 +82,7 @@
 #  define DOUBLETYPE double precision
 #  define CINTEGER INTEGER(kind=C_INT)
 #  define CLOGICAL LOGICAL(kind=C_BOOL)
-#  define CCHARACTER CHARACTER(C_CHAR)
+#  define CCHARACTER CHARACTER(kind=C_CHAR)
 
 #  define stdin  5
 #  define stdout 6

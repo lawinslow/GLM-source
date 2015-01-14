@@ -169,7 +169,7 @@ void read_daily_met(int julian, MetDataType *met)
         if ( i >= n_steps ) {
             int dd,mm,yy;
             calendar_date(now,&yy,&mm,&dd);
-            fprintf(stderr, "Warning! Too many steps for %4d-%02d-%02d\n", yy,mm,dd);
+            fprintf(stderr, "Warning! Too many steps in met for %4d-%02d-%02d\n", yy,mm,dd);
             break;
         }
 
@@ -192,7 +192,7 @@ void read_daily_met(int julian, MetDataType *met)
         }
 
         // Rain is the exception - goes as is
-        submet[idx].Rain        = get_csv_val_r(csv, rain_idx) * rain_factor * 1000.;
+        submet[idx].Rain        = get_csv_val_r(csv, rain_idx) * rain_factor;
         submet[idx].RelHum      = get_csv_val_r(csv, hum_idx)  * rh_factor;
         if ( submet[idx].RelHum > 100. ) submet[idx].RelHum = 100.;
 
@@ -229,7 +229,7 @@ void read_daily_met(int julian, MetDataType *met)
         submet[idx].SatVapDef   =  (submet[idx].RelHum/100.) * saturated_vapour(submet[idx].AirTemp);
 
         if ( have_snow )
-             submet[idx].Snow = get_csv_val_r(csv,snow_idx) * 1000. ;
+             submet[idx].Snow = get_csv_val_r(csv,snow_idx);
         else submet[idx].Snow = 0. ;
 
         if ( have_rain_conc ) {

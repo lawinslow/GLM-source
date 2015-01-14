@@ -67,7 +67,7 @@ static   AED_REAL gPrimeTwoLayer = 0.;  //# Reduced gravity for int wave estimat
 static   AED_REAL Energy_RequiredMix = 0.;   //# Energy required to entrain next layer into the epilimnion
 static   AED_REAL Energy_AvailableMix = 0.;  //# Total available energy to mix (carries over from previous timesteps)
 
-static   AED_REAL Vol_Epi = 0.;  //# Volume of Epilimnion (surface layer after Kelvin-Helmholtz) 1000m3
+static   AED_REAL Vol_Epi = 0.;  //# Volume of Epilimnion (surface layer after Kelvin-Helmholtz) m3
 static   AED_REAL Mass_Epi = 0.; //# Sigma mass of Epilimnion (surface layer after Kelvin-Helmholtz) kg
 
 static   AED_REAL OldSlope   = 0.;
@@ -104,8 +104,7 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
              twfour = 24.0,
              half = 0.500,
              secshr = 3600.0,
-             tdfac = 8.33E-4,
-             volfac = 1.0E+3;
+             tdfac = 8.33E-4;
 
     //* Wind parameters
     AED_REAL WindSpeedX;         //# Actual wind speed, accounting for wind factor or ice [m s-1]
@@ -114,7 +113,7 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
     AED_REAL U_star_cub;         //# U*^3 [m3 s-3]
 
     //* Epilimnion variables
-    AED_REAL Dens_Epil;          //# Mean epilimnion sigma_T (density - 1000) [kg/m3]
+    AED_REAL Dens_Epil;          //# Mean epilimnion sigma_T (density - rho0) [kg/m3]
     AED_REAL Epi_Thick;          //# Effective thickness of the epilimnion (Volume/Area)
     AED_REAL Epilimnion_Mid_Ht;  //# Epilimnion height measured to middle of epilimnion
     AED_REAL dMdz;               //# Delta mass vertical gradient (kg/m), for w*
@@ -268,7 +267,7 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
      * Energy_Conv measures energy released by convective overturn            *
      * (ie. cooled dense water falling; Krays Turner deepening)               *
      **************************************************************************/
-    Energy_Conv = half * coef_mix_conv * g * dMdz/((Dens_Epil+1000.)*noSecs)*noSecs;
+    Energy_Conv = half * coef_mix_conv * g * dMdz/((Dens_Epil+rho0)*noSecs)*noSecs;
     if (Energy_Conv < zero) Energy_Conv = zero;
 
 
@@ -352,8 +351,8 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
     gPrimeTwoLayer = gprime(Dens_Epil, Dens_Hypl); //# gprime_effective
     Vol_Epi = Lake[surfLayer].Vol1 - Lake[Meta_topLayer].Vol1;
     Vol_Hypl = Lake[Meta_topLayer].Vol1;
-    Epi_Thick = (Vol_Epi/(Lake[Meta_topLayer].LayerArea+Lake[surfLayer].LayerArea))*(volfac/AreaFactor)*2.0;
-    Hypl_Thick = (Vol_Hypl/Lake[Meta_topLayer].LayerArea)*(volfac/AreaFactor)*2.0;
+    Epi_Thick = (Vol_Epi/(Lake[Meta_topLayer].LayerArea+Lake[surfLayer].LayerArea))*2.0;
+    Hypl_Thick = (Vol_Hypl/Lake[Meta_topLayer].LayerArea)*2.0;
     if (gPrimeTwoLayer <= 0.1E-6) gPrimeTwoLayer = 0.1E-6;
     IntWaveSpeed = sqrt((fabs(gPrimeTwoLayer)*Epi_Thick*Hypl_Thick)/(Epi_Thick+Hypl_Thick));
 
@@ -376,7 +375,7 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
      *      2) area = pi/4 * Length * Width                                   *
      *      3) ratio Length:Width at thermocline = crest                      *
      **************************************************************************/
-    LengthAtThermo = sqrt(Lake[Meta_topLayer].LayerArea*AreaFactor*4.0/Pi*(LenAtCrest/WidAtCrest));
+    LengthAtThermo = sqrt(Lake[Meta_topLayer].LayerArea*4.0/Pi*(LenAtCrest/WidAtCrest));
 
 
     /**************************************************************************
@@ -493,17 +492,17 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
         dbgprt("NumLayers, surfLayer, botmLayer, Meta_topLayer, Epi_botmLayer = %d,%d,%d,%d,%d\n",
                                       NumLayers, surfLayer, botmLayer, Meta_topLayer, Epi_botmLayer);
         dbgprt("Epilimnion Mass, Temp, Salt, Dens = %10.5f,%10.5f,%10.5f,%10.5f\n",
-                                      Vol_Epi/1000,MeanTemp,MeanSalt, 1000.+Dens_Epil);
+                                      Vol_Epi,MeanTemp,MeanSalt, rho0.+Dens_Epil);
         dbgprt("Meta_topLayer Vol, Temp, Salt, Dens = %10.5f,%10.5f,%10.5f,%10.5f\n",
-                                      Lake[Meta_topLayer].LayerVol/1000.,
+                                      Lake[Meta_topLayer].LayerVol,
                                       Lake[Meta_topLayer].Temp,Lake[Meta_topLayer].Salinity,
-                                      1000+Lake[Meta_topLayer].SPDensity);
+                                      rho0+Lake[Meta_topLayer].SPDensity);
 
         add_this_layer(&VMbig,&VMsml,&Tbig,&Tsml,&Sbig,&Ssml,&Mass_Epi,&MeanTemp,&MeanSalt, &Dens_Epil,Meta_topLayer);
         average_layer(&Meta_topLayer,&Epi_botmLayer,MeanTemp,MeanSalt,Dens_Epil);
 
         dbgprt("New Epilimnion Mass, Temp, Salt, Dens = %10.5f,%10.5f,%10.5f,%10.5f\n",
-                                      Vol_Epi/1000,MeanTemp,MeanSalt, 1000.+Dens_Epil);
+                                      Vol_Epi,MeanTemp,MeanSalt, rho0+Dens_Epil);
         dbgprt("NumLayers, surfLayer, botmLayer, Meta_topLayer, Epi_botmLayer = %d,%d,%d,%d,%d\n",
                                       NumLayers, surfLayer, botmLayer, Meta_topLayer, Epi_botmLayer);
 
@@ -526,7 +525,7 @@ int mixed_layer_deepening(AED_REAL *WQ_VarsM, int Mixer_Count, int *_Meta_topLay
 
         Vol_Hypl = Lake[Meta_topLayer].Vol1;
         Vol_Epi = Vol_Epi + Lake[Meta_topLayer+1].LayerVol;
-        Epi_Thick = (Vol_Epi / (Lake[Meta_topLayer].LayerArea + Lake[surfLayer].LayerArea)) * (volfac / AreaFactor)*2.0;
+        Epi_Thick = (Vol_Epi / (Lake[Meta_topLayer].LayerArea + Lake[surfLayer].LayerArea)) *2.0;
         u_f = u_f * PrevThick / Epi_Thick;
         u_avg = sqrt((u0_old*u0_old + u0_old*u_f + u_f*u_f)/3.0);
         del_u = u_avg-u_eff;
@@ -586,7 +585,7 @@ void do_mixing()
     AED_REAL *WQ_VarsM;
 #endif
 
-    AED_REAL Dens_Epil;  //# Mean epilimnion sigma_T (density - 1000) [kg/m3]
+    AED_REAL Dens_Epil;  //# Mean epilimnion sigma_T (density - rho0) [kg/m3]
     AED_REAL Vol_Hypl;   //# Volume of hypolimnion [m^3]
     int Meta_topLayer;   //# Index for top layer of hypolimnion
 

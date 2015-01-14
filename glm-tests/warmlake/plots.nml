@@ -35,7 +35,7 @@
 ! max_z = 27.0, 0.91, 800.0, 1800.0, 20.0, 28.0, 130., 10.,  5.
 !
   title = 'Temperature', 'Salinity','DO','Green','Diatom','Crypto','NO3','PO4','Zoo01'
-  vars  = 'temp','salt','aed_oxygen_oxy','aed_phytoplankton_green','aed_phytoplankton_diatom','aed_phytoplankton_crypto','aed_nitrogen_nit','aed_phosphorus_frp','aed_zooplankton_zoo01'
+  vars  = 'temp','salt','OXY_oxy','PHY_green','PHY_diatom','PHY_crypto','NIT_nit','PHS_frp','ZOO_zoo01'
   min_z =  0.0, 0.0,   0.0,  0.0,  0.0, 0.0,  0., 0.0,  0.0
   max_z = 35.0, 0.6, 300.0, 10.0, 12.0, 50., 45., 1.8, 30.0
 /

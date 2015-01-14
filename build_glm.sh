@@ -6,19 +6,17 @@
 # its location using the environment variable NETCDFLIB. 
 # Example: export NETCDFLIB=/opt/local/lib
 #
-#
-#
-#
 
 
 export FABM=true
-
 export AED2=true
 export USE_DL=false
 
 export FORTRAN_COMPILER=IFORT
 # export FORTRAN_COMPILER=GFORTRAN
 # export FORTRAN_COMPILER=OPEN64
+
+export OSTYPE=`uname -s`
 
 if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
    . /opt/intel/bin/compilervars.sh intel64
@@ -40,8 +38,6 @@ else
    export FC=gfortran
 fi
 
-export OSTYPE=`uname -s`
-
 export F77=$FC
 export F90=$FC
 export F95=$FC
@@ -50,13 +46,10 @@ export MPI=OPENMPI
 
 
 export CURDIR=`pwd`
-if [ "${FABM_NEW_BUILD}" = "true" ] ; then
-  export FABMDIR=${CURDIR}/FABM-new/fabm-git
-else
-  export FABMDIR=${CURDIR}/fabm-git
+if [ ! -d $FABMDIR ] ; then
+   echo "FABM directory not found - building a non-FABM version"
+   export FABM=false
 fi
-export PLOTDIR=${CURDIR}/libplot
-export AED2DIR=${CURDIR}/libaed2
 
 export COMPILATION_MODE=production
 
@@ -79,7 +72,7 @@ fi
 
 if [ "$OSTYPE" != "Darwin" ] && [ "$OSTYPE" != "Linux" ] ; then
   cd ${PLOTDIR}
- make || exit 1
+  make || exit 1
 fi
 
 cd ${CURDIR}/libutil

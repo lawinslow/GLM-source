@@ -19,13 +19,11 @@
    max_layer_thick = 0.500
    !max_layer_thick = 0.900
    Kw = 0.2
-   coef_inf_entrain = 0.
    coef_mix_conv = 0.125
    coef_wind_stir = 1.23
    coef_mix_shear = 0.20
    coef_mix_turb = 0.51
    coef_mix_kh = 0.30
-!  mobility_off = .true.
 !  non_avg = .true.
 !  deep_mixing = .true.
 /
@@ -56,15 +54,13 @@
 !                     feedback of bio-turbidity to temperature equation
 !-------------------------------------------------------------------------------
 &wq_setup
-!  wq_lib = 'fabm'
-!  wq_lib = 'aed2'
+   wq_lib = 'aed2'
+   wq_nml_file = 'aed2.nml'
    ode_method = 1
    split_factor = 1
    bioshade_feedback = .true.
-   !bioshade_feedback = .false.
    repair_state = .true.
-!  wq_nml_file = 'fabm-aed.nml'
-!  wq_nml_file = 'aed2.nml'
+   mobility_off = .true.
    multi_ben = .false.
 /
 
@@ -94,8 +90,8 @@
    !   H(m)  A(m2 * 1000) V(m3 * 1000)
    H = 303.28,  304.80,  306.51,  307.85,  309.37,  310.90,  312.42,
        313.94,  315.47,  316.99,  318.52,  320.04,  321.56,  323.09
-   A = 275.45,  288.11,  301.87,  316.29,  331.73,  347.41,  366.27,
-       387.52,  405.75,  445.27,  467.04,  487.50,  508.77,  541.52
+   A = 275450.,  288110.,  301870.,  316290.,  331730.,  347410.,  366270.,
+       387520.,  405750.,  445270.,  467040.,  487500.,  508770.,  541520.
 /
 
 !-------------------------------------------------------------------------------
@@ -146,7 +142,6 @@
 !               path to output directory (set permissions)
 ! out_fn      [string]
 !               output string used to generate output file names
-! out_lkn     [logical]  Output Lake Number to a file
 ! nsave       [integer, minimum = 1, maximum = 86400]
 !               save results every 'nsave' timesteps
 ! csv_at      [real]
@@ -162,7 +157,6 @@
 &output
    out_dir = '.'
    out_fn = 'output'
-   out_lkn = .true.
    nsave = 24
 
    csv_point_nlevs = 0
@@ -220,21 +214,19 @@
     the_depths = 1.31,15.55,19.32
     the_temps  = 4.00,4.00,4.00
     the_sals   = 0.760,0.760,0.760
-    num_wq_vars = 7
+    num_wq_vars = 6
     wq_names =  'OGM_don',
                 'OGM_pon',
                 'OGM_dop',
                 'OGM_pop',
                 'OGM_doc',
-                'OGM_poc',
-                'TRC_ss1'
+                'OGM_poc'
     wq_init_vals = 1.1, 1.2, 1.3,
                    2.1, 2.2, 2.3,
                    3.1, 3.2, 3.3,
                    4.1, 4.2, 4.3,
                    5.1, 5.2, 5.3,
-                   6.1, 6.2, 6.3,
-                   2.1, 2.2, 2.3
+                   6.1, 6.2, 6.3
 /
 
 !-------------------------------------------------------------------------------
@@ -258,12 +250,12 @@
 !-------------------------------------------------------------------------------
 &meteorology
    met_sw     = .true.
-!  lw_type    = 'LW_CC'
+   lw_type    = 'LW_CC'
    rain_sw    = .false.
    snow_sw    = .true.
    meteo_fl   = 'met.csv'
    subdaily   = .false.
-!  atm_stab   = .true.
+!  atm_stab   = .false.
    wind_factor = 1.0
 !  sw_factor = 1.0
 !  lw_factor = 1.0
@@ -273,6 +265,9 @@
 !  CD          = 0.0013
 !  CE          = 0.0013
 !  CH          = 0.0013
+!  catchrain   = .false.
+!  rain_threshold = 0.04
+!  runoff_coef = 0.3
 !  rad_mode    = 0
 !  albedo_mode = 1
    cloud_mode  = 1
@@ -312,11 +307,13 @@
 &inflow
    num_inflows    = 1
    names_of_strms = 'river1'     ! , 'river2'
+   subm_flag      = .false.      !, .true.
    strm_hf_angle  = 85.0         ! , 85.0
    strmbd_slope   = 0.573        ! , 0.573
    strmbd_drag    = 0.0160       ! , 0.0160
    inflow_factor  = 1.0          ! , 1.0
-   inflow_fl      = 'inflow2.csv' ! , 'inflow3.csv'
+   inflow_fl      = 'inflow.csv' ! , 'inflow2.csv'
+   coef_inf_entrain = 0.
    inflow_varnum  = 17,
    inflow_vars    = 'FLOW',
                     'TEMP',
@@ -358,5 +355,7 @@
    bsn_wid_outl = 399
    outflow_fl   = 'outflow.csv'
    outflow_factor = 1.0
+   seepage      = .true.
+   seepage_rate = 0.002
 !  time_fmt = 'YYYY-MM-DD hh:mm:ss'
 /

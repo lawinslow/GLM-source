@@ -42,8 +42,10 @@ fi
 cd ${CURDIR}/glm-aed/src
 make clean
 
-cd ${CURDIR}/glm-aed
-fakeroot make -f debian/rules clean
+if [ `uname -s` == "Linux" ] ; then
+  cd ${CURDIR}/glm-aed
+  fakeroot make -f debian/rules clean
+fi
 
 clean_outputs() {
    cd ${CURDIR}/$1

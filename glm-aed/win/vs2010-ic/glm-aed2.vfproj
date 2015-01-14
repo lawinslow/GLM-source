@@ -1,12 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<VisualStudioProject ProjectType="typeDynamicLibrary" ProjectCreator="Intel Fortran" Keyword="Dll" Version="11.0" ProjectIdGuid="{654D6ADD-1676-4136-918C-3F14C09F29D1}">
+<VisualStudioProject ProjectType="typeStaticLibrary" ProjectCreator="Intel Fortran" Keyword="Static Library" Version="11.0" ProjectIdGuid="{654D6ADD-1676-4136-918C-3F14C09F29D1}">
 	<Platforms>
 		<Platform Name="Win32"/>
 		<Platform Name="x64"/></Platforms>
 	<Configurations>
-		<Configuration Name="Debug|Win32" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)\" PreprocessorDefinitions="PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
-				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)&quot;" LinkLibraryDependencies="false" GenerateDebugInformation="true" SubSystem="subSystemWindows" ResourceOnlyDLL="true" LinkDLL="true" AdditionalDependencies="libaed2.lib"/>
+		<Configuration Name="Debug|Win32" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)_DP\;.\$(PlatformName)-$(ConfigurationName)_DP\" PreprocessorDefinitions="AED2;PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
+				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" SuppressStartupBanner="true" AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)" IgnoreDefaultLibraryNames="LIBCMTD" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="libplugin.lib"/>
+				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -14,9 +15,10 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|Win32" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\libaed2\$(PlatformName)-$(ConfigurationName)\" PreprocessorDefinitions="PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true"/>
-				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)&quot;" LinkLibraryDependencies="false" SubSystem="subSystemWindows" ResourceOnlyDLL="true" LinkDLL="true" AdditionalDependencies="libaed2.lib"/>
+		<Configuration Name="Release|Win32" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)_DP\;.\$(PlatformName)-$(ConfigurationName)_DP\" PreprocessorDefinitions="AED2;PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true"/>
+				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" SuppressStartupBanner="true" AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)" IgnoreDefaultLibraryNames="LIBCMT" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="libplugin.lib"/>
+				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -24,9 +26,10 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Debug|x64" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\libaed2\$(PlatformName)-$(ConfigurationName)\" PreprocessorDefinitions="PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
-				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" LinkIncremental="linkIncrementalNo" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)&quot;" LinkLibraryDependencies="false" GenerateDebugInformation="true" SubSystem="subSystemWindows" ResourceOnlyDLL="true" LinkDLL="true" AdditionalDependencies="libaed2.lib"/>
+		<Configuration Name="Debug|x64" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" DebugInformationFormat="debugEnabled" Optimization="optimizeDisabled" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)_DP\;.\$(PlatformName)-$(ConfigurationName)_DP\" PreprocessorDefinitions="AED2;PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true" WarnInterfaces="true" Traceback="true" BoundsCheck="true" RuntimeLibrary="rtMultiThreadedDebug"/>
+				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" SuppressStartupBanner="true" AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)" IgnoreDefaultLibraryNames="LIBCMTD" GenerateDebugInformation="true" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="libplugin.lib"/>
+				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
@@ -34,9 +37,10 @@
 				<Tool Name="VFPreBuildEventTool"/>
 				<Tool Name="VFPostBuildEventTool"/>
 				<Tool Name="VFManifestTool" SuppressStartupBanner="true"/></Configuration>
-		<Configuration Name="Release|x64" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeDynamicLibrary">
-				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\libaed2\$(PlatformName)-$(ConfigurationName)\" PreprocessorDefinitions="PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true"/>
-				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" SuppressStartupBanner="true" AdditionalLibraryDirectories="&quot;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)&quot;" LinkLibraryDependencies="false" SubSystem="subSystemWindows" ResourceOnlyDLL="true" LinkDLL="true" AdditionalDependencies="libaed2.lib"/>
+		<Configuration Name="Release|x64" OutputDirectory="$(PlatformName)-$(ConfigurationName)" IntermediateDirectory="$(PlatformName)-$(ConfigurationName)" ConfigurationType="typeStaticLibrary">
+				<Tool Name="VFFortranCompilerTool" SuppressStartupBanner="true" Preprocess="preprocessYes" AdditionalIncludeDirectories="..\..\src\;..\..\..\libaed2\include\;..\..\..\libaed2\win\vs2010\$(PlatformName)-$(ConfigurationName)_DP\;.\$(PlatformName)-$(ConfigurationName)_DP\" PreprocessorDefinitions="AED2;PLOTS;XPLOTS;_FORTRAN_VERSION_" F2003Semantics="true"/>
+				<Tool Name="VFLinkerTool" Version="2.0.0alpha4" SuppressStartupBanner="true" AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)" IgnoreDefaultLibraryNames="LIBCMT" SubSystem="subSystemWindows" LinkDLL="true" AdditionalDependencies="libplugin.lib"/>
+				<Tool Name="VFLibrarianTool"/>
 				<Tool Name="VFResourceCompilerTool"/>
 				<Tool Name="VFMidlTool" SuppressStartupBanner="true" TargetEnvironment="midlTargetAMD64"/>
 				<Tool Name="VFCustomBuildTool"/>
