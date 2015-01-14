@@ -46,6 +46,14 @@ export MPI=OPENMPI
 
 
 export CURDIR=`pwd`
+if [ "${FABM_NEW_BUILD}" = "true" ] ; then
+  export FABMDIR=${CURDIR}/FABM-new/fabm-git
+else
+  export FABMDIR=${CURDIR}/fabm-git
+fi
+export PLOTDIR=${CURDIR}/libplot
+export AED2DIR=${CURDIR}/libaed2
+
 if [ ! -d $FABMDIR ] ; then
    echo "FABM directory not found - building a non-FABM version"
    export FABM=false
