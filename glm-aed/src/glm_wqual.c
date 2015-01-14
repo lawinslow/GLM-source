@@ -92,6 +92,9 @@ void *find_entry(void *glm_wq_handle, const char *entry)
  ******************************************************************************/
 int prime_glm_wq(const char *which)
 {
+#ifndef PLOTS
+    CLOGICAL do_plots = FALSE;
+#endif
 #if USE_DL_LOADER
     char dirname[1024];
     char *wq_name = NULL;

@@ -201,7 +201,7 @@ void do_deep_mixing()
     for (i = 0; i < NumLayers; i++) {
         //# Update T, S and WQ
         Lake[i].Temp = _Scalars(i,0);
-        Lake[i].Salinity = _Scalars(i,1) / (Lake[i].SPDensity+1000.);
+        Lake[i].Salinity = _Scalars(i,1) / (Lake[i].SPDensity+rho0);
         for (j = 2; j < Num_WQ_Vars+2; j++)
             _WQ_Vars(j-2,i) = _Scalars(i,j);
 
@@ -325,7 +325,7 @@ static void calculate_diffusion(AED_REAL RTimeStep,
  ******************************************************************************/
 void do_dissipation()
 {
-    AED_REAL  pt5 = 0.5, areaFactor = 1.0E+6, volFactor = 1.0E+3, cwnsq1 = 12.4;
+    AED_REAL cwnsq1 = 12.4;
 
 #ifndef _VISUAL_C_
     // The visual c compiler doesn't like this so must malloc manually
@@ -422,8 +422,8 @@ void do_dissipation()
     //# Calculate first moments
     for (i = 0; i < NumLayers; i++) {
         add_this_layer(&VMbig, &VMsml, &Tbig, &Tsml, &Sbig, &Ssml, &VMLOC, &TMLOC, &SMLOC, &DFLOC, i);
-        CentreMassSML = CentreMassSML + Lake[i].MeanHeight * Lake[i].SPDensity * Lake[i].LayerVol * volFactor;
-        CentreMassMIX = CentreMassMIX + Lake[i].MeanHeight * Lake[i].LayerVol * volFactor;
+        CentreMassSML = CentreMassSML + Lake[i].MeanHeight * Lake[i].SPDensity * Lake[i].LayerVol;
+        CentreMassMIX = CentreMassMIX + Lake[i].MeanHeight * Lake[i].LayerVol;
     }
 
     //# find the layer with the centre of buoyancy
@@ -457,7 +457,7 @@ void do_dissipation()
     }
 
     BuoySD = zero;
-    if (H_sig > zero) BuoySD = pow(H_sig, pt5);
+    if (H_sig > zero) BuoySD = pow(H_sig, 0.5);
 
     /**************************************************************************
      * Find the 1st layer above which 85% of N^2 lies                         *
@@ -479,12 +479,12 @@ void do_dissipation()
      * i.e. the change in potential energy (see do_inflows)                   *
      **************************************************************************/
     MixLayerVol = VTilda - Lake[surfLayer].LayerVol;
-    MeanDensity = 1000. + (Lake[0].SPDensity + Lake[surfLayer].SPDensity) / 2.0;
-    EINFW = einff / (MixLayerVol*1000.*MeanDensity);
+    MeanDensity = rho0 + (Lake[0].SPDensity + Lake[surfLayer].SPDensity) / 2.0;
+    EINFW = einff / (MixLayerVol*MeanDensity);
 
     //# Include rate of working of the wind
-    EW = WindPower * Lake[surfLayer].LayerArea * areaFactor;
-    EWW = EW / (VTilda * 1000. * MeanDensity);
+    EW = WindPower * Lake[surfLayer].LayerArea;
+    EWW = EW / (VTilda * MeanDensity);
 
     /**************************************************************************
      * Calculate dissipation, and associated velocity scale and wavenumber^2  *
@@ -493,7 +493,7 @@ void do_dissipation()
    if ((EW + einff) > zero) {
         dissipation = EWW+EINFW;
         if (EWW > EINFW) {
-            WaveNumSquared = cwnsq1*Lake[surfLayer].LayerArea*areaFactor/(VTilda*1000.*dz_top);
+            WaveNumSquared = cwnsq1*Lake[surfLayer].LayerArea/(VTilda*dz_top);
             vel = uStar;
         }
     }
@@ -514,7 +514,7 @@ static void join_scalar_colums(AED_REAL *Scalars)
 
     for (i = 0; i < NumLayers; i++) {
         _Scalars(i,0) = Lake[i].Temp;
-        _Scalars(i,1) = Lake[i].Salinity*(Lake[i].SPDensity+1000.);
+        _Scalars(i,1) = Lake[i].Salinity*(Lake[i].SPDensity+rho0);
 
         for (j = 2; j < Num_WQ_Vars+2; j++)
             _Scalars(i,j) = _WQ_Vars(j-2,i);

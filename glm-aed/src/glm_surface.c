@@ -147,7 +147,6 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 // ShortWave // Total solar radiation at the surface for today
 {
 /*----------------------------------------------------------------------------*/
-    const AED_REAL  AreaFactor = 1.0E+6;
     const AED_REAL  K_I1 = 2.3, K_I2 = 2.0, K_W = 0.57, CSEN = 0.0014;
     const AED_REAL  L_I = 334000.0,L_S = 334000.0,TF = 0.0,TMELT = 0.0;
     const AED_REAL  A_ONE = 0.7;        //# fraction of short wave radiation in first wavelength band
@@ -269,9 +268,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
     // Heating due to PAR
     heat[surfLayer] = ( Lake[surfLayer-1].LayerArea * (Lake[surfLayer].Light - Lake[surfLayer-1].Light) +
-                       (Lake[surfLayer].LayerArea - Lake[surfLayer-1].LayerArea) * Lake[surfLayer].Light * 0.1) * AreaFactor;
+                       (Lake[surfLayer].LayerArea - Lake[surfLayer-1].LayerArea) * Lake[surfLayer].Light * 0.1);
     // Heating due to NIR/UV (all absorbed in surf layer only)
-    heat[surfLayer] = heat[surfLayer] + 0.55 * Q_shortwave * Lake[surfLayer].LayerArea * AreaFactor;
+    heat[surfLayer] = heat[surfLayer] + 0.55 * Q_shortwave * Lake[surfLayer].LayerArea;
 
     //Total daily short wave radiation (J/day), stored for lake.csv
     SurfData.dailyQsw += Lake[surfLayer].LayerArea * Q_shortwave * noSecs;
@@ -351,8 +350,8 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         } else if (LWModel  ==  LW_NET)
             Q_longwave = MetData.LongWave;
 
-//fprintf(stderr, "%e %e \n%e %e \n%e\n", Q_latentheat, Q_sensibleheat, Q_longwave, Lake[surfLayer].LayerArea, AreaFactor);
-        heat[surfLayer] = heat[surfLayer]+(Q_latentheat+Q_sensibleheat+Q_longwave)*Lake[surfLayer].LayerArea*AreaFactor;
+//fprintf(stderr, "%e %e \n%e %e \n%e\n", Q_latentheat, Q_sensibleheat, Q_longwave, Lake[surfLayer].LayerArea);
+        heat[surfLayer] = heat[surfLayer]+(Q_latentheat+Q_sensibleheat+Q_longwave)*Lake[surfLayer].LayerArea;
 
         // Daily heat budget (J/day)
         SurfData.dailyQe += Q_latentheat * Lake[surfLayer].LayerArea * noSecs;
@@ -476,13 +475,13 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                     if ((SurfData.HeightBlackIce-SurfData.dHt) < 0.)SurfData.dHt = SurfData.HeightBlackIce;
                     SurfData.HeightBlackIce = SurfData.HeightBlackIce-SurfData.dHt;
                 }
-                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(DENSITY_I1/(1000.+Lake[surfLayer].SPDensity));
+                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(DENSITY_I1/(rho0+Lake[surfLayer].SPDensity));
             } else {
                 if (RHOSNO == 0.0) RHOSNO = RHOMXSNO;
                 SurfData.dHt = (1/(L_S*RHOSNO))*(H_FLUX+Q01)*noSecs;
                 if ((SurfData.HeightSnow-SurfData.dHt) < 0.0)SurfData.dHt = SurfData.HeightSnow;
                 SurfData.HeightSnow = SurfData.HeightSnow-SurfData.dHt;
-                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(RHOSNO/(1000.+Lake[surfLayer].SPDensity));
+                Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.dHt*(RHOSNO/(rho0+Lake[surfLayer].SPDensity));
             }
 
             recalc_surface_salt();
@@ -507,14 +506,14 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
          *--------------------------------------------------------------------*/
         for (i = surfLayer-1; i >= (botmLayer+1); i--)
             heat[i] = (Lake[i-1].LayerArea * (Lake[i].Light - Lake[i-1].Light) +
-                       Lake[i].Light * (Lake[i].LayerArea - Lake[i-1].LayerArea) * 0.1) *AreaFactor;
-        heat[botmLayer] = Lake[botmLayer].Light * Lake[botmLayer].LayerArea * AreaFactor;
+                       Lake[i].Light * (Lake[i].LayerArea - Lake[i-1].LayerArea) * 0.1) ;
+        heat[botmLayer] = Lake[botmLayer].Light * Lake[botmLayer].LayerArea;
     }
 
     // Compute the temperature increase in non-surface layers over noSecs
     for (i = botmLayer; i <= surfLayer; i++) {
         if (fabs(heat[i]) >= 1E-20 && Lake[i].SPDensity != 0.0 && Lake[i].LayerVol != 0.0)
-            DT = heat[i]*noSecs/(SPHEAT*(1000.+Lake[i].SPDensity)*Lake[i].LayerVol*AreaFactor);
+            DT = heat[i]*noSecs/(SPHEAT*1000.*(rho0+Lake[i].SPDensity)*Lake[i].LayerVol);
         else
             DT = 0.;
 
@@ -576,9 +575,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
         // Adjust water temperature for ice/water exchange, determine latent heat
         Lake[surfLayer].Temp = Lake[surfLayer].Temp+(((K_W*((TF-Lake[surfLayer].Temp)/0.039))*Lake[surfLayer].LayerArea*
-                                 AreaFactor*noSecs)+QLATENT)/(SPHEAT*(1000.+Lake[surfLayer].SPDensity)*Lake[surfLayer].LayerVol*AreaFactor);
+                                 noSecs)+QLATENT)/(SPHEAT*1000*(rho0+Lake[surfLayer].SPDensity)*Lake[surfLayer].LayerVol);
         QLATENT = L_I*DENSITY_I1*SurfData.dHt/noSecs;
-        Lake[surfLayer].Height = Lake[surfLayer].Height-SurfData.dHt*(DENSITY_I1/(1000.+Lake[surfLayer].SPDensity));
+        Lake[surfLayer].Height = Lake[surfLayer].Height-SurfData.dHt*(DENSITY_I1/(rho0+Lake[surfLayer].SPDensity));
 
         recalc_surface_salt();
     }
@@ -599,11 +598,11 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
  *  for (i = botmLayer+1; i <= surfLayer; i++) {
  *      Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
  *                (Lake[i].LayerArea-Lake[i-1].LayerArea)*
- *                 AreaFactor*LayerThickness[i]*noSecs)/(SPHEAT*(1000.+Lake[i].SPDensity)*Lake[i].LayerVol*AreaFactor);
+ *                 LayerThickness[i]*noSecs)/(SPHEAT*1000*(rho0+Lake[i].SPDensity)*Lake[i].LayerVol);
  *  }
  *  Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
- *                             Lake[botmLayer].LayerArea*AreaFactor*LayerThickness[botmLayer] *
- *                         noSecs)/(SPHEAT*(1000.+Lake[botmLayer].SPDensity)*Lake[botmLayer].LayerVol*AreaFactor);
+ *                             Lake[botmLayer].LayerArea*LayerThickness[botmLayer] *
+ *                         noSecs)/(SPHEAT*1000*(rho0+Lake[botmLayer].SPDensity)*Lake[botmLayer].LayerVol);
  *
  ******************************************************************************/
 
@@ -618,7 +617,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 		        ( MetData.Rain - rain_threshold )  *  (noSecs/SecsPerDay) * runoff_coef;
 	}
 
-        SurfData.dailyEvap += SurfData.Evap * noSecs * Lake[surfLayer].LayerArea * 1000.0;
+        SurfData.dailyEvap += SurfData.Evap * noSecs * Lake[surfLayer].LayerArea ;
         SurfData.dailyRain += MetData.Rain * (noSecs / SecsPerDay) * Lake[surfLayer].LayerArea;
         if ( catchrain ) SurfData.dailyRain += catch_runoff;
 
@@ -626,7 +625,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         // deposits them at a rate dependent on the input composition of rainfall
         // with changes in depth, not area, for the surface layer. therefore just
         // depths to get new composition. firstly evaporation
-        Lake[surfLayer].Height += (SurfData.Evap * noSecs + (MetData.Rain / 1000.0) * (noSecs / SecsPerDay));
+        Lake[surfLayer].Height += (SurfData.Evap * noSecs + (MetData.Rain) * (noSecs / SecsPerDay));
 	if ( catchrain ) Lake[surfLayer].Height += catch_runoff / Lake[surfLayer].LayerArea;
 
         recalc_surface_salt();
@@ -645,8 +644,8 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
                 RHOLDSNO = RHOSNO+(RHOMXSNO-RHOSNO)*KCOMSNO;
                 SurfData.HeightSnow = SurfData.HeightSnow*RHOSNO/RHOLDSNO;
-                RHOSNO = ((RHOLDSNO*SurfData.HeightSnow)+MetData.Rain)/(SurfData.HeightSnow+(MetData.Snow/1000.));
-                SurfData.HeightSnow = SurfData.HeightSnow+(MetData.Snow/1000.);
+                RHOSNO = ((RHOLDSNO*SurfData.HeightSnow)+MetData.Rain)/(SurfData.HeightSnow+(MetData.Snow));
+                SurfData.HeightSnow = SurfData.HeightSnow+(MetData.Snow);
                 if (RHOSNO > RHOMXSNO) RHOSNO = RHOMXSNO;
                 if (RHOSNO < RHOMNSNO) RHOSNO = RHOMNSNO;
                 QRL = 0.0;
@@ -669,14 +668,14 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                     RHOLDSNO = RHOSNO+(RHOMXSNO-RHOSNO)*KCOMSNO;
                     SurfData.HeightSnow = SurfData.HeightSnow*RHOSNO/RHOLDSNO;
                     RHOSNO = RHOLDSNO;
-                    Lake[surfLayer].Height = Lake[surfLayer].Height+MetData.Rain/1000.0;
+                    Lake[surfLayer].Height = Lake[surfLayer].Height+MetData.Rain;
 
                     recalc_surface_salt();
 
                     if (T001 == TMELT)
-                        QRL = SPHEAT*AreaFactor*(MetData.AirTemp-T001)*(MetData.Rain/1000.)/noSecs;
+                        QRL = SPHEAT*1000*(MetData.AirTemp-T001)*(MetData.Rain)/noSecs;
                     else
-                        QRL = L_I*1000.*(MetData.Rain/1000.)/noSecs;
+                        QRL = L_I*MetData.Rain/noSecs;
                 } else {
                     MetData.Snow = MetData.Rain/RHOMXSNO;
                     RHOLDSNO = RHOMXSNO;
@@ -690,7 +689,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
             if (MetData.Snow > 0.0 && MetData.Rain >= 0.0) {
                 // Snowfall on ice
                 if (MetData.Rain == 0.0)MetData.Rain = MetData.Snow*0.15;
-                SurfData.HeightSnow = MetData.Snow/1000.;
+                SurfData.HeightSnow = MetData.Snow;
                 RHOSNO = 1000.*MetData.Rain/MetData.Snow;
                 if (RHOSNO > RHOMXSNO)RHOSNO = RHOMXSNO;
                 if (RHOSNO < RHOMNSNO)RHOSNO = RHOMNSNO;
@@ -701,14 +700,14 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
             } else if (MetData.Snow == 0.0 && MetData.Rain > 0.0) {
                 // Rainfall on ice - need to know whether it will contribute to water (T
                 if (MetData.AirTemp > 0.0) {
-                    Lake[surfLayer].Height = Lake[surfLayer].Height+MetData.Rain/1000.0;
+                    Lake[surfLayer].Height = Lake[surfLayer].Height+MetData.Rain;
 
                     recalc_surface_salt();
 
                     if (T001 == TMELT)
-                        QRL = SPHEAT*AreaFactor*(MetData.AirTemp-T001)*(MetData.Rain/1000.)/noSecs;
+                        QRL = SPHEAT*1000.*(MetData.AirTemp-T001)*(MetData.Rain)/noSecs;
                     else
-                        QRL = L_I*1000.*(MetData.Rain/1000.)/noSecs;
+                        QRL = L_I*MetData.Rain/noSecs;
                 } else {
                     MetData.Snow = MetData.Rain/RHOMXSNO;
                     RHOSNO = RHOMXSNO;
@@ -721,19 +720,19 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         // Archmides principle for weight of Snow on Ice, White Ice formation
         if (RHOSNO == 0.) RHOSNO = 0.00000000000000001; //CAB# fudge factor!
 
-        if (SurfData.HeightSnow > ((SurfData.HeightBlackIce*(1000.-DENSITY_I1) +
-                                    SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO)) {
-            HEN = SurfData.HeightSnow-(SurfData.HeightBlackIce*(1000.-DENSITY_I1) +
-                      SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO;
+        if (SurfData.HeightSnow > ((SurfData.HeightBlackIce*(rho0-DENSITY_I1) +
+                                    SurfData.HeightWhiteIce*(rho0-DENSITY_I2))/RHOSNO)) {
+            HEN = SurfData.HeightSnow-(SurfData.HeightBlackIce*(rho0-DENSITY_I1) +
+                      SurfData.HeightWhiteIce*(rho0-DENSITY_I2))/RHOSNO;
             QSI = ((Lake[surfLayer].Temp*SPHEAT*1000.+L_I)*(Lake[surfLayer].SPDensity +
-                 1000.)*HEN*(1.-(RHOSNO/(Lake[surfLayer].SPDensity+1000.))))/SecsPerDay;
+                 rho0)*HEN*(1.-(RHOSNO/(Lake[surfLayer].SPDensity+rho0))))/SecsPerDay;
             SurfData.HeightWhiteIce = SurfData.HeightWhiteIce+SurfData.HeightSnow -
-                 ((SurfData.HeightBlackIce*(1000.-DENSITY_I1) +
-                   SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO);
+                 ((SurfData.HeightBlackIce*(rho0-DENSITY_I1) +
+                   SurfData.HeightWhiteIce*(rho0-DENSITY_I2))/RHOSNO);
             QSI1 = (QSI*SurfData.HeightSnow)/(2.0*K_S);
             SurfData.HeightSnow =
-                  (SurfData.HeightBlackIce*(1000.-DENSITY_I1) +
-                   SurfData.HeightWhiteIce*(1000.-DENSITY_I2))/RHOSNO;
+                  (SurfData.HeightBlackIce*(rho0-DENSITY_I1) +
+                   SurfData.HeightWhiteIce*(rho0-DENSITY_I2))/RHOSNO;
         } else {
             HEN = 0.0;
             QSI = 0.0;
@@ -741,12 +740,12 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         }
 
         // Rainfall/snowfall and dry deposition effects on nutrients
-        SUMPO4 = SUMPO4 + 0.145 + MetData.RainConcPO4 * MetData.Rain / 1000.0;
-        SUMTP  = SUMTP  + 0.368 + MetData.RainConcTp  * MetData.Rain / 1000.0;
-        SUMNO3 = SUMNO3 + 0.507 + MetData.RainConcNO3 * MetData.Rain / 1000.0;
-        SUMNH4 = SUMNH4 + 0.507 + MetData.RainConcNH4 * MetData.Rain / 1000.0;
-        SUMTN  = SUMTN  + 2.576 + MetData.RainConcTn  * MetData.Rain / 1000.0;
-        SUMSI  = SUMSI  + 0.0   + MetData.RainConcSi  * MetData.Rain / 1000.0;
+        SUMPO4 = SUMPO4 + 0.145 + MetData.RainConcPO4 * MetData.Rain ;
+        SUMTP  = SUMTP  + 0.368 + MetData.RainConcTp  * MetData.Rain ;
+        SUMNO3 = SUMNO3 + 0.507 + MetData.RainConcNO3 * MetData.Rain ;
+        SUMNH4 = SUMNH4 + 0.507 + MetData.RainConcNH4 * MetData.Rain ;
+        SUMTN  = SUMTN  + 2.576 + MetData.RainConcTn  * MetData.Rain ;
+        SUMSI  = SUMSI  + 0.0   + MetData.RainConcSi  * MetData.Rain ;
     } // end iclock == 0 && ice
 
     // Recalculate densities
@@ -758,7 +757,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         ice = TRUE;
         SurfData.HeightBlackIce = 0.05;
         SurfData.HeightWhiteIce = 0.0;
-        Lake[surfLayer].Height -= 0.05*(DENSITY_I1/(1000.+Lake[surfLayer].SPDensity));
+        Lake[surfLayer].Height -= 0.05*(DENSITY_I1/(rho0+Lake[surfLayer].SPDensity));
 
         recalc_surface_salt();
 
@@ -767,9 +766,9 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 
     if ((SurfData.HeightBlackIce+SurfData.HeightWhiteIce) < 0.05  &&  ice) {
         Lake[surfLayer].Height = Lake[surfLayer].Height+SurfData.HeightBlackIce*
-              (DENSITY_I1/(1000.+Lake[surfLayer].SPDensity))+SurfData.HeightWhiteIce*
-              (DENSITY_I2/(1000.+Lake[surfLayer].SPDensity))+SurfData.HeightSnow*
-              (RHOSNO/(1000.+Lake[surfLayer].SPDensity));
+              (DENSITY_I1/(rho0+Lake[surfLayer].SPDensity))+SurfData.HeightWhiteIce*
+              (DENSITY_I2/(rho0+Lake[surfLayer].SPDensity))+SurfData.HeightSnow*
+              (RHOSNO/(rho0+Lake[surfLayer].SPDensity));
 
         recalc_surface_salt();
 
@@ -958,9 +957,9 @@ void recalc_surface_salt()
     AddDensity = calculate_density(Lake[surfLayer].Temp, zero);
 
     WaterMass = OldVol * (Lake[surfLayer].SPDensity - AddDensity) +
-                Lake[surfLayer].LayerVol * (AddDensity + 1000.);
+                Lake[surfLayer].LayerVol * (AddDensity + rho0);
 
-    Lake[surfLayer].Salinity = ((1000. + Lake[surfLayer].SPDensity) / WaterMass) *
+    Lake[surfLayer].Salinity = ((rho0 + Lake[surfLayer].SPDensity) / WaterMass) *
                                                    OldVol * Lake[surfLayer].Salinity;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
