@@ -43,7 +43,7 @@ else
   INCLUDES+=-I/usr/include
   DEBUG_FFLAGS=-g -fbacktrace
   OPT_FFLAGS=-O3
-  FFLAGS=-fPIC -Wall -ffree-line-length-none -std=f2003 $(DEFINES) $(INCLUDES) -fall-intrinsics
+  FFLAGS=-fPIC -Wall -ffree-line-length-none -std=f2003 $(DEFINES) $(INCLUDES) -fall-intrinsics -Wno-unused-dummy-argument -fno-range-check
   ifeq ($(WITH_CHECKS),true)
     FFLAGS+=-fcheck=all
   endif

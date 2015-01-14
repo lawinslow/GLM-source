@@ -36,6 +36,9 @@
 const AED_REAL Visc    =  0.00000114;
 
 const AED_REAL AreaFactor = 1.0e6; //* Multiplicative factor to get area to m**2
+const AED_REAL MLday2m3sec = 1.0e3/86400.0; //* Multiplicative factor to get ML/day to m**3/s
+const AED_REAL ML2m3       = 1.0e3; //* Multiplicative factor to get ML to m**3
+const AED_REAL rho0		   = 1.0e3; //* Density of water standard to convert specific density to density in kg/m3
 
 const AED_REAL g          = 9.81;
 

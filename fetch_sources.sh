@@ -12,7 +12,7 @@ fetch_it () {
 
    if [ -d $dst ] ; then
       cd $dst
-      git pull origin master
+      git pull # origin master
       cd ..
    else
       git  clone git@${GITHOST}:$src $dst

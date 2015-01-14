@@ -35,6 +35,7 @@
 #include "glm.h"
 
 #include "glm_types.h"
+#include "glm_const.h"
 #include "glm_globals.h"
 
 #include "aed_time.h"
@@ -52,7 +53,7 @@ void add_this_layer(AED_REAL *VMbig, AED_REAL *VMsml, AED_REAL *Tbig, AED_REAL *
     AED_REAL WTbig;
     AED_REAL WTsml;
 
-    WTbig = 1000.0 * Lake[idx].LayerVol;
+    WTbig = rho0 * Lake[idx].LayerVol;
     WTsml = Lake[idx].SPDensity * Lake[idx].LayerVol;
 
     *VMbig += WTbig;
@@ -138,7 +139,7 @@ void resize_internals(int icode, int lnu)
          **********************************************************************/
         VolSum = 0.0;
         for (k = 0; k < NumInf; k++)
-            VolSum += Inflows[k].TotIn;
+            VolSum += Inflows[k].TotIn*ML2m3;
 
  //     while(1) {
         while(NumLayers > 1) { // stop at 1
@@ -180,7 +181,7 @@ void resize_internals(int icode, int lnu)
          **********************************************************************/
         VolSum = Lake[surfLayer].Vol1;
         for (i = 0; i < NumInf; i++)
-            VolSum += Inflows[i].TotIn;
+            VolSum += Inflows[i].TotIn*ML2m3;
 
         j = 0;
         while (j < Nmorph) {

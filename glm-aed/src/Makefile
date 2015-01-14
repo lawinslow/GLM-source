@@ -33,13 +33,13 @@
 #                                                                             #
 ###############################################################################
 
-#ifeq ($(OSTYPE),Darwin)
+ifeq ($(OSTYPE),Darwin)
   WITH_PLOTS=false
   WITH_XPLOTS=false
-#else
-#  WITH_PLOTS=true
-#  WITH_XPLOTS=true
-#endif
+else
+  WITH_PLOTS=true
+  WITH_XPLOTS=true
+endif
 
 UTILDIR=../../libutil
 
@@ -47,7 +47,6 @@ TARGETS=glm
 DEFINES=
 FINCLUDES=-I$(UTILDIR)/include
 CINCLUDES=-I$(UTILDIR)/include
-CINCLUDES+=-I/opt/local/include
 LIBS=-L$(UTILDIR) -lutil
 GLM_DEPS=../../libutil/libutil.a
 ifeq ($(WITH_PLOTS),true)
@@ -59,6 +58,15 @@ ifeq ($(WITH_PLOTS),true)
 endif
 ifeq ($(SINGLE),true)
   DEFINES += -DSINGLE=1
+endif
+
+ifeq ($(OSTYPE),Darwin)
+  FINCLUDES+=-I/opt/local/include
+  CINCLUDES+=-I/opt/local/include
+  LIBS+=-L/opt/local/lib
+  EXTRALINKFLAGS=-Wl,-no_compact_unwind
+else
+  EXTRALINKFLAGS=-Wl,--export-dynamic
 endif
 
 ifeq ($(FORTRAN_COMPILER),IFORT11)
@@ -186,16 +194,7 @@ else
   # OPT_FFLAGS=
 endif
 
-
 LIBS+=-lnetcdf
-# If variable NETCDFLIB is not empty, use it to 
-# set path to the library 
-ifneq ($(NETCDFLIB),)
-  LIBS+=-L$(NETCDFLIB)
-endif
-
-
-
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
@@ -254,12 +253,11 @@ all: $(TARGETS)
 
 
 glm: $(OBJS) $(GLM_DEPS)
-	$(CC) -o glm -Wl,--export-dynamic $(OBJS) $(LIBS)
-
+	$(CC) -o glm $(EXTRALINKFLAGS) $(OBJS) $(LIBS)
 
 clean:
-	@touch 1.o 1.mod 1.t 1__genmod.f90 glm 1.so glm_test_bird
-	@/bin/rm *.mod *.o *.t *__genmod.f90 glm *.so glm_test_bird
+	@touch 1.o 1.mod 1.t 1__genmod.f90 glm 1.so
+	@/bin/rm *.mod *.o *.t *__genmod.f90 glm *.so
 	@echo Made clean
 
 distclean: clean

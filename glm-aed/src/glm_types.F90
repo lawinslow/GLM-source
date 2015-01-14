@@ -52,7 +52,6 @@ MODULE glm_types
       CCHARACTER :: S(40)
    END TYPE StringT
 
-#if 0
    !#===========================================================#!
    !# Structured type for key global lake environmental vars
    !# A Lake will be an allocated array of MaxLayers of these
@@ -151,8 +150,8 @@ FUNCTION make_c_string(s1,s2) RESULT(len)
    CCHARACTER,INTENT(out) :: s1(*)
    CHARACTER(len=*),INTENT(in) :: s2
 !LOCALS
-   INTEGER :: i
-   INTEGER :: len
+   INTEGER  :: i
+   CINTEGER :: len
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -160,7 +159,7 @@ FUNCTION make_c_string(s1,s2) RESULT(len)
    DO i=1,len
       s1(i) = s2(i:i)
    ENDDO
-   s1(len+1) = ACHAR(0)
+   s1(len+1) = C_NULL_CHAR
 END FUNCTION make_c_string
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -34,23 +34,25 @@ for k in fabm-git/src/models/aed fabm-git/src/drivers/glm glm-aed libplot libuti
    fi
 done
 
-tr -d '\r' < fabm-git/compilers/vs2008/fabm-glm.vfproj > .tmpx
-\diff fabm-git/compilers/vs2008/fabm-glm.vfproj .tmpx > /dev/null 2>&1
-if [ $? != 0 ] ; then
+if [ -d fabm-git ] ; then
+  tr -d '\r' < fabm-git/compilers/vs2008/fabm-glm.vfproj > .tmpx
+  \diff fabm-git/compilers/vs2008/fabm-glm.vfproj .tmpx > /dev/null 2>&1
+  if [ $? != 0 ] ; then
     echo changed fabm-git/compilers/vs2008/fabm-glm.vfproj
     /bin/rm fabm-git/compilers/vs2008/fabm-glm.vfproj
     /bin/mv .tmpx fabm-git/compilers/vs2008/fabm-glm.vfproj
-else
+  else
     /bin/rm .tmpx
-fi
+  fi
 
-tr -d '\r' < fabm-git/compilers/vs2010/fabm-glm.vfproj > .tmpx
-\diff fabm-git/compilers/vs2010/fabm-glm.vfproj .tmpx > /dev/null 2>&1
-if [ $? != 0 ] ; then
+  tr -d '\r' < fabm-git/compilers/vs2010/fabm-glm.vfproj > .tmpx
+  \diff fabm-git/compilers/vs2010/fabm-glm.vfproj .tmpx > /dev/null 2>&1
+  if [ $? != 0 ] ; then
     echo changed fabm-git/compilers/vs2010/fabm-glm.vfproj
     /bin/rm fabm-git/compilers/vs2010/fabm-glm.vfproj
     /bin/mv .tmpx fabm-git/compilers/vs2010/fabm-glm.vfproj
-else
+  else
     /bin/rm .tmpx
+  fi
 fi
 

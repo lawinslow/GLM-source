@@ -193,14 +193,14 @@ AED_REAL combine(AED_REAL c1, AED_REAL v1, AED_REAL d1,
 /*----------------------------------------------------------------------------*/
     if (fabs(c1-c2) < 1e-5 && fabs(d1-d2) < 1e-5) return c1;
 
-    M1big = v1 * 1000.0;
+    M1big = v1 * rho0;
     M1sml = v1 * d1;
-    M2big = v2 * 1000.0;
+    M2big = v2 * rho0;
     M2sml = v2 * d2;
 
     MTotal = M1sml + M2sml + M1big + M2big;
 
-    return ((c1*M1sml+c2*M2sml) + 1000.0*(c1*v1+c2*v2)) / MTotal;
+    return ((c1*M1sml+c2*M2sml) + rho0*(c1*v1+c2*v2)) / MTotal;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 

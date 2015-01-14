@@ -36,7 +36,7 @@ MODULE aed2_core
    !#---------------------------------------------------------------------------
    TYPE :: aed2_variable_t
       CHARACTER(len=64) :: name
-      CHARACTER(len=24) :: model_name
+      CHARACTER(len=64) :: model_name
       CHARACTER(len=128):: longname
       CHARACTER(len=24) :: units
       AED_REAL          :: initial
@@ -94,7 +94,7 @@ MODULE aed2_core
 !  CLASS(aed2_model_data_t), POINTER :: aed2_cur_mod => null()
    CHARACTER(len=4),POINTER :: aed2_cur_prefix => null()
    CHARACTER(len=80) :: base_aed_directory = '.'
-   CHARACTER(len=32) :: cur_model_name = ''
+   CHARACTER(len=64) :: cur_model_name = ''
 
 !CONSTANTS
    AED_REAL,PARAMETER :: zero_ = 0., one_ = 1.
@@ -109,11 +109,11 @@ MODULE aed2_core
 !# The preprocessor symbols predefined by compilers are :
 !#   __GFORTRAN__      for gfortran
 !#   __INTEL_COMPILER  for intel fortran (ifort)
-#ifdef __GFORTRAN__
-   AED_REAL           :: nan_ = zero_
-#else
+!#ifdef __GFORTRAN__
+!   AED_REAL           :: nan_ = zero_
+!#else
    AED_REAL,PARAMETER :: nan_ = zero_ / zero_
-#endif
+!#endif
 
 !===============================================================================
 CONTAINS
@@ -128,7 +128,7 @@ INTEGER FUNCTION aed2_init_core(dname)
    CHARACTER(len=*) :: dname
 !
 !LOCAL
-   AED_REAL :: tmpr = zero_
+!   AED_REAL :: tmpr = zero_
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -136,9 +136,9 @@ INTEGER FUNCTION aed2_init_core(dname)
    n_aed_vars = 0 ; a_vars = 0
    n_vars = 0;  n_sheet_vars = 0
    n_diags = 0; n_sheet_diags = 0
-#ifdef __GFORTRAN__
-   nan_ = nan_ / tmpr;
-#endif
+!#ifdef __GFORTRAN__
+!   nan_ = nan_ / tmpr;
+!#endif
    print*,"libaed2 version ", TRIM(AED2_VERSION)
    aed2_init_core = 0
 END FUNCTION aed2_init_core
@@ -185,7 +185,6 @@ SUBROUTINE extend_allocated_variables(count)
 !
 !LOCALS
    TYPE(aed2_variable_t),DIMENSION(:),ALLOCATABLE :: tmp
-   TYPE(aed2_column_t),DIMENSION(:),ALLOCATABLE :: tmpc
 !
 !-------------------------------------------------------------------------------
 !BEGIN
