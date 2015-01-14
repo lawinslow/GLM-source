@@ -1,18 +1,26 @@
 !-------------------------------------------------------------------------------
 ! aed2_nml
 !-------------------------------------------------------------------------------
+!
+! List here the available aed2 modules to be included in the simulation.
+! It is important they are listed in the correct order so dependecicies can be
+! set during the model set-up phase.
+!
+! For further detail about available AED modules visit:
+!     aed.see.uwa.edu.au/research/models/AED
+!
+!-------------------------------------------------------------------------------
 &aed2_models
    models = 'aed2_sedflux',
             'aed2_oxygen',
-            !'aed2_carbon',
-            !'aed2_silica',
-            !'aed2_nitrogen',
-            !'aed2_phosphorus',
-            !'aed2_organic_matter',
-            !'aed2_phytoplankton',
-            !'aed2_zooplankton',
-            !'aed2_pathogens',
-            !'aed2_tracer',
+            'aed2_carbon',
+            'aed2_silica',
+            'aed2_nitrogen',
+            'aed2_phosphorus',
+            'aed2_organic_matter',
+            'aed2_phytoplankton',
+            'aed2_zooplankton',
+            'aed2_tracer',
             !'aed2_totals'
 /
 
@@ -82,19 +90,19 @@
 ! theta_sed_oxy [float, unit = - ]
 !                 Arrhenius temperature multiplier for sediment oxygen flux
 !  Fsed_oxy_variable = Oxygen sedimentation variable link
-!                         eg 'aed_sedflux_Fsed_oxy' will use the value supplied
+!                         eg 'SDF_Fsed_oxy' will use the value supplied
 !                          by the aed_sedflux model for Fsed_oxy
 !
 ! NOTE: Processes such as photosynthesis and bacterial respiration from other
 !       AED modules should be configured to use the following names:
-!        aed_oxygen_oxy
+!        OXY_oxy
 !
 ! DIAGNOSTICS:
 !
 !-------------------------------------------------------------------------------
 &aed2_oxygen
    oxy_initial = 225.0
-   Fsed_oxy = -50.0
+   Fsed_oxy = -3.0
    Ksed_oxy = 50.0
    theta_sed_oxy = 1.08
 !  Fsed_oxy_variable = 'SDF_Fsed_oxy'
@@ -102,7 +110,7 @@
 
 
 !###############################################################################
-! aed_carbon - AED carbon model
+! aed2_carbon - AED carbon model
 !-------------------------------------------------------------------------------
 ! dic_initial   [float, unit = mmol/m^3]
 !                 initial DIC concentration (can be overwritten by GLM or TFV IC)
@@ -138,9 +146,9 @@
 !
 ! NOTE: Processes such as photosynthesis and bacterial respiration from other
 !       AED modules should be configured to use the following names:
-!        aed_carbon_dic
-!        aed_carbon_ch4
-!        aed_carbon_pH
+!        CAR_dic
+!        CAR_ch4
+!        CAR_pH
 !
 ! DIAGNOSTICS:
 !        -
@@ -153,7 +161,7 @@
    theta_sed_dic = 1.08
    Fsed_dic_variable='SDF_Fsed_dic'
    pH_initial = 7.5
-   atmco2 = 390
+   atmco2 = 370e-6
    ionic = 0.1
    !-- CH4 --
    ch4_initial = 27.6
@@ -225,11 +233,11 @@
 !
 ! NOTE: Processes such as phytoplankton uptake and zooplankton excretion from
 !       other AED modules should be configured to use the following names:
-!        aed_nitrogen_nit
-!        aed_nitrogen_amm
+!        NIT_nit
+!        NIT_amm
 !
 ! DIAGNOSTICS:
-!        aed_nitrogen_denit
+!        NIT_denit
 !
 !-------------------------------------------------------------------------------
 &aed2_nitrogen
@@ -237,7 +245,7 @@
    nit_initial = 27.6
    Rnitrif = 0.1
    Rdenit = 0.5
-   Fsed_amm = 10.0
+   Fsed_amm = 3.0
    Fsed_nit = -0.5
    Knitrif = 78.1
    Kdenit = 2.0
@@ -252,7 +260,6 @@
    Fsed_amm_variable='SDF_Fsed_amm'
    Fsed_nit_variable='SDF_Fsed_nit'
 /
-
 
 !###############################################################################
 ! aed2_phosphorus - AED phosphorus model
@@ -288,8 +295,8 @@
 !
 ! NOTE: Processes such as PO4 uptake and bacterial mineralisation from other
 !       AED modules should be configured to use the following names:
-!        aed_phosphorus_frp
-!        aed_phosphorus_frp_ads
+!        PHS_frp
+!        PHS_frp_ads
 !
 ! DIAGNOSTICS:
 !        -
@@ -297,7 +304,7 @@
 !-------------------------------------------------------------------------------
 &aed2_phosphorus
    frp_initial = 0.29
-   Fsed_frp = 0.010
+   Fsed_frp = 0.008
    Ksed_frp = 50.0
    theta_sed_frp = 1.08
    phosphorus_reactant_variable = '' !'OXY_oxy'
@@ -310,9 +317,8 @@
    ads_use_pH = .false.
    Kadsratio= 1.0
    Qmax = 1.0
-   w_po4ads = -0.2
+   w_po4ads = -1.2   ! doesnt seem to work
 /
-
 
 !###############################################################################
 ! aed2_organic_matter - AED organic matter model
@@ -356,9 +362,9 @@
 !
 ! NOTE: Processes such as phyto or zoop excretion within any other
 !       AED modules should be configured to use the following names:
-!        aed_organic_matter_doc    aed_organic_matter_poc
-!        aed_organic_matter_don    aed_organic_matter_pon
-!        aed_organic_matter_dop    aed_organic_matter_pop
+!        OGM_doc    OGM_poc
+!        OGM_don    OGM_pon
+!        OGM_dop    OGM_pop
 !
 ! DIAGNOSTICS:
 !        -
@@ -368,7 +374,7 @@
    !-- ORGANIC NITROGEN
    pon_initial = 50.0
    don_initial = 50.0
-   w_pon = 0.1
+   w_pon = 0.0
    Rpon_miner = 0.01
    Rdon_miner = 0.01
    Fsed_pon = -0.01
@@ -383,7 +389,7 @@
    !-- ORGANIC PHOSPHORUS
    pop_initial = 1.0
    dop_initial = 1.0
-   w_pop = 0.1
+   w_pop = 0.0
    Rpop_miner = 0.001
    Rdop_miner = 0.0001
    Fsed_pop = -0.01
@@ -396,13 +402,13 @@
    theta_sed_dop = 1.08
    dop_miner_product_variable='PHS_frp'
    !-- ORGANIC CARBON
-   poc_initial = 40.0
-   doc_initial = 60.0
-   w_poc = 0.1
+   poc_initial = 80.0
+   doc_initial = 80.0
+   w_poc = 0.0
    Rpoc_miner = 0.01
    Rdoc_miner = 0.01
    Fsed_poc = 0.00
-   Fsed_doc = 15.0
+   Fsed_doc = 10.0
    Kpoc_miner = 31.25
    Kdoc_miner = 31.25
    Ksed_doc = 4.5
@@ -420,7 +426,6 @@
 !  Fsed_poc_variable='SDF_Fsed_poc'
 !  Fsed_doc_variable='SDF_Fsed_doc'
 /
-
 
 !###############################################################################
 ! aed2_phytoplankton - AED phytoplankton model
@@ -441,19 +446,19 @@
 !
 ! NOTE: Processes such as zoop grazing or turbidity calc within any other
 !       AED modules should be configured to use the following names:
-!        aed_phytoplankton_name        (where name is as defined in the nml)
-!        aed_phytoplankton_name_IN     (internal nitrogen)
-!        aed_phytoplankton_name_IP     (internal phosphorus)
+!        PHY_name        (where name is as defined in the nml)
+!        PHY_name_IN     (internal nitrogen)
+!        PHY_name_IP     (internal phosphorus)
 !
 ! DIAGNOSTICS:
-!        aed_phytoplankton_name_fI     (light limitation)
-!        aed_phytoplankton_name_fT     (temp limitation)
-!        aed_phytoplankton_name_fS     (salinity limitation)
-!        aed_phytoplankton_name_fN     (nitrogen limitation)
-!        aed_phytoplankton_name_fP     (phosphorus limitation)
-!        aed_phytoplankton_name_fSi    (silica limitation)
-!        aed_phytoplankton_tchla       (total module chlorophyll-a)
-!        aed_phytoplankton_gpp         (total module gross primary productivity)
+!        PHY_name_fI     (light limitation)
+!        PHY_name_fT     (temp limitation)
+!        PHY_name_fS     (salinity limitation)
+!        PHY_name_fN     (nitrogen limitation)
+!        PHY_name_fP     (phosphorus limitation)
+!        PHY_name_fSi    (silica limitation)
+!        PHY_tchla       (total module chlorophyll-a)
+!        PHY_gpp         (total module gross primary productivity)
 !
 !-------------------------------------------------------------------------------
 &aed2_phytoplankton
@@ -475,7 +480,6 @@
    c_uptake_target_variable='CAR_dic'
 /
 
-
 !###############################################################################
 ! aed2_zooplankton - AED zooplankton model
 !-------------------------------------------------------------------------------
@@ -493,7 +497,7 @@
 !
 ! NOTE: Processes such as zoop grazing or turbidity calc within any other
 !       AED modules should be configured to use the following names:
-!        aed_zooplankton_name        (where name is as defined in the nml)
+!        ZOO_name        (where name is as defined in the nml)
 !
 ! DIAGNOSTICS:
 !       -
@@ -512,17 +516,6 @@
 
 
 !###############################################################################
-! aed2_pathogens
-!  num_pathogens = number of pathogens to model
-!  the_pathogens = list of pathogens classes (referencing the pathogens database)
-!-------------------------------------------------------------------------------
-&aed2_pathogens
-   num_pathogens = 1
-   the_pathogens = 1 !,3,5
-/
-
-
-!###############################################################################
 ! aed2_tracer
 !   num_tracers = number of tracers to model
 !   decay       = list of decay rates for the tracers
@@ -531,9 +524,13 @@
 !-------------------------------------------------------------------------------
 &aed2_tracer
    num_tracers = 1
-   decay = 0 !, 0, 0, ...
-   settling = 0 !, 0, 0, ....
-   fsed = 0 !, 0, 0, ...
+   decay = 0      !, 0, 0, ...
+   settling = -0.1  !, 0, 0, ....
+   fsed = 0       !, 0, 0, ...
+   epsilon = 0.02 !, 0.02, 0.02
+   tau_0 = 0.01   !, 0.01, 0.01
+   tau_r = 1.0    !, 1.0, 1.0
+   Ke_ss = 0.02   !, 0.02, 0.02
    retention_time = .true.
 /
 
@@ -553,23 +550,20 @@
    TN_vars =  'NIT_nit',
               'NIT_amm',
               'OGM_don',
-              'OGM_don',
-              'PHY_green_IN',
-              'PHY_crypto_IN'
-   TN_varscale = 1.0, 1.0, 1.0, 1.0, 0.15, 0.15
+              'OGM_pon',
+              'PHY_green_IN'
+   TN_varscale = 1.0, 1.0, 1.0, 1.0, 0.15
    TP_vars =  'PHS_frp',
               'PHS_frp_ads',
               'OGM_dop',
-              'OGM_dop',
-              'PHY_green_IP',
-              'PHY_crypto_IP'
-   TP_varscale = 1.0, 1.0, 1.0, 1.0, 0.01, 0.01
+              'OGM_pop',
+              'PHY_green_IP'
+   TP_varscale = 1.0, 1.0, 1.0, 1.0, 0.01
    TOC_vars = 'OGM_doc',
               'OGM_poc',
               'PHY_green'
-              'PHY_crypto'
    TOC_varscale = 1.0, 1.0, 1.0, 1.0
    TSS_vars = 'TRC_ss1',
               'PHY_green' !, .... 
-!  TSS_varscale = 0.1,0.1,0.,0.1            !,  <vector same length as TSS names>
+!  TSS_varscale = 0.1,0.1            !,  <vector same length as TSS names>
 /

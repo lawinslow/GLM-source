@@ -145,8 +145,6 @@ MODULE glm_fabm
    CHARACTER(len=48),ALLOCATABLE :: names(:)
 
    AED_REAL,ALLOCATABLE :: dz(:)         !# layer thickness
-
-INTEGER :: step = 0
 !===============================================================================
 CONTAINS
 
@@ -512,7 +510,6 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-step = step + 1
    lIce = pIce
 
    !# re-compute the layer heights

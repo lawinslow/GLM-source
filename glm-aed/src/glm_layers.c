@@ -321,8 +321,8 @@ void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
         *ll = i;
         B0 = (Lake[surfLayer].Height-Lake[surfLayer-1].Height)/ 2.0;
         AL = LenAtCrest;
-        if (*width <= 1E-7) *width = Lake[surfLayer].LayerArea * AreaFactor / AL;
-        UINF = q * 1000.0 / ( 2.0 * B0 * (*width));
+        if (*width <= 1E-7) *width = Lake[surfLayer].LayerArea / AL;
+        UINF = q * ML2m3 / ( 2.0 * B0 * (*width));
     } else {
         // Find level of neutral buoyancy
         for (i = surfLayer; i > botmLayer; i--)
@@ -333,9 +333,9 @@ void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
             i = botmLayer;
             *ll = i;
             AL = DHLE/sin(bsl);
-            if ((*width) <= 1E-7) (*width) = AHLE * AreaFactor / AL;
+            if ((*width) <= 1E-7) (*width) = AHLE / AL;
             B0 = (DHLE/ 2.0)/ 2.0;
-            UINF = q * 1000.0 / ( 2.0 * B0 * (*width));
+            UINF = q * ML2m3 / ( 2.0 * B0 * (*width));
         } else {
             //  Here for intrusion
             JT = i;
@@ -343,20 +343,20 @@ void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
             JB = i-1;
             AL = Lake[i].Height/sin(bsl);
             ALSQ = sqr(AL);
-            if ((*width) <= 1E-7) (*width) = Lake[i].LayerArea*AreaFactor/AL;
+            if ((*width) <= 1E-7) (*width) = Lake[i].LayerArea/AL;
 
             while(1) {
                 DT = Lake[JT].MeanHeight;
                 DBB = Lake[JB].MeanHeight;
                 DZ = DT - DBB;
-                XNSQ = g*(Lake[JB].SPDensity-Lake[JT].SPDensity)/((di+1000.0)*DZ);
+                XNSQ = g*(Lake[JB].SPDensity-Lake[JT].SPDensity)/((di+rho0)*DZ);
                 if (XNSQ  <=  zero)
                     //  Here for unstable stratification
                     BL=AL;
                 else {
                     //  here for stable stratification
                     XN = sqrt(XNSQ);
-                    F = q*1000.0/((*width)*ntims*XN*ALSQ);
+                    F = q*ML2m3/((*width)*ntims*XN*ALSQ);
                     VISCOS = Lake[i].Epsilon * 20.0;
                     if (VISCOS <= 0.) VISCOS=Visc;
                     GR = XNSQ*sqr(ALSQ)/sqr(VISCOS);
@@ -374,7 +374,7 @@ void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
                 }
 
                 // B0 is 1/2 the intrusion thickness
-                B0 = q*1000.0/((*width)*BL);
+                B0 = q*ML2m3/((*width)*BL);
                 if (B0 > DZ) {
                     if ( !((JT == surfLayer) && (JB == botmLayer)) ) {
                         if (JT != surfLayer) JT++;
@@ -387,10 +387,10 @@ void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
 
             if (Lake[i].Height < (DHLE + 1.0)) {
                 AL = DHLE/sin(bsl);
-                if ((*width) <= 1E-7) (*width) = AHLE * AreaFactor / AL;
+                if ((*width) <= 1E-7) (*width) = AHLE / AL;
                 B0 = (DHLE+ 2.0)/ 2.0;
             }
-            UINF = q*1000.0/( 2.0*B0*(*width));
+            UINF = q*ML2m3/( 2.0*B0*(*width));
         }
     }
 
@@ -465,14 +465,14 @@ void insert(AED_REAL q, AED_REAL di, AED_REAL bsl, AED_REAL temp, AED_REAL salt,
     // Insert inflow into reservoir and adjust layer properties
     // Include water quality and particles
     for (k = NB1; k <= NT1; k++) {
-        Lake[k].Temp = combine(Lake[k].Temp,Lake[k].LayerVol,Lake[k].SPDensity, temp,DVR[k],di);
-        Lake[k].Salinity = combine(Lake[k].Salinity,Lake[k].LayerVol,Lake[k].SPDensity,salt,DVR[k],di);
+        Lake[k].Temp = combine(Lake[k].Temp,Lake[k].LayerVol,Lake[k].SPDensity, temp,DVR[k]*ML2m3,di);
+        Lake[k].Salinity = combine(Lake[k].Salinity,Lake[k].LayerVol,Lake[k].SPDensity,salt,DVR[k]*ML2m3,di);
 
         for (wqidx = 0; wqidx < Num_WQ_Vars; wqidx++)
-            _WQ_Vars(wqidx,k) = combine_vol(_WQ_Vars(wqidx,k),Lake[k].LayerVol,wqx[wqidx],DVR[k]);
+            _WQ_Vars(wqidx,k) = combine_vol(_WQ_Vars(wqidx,k),Lake[k].LayerVol,wqx[wqidx],DVR[k]*ML2m3);
 
         Lake[k].SPDensity=calculate_density(Lake[k].Temp,Lake[k].Salinity);
-        Lake[k].LayerVol=Lake[k].LayerVol+DVR[k];
+        Lake[k].LayerVol=Lake[k].LayerVol+DVR[k]*ML2m3;
     }
 
     Lake[botmLayer].Vol1 = Lake[botmLayer].LayerVol;

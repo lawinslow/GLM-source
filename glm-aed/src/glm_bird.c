@@ -40,7 +40,6 @@
 #include <math.h>
 
 #include "glm.h"
-#include "glm_types.h"
 #include "glm_const.h"
 #include "glm_util.h"
 #include "glm_bird.h"

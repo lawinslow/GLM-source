@@ -425,11 +425,11 @@ void calc_mass_temp(const char *msg)
 
     Lake_Mass = zero;
     for (i = surfLayer; i >= botmLayer; i-- )
-        Lake_Mass += (1000 + Lake[i].SPDensity) * Lake[i].LayerVol;
+        Lake_Mass += (rho0 + Lake[i].SPDensity) * Lake[i].LayerVol;
 
     Lake_Temp = zero;
     for (i = surfLayer; i >= botmLayer; i-- )
-        Lake_Temp += Lake[i].Temp * (1000 + Lake[i].SPDensity) * Lake[i].LayerVol;
+        Lake_Temp += Lake[i].Temp * (rho0 + Lake[i].SPDensity) * Lake[i].LayerVol;
     Lake_Temp = Lake_Temp / Lake_Mass;
 
     printf("%s Lake_Mass = %10.5f\t, Lake_Temp = %10.5f\n", msg, Lake_Mass/1e6, Lake_Temp);
@@ -508,7 +508,7 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
         Benthic_Light_pcArea += calc_benthic_light();
 
         calc_layer_stress(MetData.WindSpeed,
-                      sqrt( (Lake[surfLayer].LayerArea * AreaFactor)/Pi ) * 2 );
+                      sqrt( (Lake[surfLayer].LayerArea)/Pi ) * 2 );
 
         /**********************************************************************
          *## Start Water Quality calls                                        *

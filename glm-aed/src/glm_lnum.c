@@ -204,7 +204,7 @@ void lnpe3(int NLayers, AED_REAL *iheight, AED_REAL *density, AED_REAL *xpp,
     for (i_pe3 = 0; i_pe3 <= (ij-1); i_pe3++) {
         il = il + 1;
 
-        dens = (density[il] + 1000.0);
+        dens = (density[il] + rho0);
         ht = ht + 0.1;
         if (i_pe3 != 0) da = (dMphLevelArea[(i_pe3-1)+1] * 10.0);
         zcvp = ab * ((0.1 * ht) - 0.005) + (da / 6) * ((0.03 * ht) - 0.001);

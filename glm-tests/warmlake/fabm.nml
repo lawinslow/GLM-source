@@ -14,7 +14,7 @@
 !  
 !-------------------------------------------------------------------------------
 &fabm_nml
-   models = 'gotm_npzd',
+   models = !'gotm_npzd',
             'aed_sedflux',
             'aed_oxygen',
             'aed_carbon',
