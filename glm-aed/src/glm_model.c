@@ -39,6 +39,7 @@
 #endif
 #include <string.h>
 #include <math.h>
+#include <time.h>
 
 #include "glm.h"
 
@@ -60,6 +61,10 @@
 #include "glm_wqual.h"
 #include "glm_stress.h"
 #include "glm_bubbler.h"
+#if PLOTS
+#include "glm_plot.h"
+#endif
+
 
 #include "aed_time.h"
 #include "aed_csv.h"
@@ -68,11 +73,6 @@
 //#define dbgprt(...) fprintf(stderr, __VA_ARGS__)
 #define dbgprt(...) /* __VA_ARGS__ */
 
-
-#if PLOTS
- extern int xdisp, today, plotstep;
- extern AED_REAL psubday;
-#endif
 
 extern int lw_ind;
 
@@ -93,14 +93,25 @@ void end_model(void);
  ******************************************************************************/
 void run_model()
 {
-    int jstart, nsave;
+    int jstart, nsave, lth, ltm, lts, ltd;
+    time_t begn, done;
+    char buf[64];
 
     init_model(&jstart, &nsave);
 
+    begn = time(NULL);
+    printf("Wall clock start time :  %s", ctime_r(&begn, buf));
     if (non_avg)
         do_model_non_avg(jstart, nsave);
     else
         do_model(jstart, nsave);
+    done = time(NULL);
+    printf("Wall clock finish time : %s", ctime_r(&done, buf));
+    ltd = difftime(done, begn);
+    lth = ltd / 3600;
+    ltm = (ltd - (lth * 3600)) / 60;
+    lts = ltd - (lth * 3600) - (ltm * 60);
+    printf("Wall clock runtime %d seconds : %02d:%02d:%02d [hh:mm:ss]\n", ltd, lth, ltm, lts);
 
     end_model();
 }
@@ -244,8 +255,9 @@ void do_model(int jstart, int nsave)
 
         read_daily_inflow(jday, NumInf, FlowNew, TempNew, SaltNew, WQNew);
         //# Averaging of flows
+        //# To get daily inflow (i.e. m3/day) times by SecsPerDay
         for (i = 0; i < NumInf; i++) {
-            Inflows[i].FlowRate = (FlowOld[i] + FlowNew[i]) / 2.0;
+            Inflows[i].FlowRate = (FlowOld[i] + FlowNew[i]) / 2.0 * SecsPerDay;
             Inflows[i].TemInf   = (TempOld[i] + TempNew[i]) / 2.0;
             Inflows[i].SalInf   = (SaltOld[i] + SaltNew[i]) / 2.0;
             for (j = 0; j < Num_WQ_Vars; j++)
@@ -253,8 +265,9 @@ void do_model(int jstart, int nsave)
         }
 
         read_daily_outflow(jday, NumOut, DrawNew);
+        //# To get daily inflow (i.e. m3/day) times by SecsPerDay
         for (i = 0; i < NumOut; i++)
-            Outflows[i].Draw = (DrawOld[i] + DrawNew[i]) / 2.0;
+            Outflows[i].Draw = (DrawOld[i] + DrawNew[i]) / 2.0 * SecsPerDay;
 
         read_daily_met(jday, &MetNew);
         if ( !subdaily ) {
@@ -306,7 +319,9 @@ void do_model(int jstart, int nsave)
         SWold = SWnew;
 
 #ifdef XPLOTS
-        if ( !xdisp )
+        if ( xdisp )
+            flush_all_plots();
+        else
 #endif
             printf("Running day %8d, %4.2f%% of days complete%c", jday, ntot*100./nDays,  EOLN);
 
@@ -364,8 +379,9 @@ void do_model_non_avg(int jstart, int nsave)
 
         read_daily_inflow(jday, NumInf, FlowNew, TempNew, SaltNew, WQNew);
         //# Set to today's inflow
+        //# To get daily inflow (i.e. m3/day) times by SecsPerDay
         for (i = 0; i < NumInf; i++) {
-            Inflows[i].FlowRate = FlowNew[i];
+            Inflows[i].FlowRate = FlowNew[i] * SecsPerDay;
             Inflows[i].TemInf   = TempNew[i];
             Inflows[i].SalInf   = SaltNew[i];
             for (j = 0; j < Num_WQ_Vars; j++)
@@ -373,8 +389,9 @@ void do_model_non_avg(int jstart, int nsave)
         }
 
         read_daily_outflow(jday, NumOut, DrawNew);
+        //# To get daily outflow (i.e. m3/day) times by SecsPerDay
         for (i = 0; i < NumOut; i++)
-            Outflows[i].Draw = DrawNew[i];
+            Outflows[i].Draw = DrawNew[i] * SecsPerDay;
 
         read_daily_met(jday, &MetData);
         SWnew = MetData.ShortWave;
@@ -402,7 +419,9 @@ void do_model_non_avg(int jstart, int nsave)
         SWold = SWnew;
 
 #ifdef XPLOTS
-        if ( !xdisp )
+        if ( xdisp )
+            flush_all_plots();
+        else
 #endif
             printf("Running day %8d, %4.2f%% of days complete%c", jday, ntot*100./nDays,  EOLN);
 
@@ -425,11 +444,11 @@ void calc_mass_temp(const char *msg)
 
     Lake_Mass = zero;
     for (i = surfLayer; i >= botmLayer; i-- )
-        Lake_Mass += (rho0 + Lake[i].SPDensity) * Lake[i].LayerVol;
+        Lake_Mass += Lake[i].Density * Lake[i].LayerVol;
 
     Lake_Temp = zero;
     for (i = surfLayer; i >= botmLayer; i-- )
-        Lake_Temp += Lake[i].Temp * (rho0 + Lake[i].SPDensity) * Lake[i].LayerVol;
+        Lake_Temp += Lake[i].Temp * Lake[i].Density * Lake[i].LayerVol;
     Lake_Temp = Lake_Temp / Lake_Mass;
 
     printf("%s Lake_Mass = %10.5f\t, Lake_Temp = %10.5f\n", msg, Lake_Mass/1e6, Lake_Temp);

@@ -55,6 +55,7 @@ int wq_calc = FALSE;
 AED_REAL Kw;             //# background light attenuation (m**-1)
 
 int Num_WQ_Vars;         //# number of water quality variables
+int Num_WQ_Ben;          //# number of benthic water quality variables
 CLOGICAL atm_stab = FALSE;   // Account for non-neutral atmospheric stability
 
 //------------------------------------------------------------------------------
@@ -135,7 +136,7 @@ int      cloud_mode = 1;
 
 //------------------------------------------------------------------------------
 
-AED_REAL timezone = 0.0, timezone_m = 0.0, timezone_i = 0.0, timezone_o = 0.0;
+AED_REAL timezone_r = 0.0, timezone_m = 0.0, timezone_i = 0.0, timezone_o = 0.0;
 
 //------------------------------------------------------------------------------
 
@@ -186,13 +187,13 @@ void _debug_print_lake(FILE *of) {
     fprintf(of, "----------DEPTH----------------TEMP-----------------SALT-----------------DENS-----------------LVol------\n");
     for (i = 0; i < NumLayers; i++)
         fprintf(of, "%3d %16.11f %20.11f %20.11f %20.11f %20.11f %16.10f\n",
-                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].SPDensity, Lake[i].LayerVol,Lake[i].Vol1);
+                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].Density, Lake[i].LayerVol,Lake[i].Vol1);
 */
     fprintf(of, "MaxLayers %d NumLayers %d\n", MaxLayers, NumLayers);
     fprintf(of, "----------DEPTH----------------TEMP-----------------SALT-----------------DENS-----------------LVol--------------LArea----\n");
     for (i = 0; i < NumLayers; i++)
         fprintf(of, "%3d %16.11f %20.11f %20.11f %20.11f %20.11f %16.10f\n",
-                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].SPDensity, Lake[i].LayerVol, Lake[i].LayerArea);
+                    i, Lake[i].Height, Lake[i].Temp, Lake[i].Salinity, Lake[i].Density, Lake[i].LayerVol, Lake[i].LayerArea);
     fprintf(of, "-------------------------------------------------------------------------------------------------------------------------\n\n");
 }
 void debug_print_lake() { _debug_print_lake(stderr); }

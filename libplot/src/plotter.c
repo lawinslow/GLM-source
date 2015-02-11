@@ -39,11 +39,9 @@
 
 #include <colours.h>
 #ifdef XPLOTS
+ #include <ui_basic.h>
  #ifdef _WIN32
-  #include <WinBasic.h>
   #define snprintf _snprintf
- #else
-  #include <xbasic.h>
  #endif
 #endif
 #define DEBUG_VALS 0
@@ -167,7 +165,7 @@ int init_plotter(int *maxx, int *maxy)
 #ifdef XPLOTS
     my_xdisp = 1;
     *maxx+=20; *maxy+=60;
-    if ( InitX(maxx, maxy) < 0 ) return -1;
+    if ( InitUI(maxx, maxy) < 0 ) return -1;
     _s_maxx = *maxx; _s_maxy = *maxy;
     *maxx-=20; *maxy-=60;
     okItm = NewControl(pushButton, "Done", *maxx - 90, *maxy + 20, 80, 20);
@@ -298,6 +296,8 @@ static void font_metric(const char*f, int sz, int *u, int *d)
 /******************************************************************************/
 void set_plot_font_(int *which, int *size, const char *font, int *len)
 {
+#ifndef _WIN32
+
     if ( *len == 0 ) return;
 
     gdFTUseFontConfig(1);
@@ -310,11 +310,13 @@ void set_plot_font_(int *which, int *size, const char *font, int *len)
         if ( *size ) label_size = *size;
         font_metric(label_font, label_size, &lfu, &lfd);
     }
+#endif
 }
 
 /******************************************************************************/
 void set_plot_font(int which, int size, const char *font)
 {
+#ifndef _WIN32
     if ( font == NULL ) return;
 
     gdFTUseFontConfig(1);
@@ -327,6 +329,7 @@ void set_plot_font(int which, int size, const char *font)
         if ( size ) label_size = size;
         font_metric(label_font, label_size, &lfu, &lfd);
     }
+#endif
 }
 
 #if 0
@@ -741,6 +744,17 @@ void plot_value(int plot, double x, double y, double z)
 
 #ifdef XPLOTS
 /******************************************************************************/
+void flush_all_plots()
+{
+    int plot;
+
+    for (plot = 0; plot <= last_plot; plot++)
+        FlushPicture(_plots[plot].im, _plots[plot].item_id);
+    CheckUI();
+    FlushUI();
+}
+
+/******************************************************************************/
 void flush_plot_(int *plot) { flush_plot(*plot); }
 /*----------------------------------------------------------------------------*/
 void flush_plot(int plot)
@@ -861,7 +875,7 @@ void do_cleanup(int saveall)
             save_plot(i);
         }
 #ifdef XPLOTS
-        if ( my_xdisp ) CleanupX();
+        if ( my_xdisp ) CleanupUI();
 #endif
         return;
     }
@@ -893,7 +907,7 @@ void do_cleanup(int saveall)
             }
         }
     }
-    CleanupX();
+    CleanupUI();
 #endif
 }
 

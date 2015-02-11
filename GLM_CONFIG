@@ -1,0 +1,14 @@
+#
+# These are settings used for building glm
+#
+
+export FABM=true
+export AED2=true
+export USE_DL=false
+export WITH_PLOTS=true
+export WITH_XPLOTS=true
+
+export FORTRAN_COMPILER=IFORT
+# export FORTRAN_COMPILER=GFORTRAN
+# export FORTRAN_COMPILER=OPEN64
+

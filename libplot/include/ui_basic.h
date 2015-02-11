@@ -1,6 +1,10 @@
 /******************************************************************************
  *                                                                            *
- * WinBasic.h                                                                 *
+ * ui_basic.h                                                                 *
+ *                                                                            *
+ * Description :                                                              *
+ *                                                                            *
+ *   A simple GUI example. This is the generic header.                        *
  *                                                                            *
  * Developed by :                                                             *
  *     AquaticEcoDynamics (AED) Group                                         *
@@ -32,13 +36,10 @@
  *                                                                            *
  ******************************************************************************/
 
-#ifndef _WIN_BASIC_H_
-#define _WIN_BASIC_H_
+#ifndef _UI_BASIC_H_
+#define _UI_BASIC_H_
 
 #include <gd.h>
-
-//#define INCLUDE_MENUS 1
-//#define INCLUDE_SAVED 1
 
 #ifndef INCLUDE_MENUS
 #define INCLUDE_MENUS 0
@@ -48,10 +49,11 @@
 #endif
 
 /******************************************************************************/
-int InitX(int *width, int *height);
-int CleanupX(void);
+int InitUI(int *width, int *height);
+int CleanupUI(void);
 
     /**********************************************************/
+void FlushUI(void);
 int CheckUI(void);
 int DoUI(void);
 void GetMouse(int *x, int *y);

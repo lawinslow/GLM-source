@@ -24,20 +24,45 @@
 #                                                                             #
 ###############################################################################
 
+OSTYPE=$(shell uname -s)
+OC=clang
+
+ifeq ($(WITH_XPLOTS),)
+  WITH_XPLOTS=true
+endif
+
+ifeq ($(OSTYPE),Darwin)
+  uibasic=macbasic
+  srcext=m
+  CC=clang
+else
+  uibasic=xbasic
+  srcext=c
+endif
+
 srcdir=src
 objdir=objs
 incdir=include
 
-SRCS=${srcdir}/xbasic.c \
+SRCS=${srcdir}/${uibasic}.${srcext} \
      ${srcdir}/colours.c \
      ${srcdir}/plotter.c
 
-OBJS=${objdir}/xbasic.o \
+OBJS=${objdir}/${uibasic}.o \
      ${objdir}/colours.o \
      ${objdir}/plotter.o
 
-CFLAGS=-O3 -DXPLOTS
-INCLUDES=-I${incdir} -I.
+CFLAGS=-O3
+ifeq ($(WITH_XPLOTS),true)
+  CFLAGS+=-DXPLOTS
+endif
+INCLUDES=-I${incdir} -I. -I/opt/local/include
+LIBS=-lgd -lpng -ljpeg -lm
+ifeq ($(OSTYPE),Darwin)
+  LIBS+=-framework Cocoa -L/opt/local/lib
+else
+  LIBS+=-lX11
+endif
 
 ifeq ($(SINGLE),true)
   CFLAGS += -DSINGLE=1
@@ -66,9 +91,12 @@ ${objdir}:
 ${objdir}/%.o: ${srcdir}/%.c ${incdir}/%.h
 	$(CC) -Wall -fPIC $(CFLAGS) $(INCLUDES) -g -c $< -o $@
 
-tstmap: tests/tstmap.c ${srcdir}/xbasic.c ${srcdir}/colours.c
-	$(CC) -DTRUE_COLOUR=1 -I${incdir} tests/tstmap.c ${srcdir}/xbasic.c ${srcdir}/colours.c -lgd -lpng -ljpeg -lm -lX11 -o $@
+${objdir}/${uibasic}.o: ${srcdir}/${uibasic}.${srcext}
+	$(CC) -Wall $(CFLAGS) $(INCLUDES) -g -c $< -o $@
+
+tstmap: tests/tstmap.c ${srcdir}/${uibasic}.${srcext} ${srcdir}/colours.c
+	$(CC) -DTRUE_COLOUR=1 $(CFLAGS) $(INCLUDES) tests/tstmap.c ${srcdir}/${uibasic}.${srcext} ${srcdir}/colours.c $(LIBS) -o $@
 
 tstfont: tests/tstfont.c ${srcdir}/xbasic.c ${srcdir}/colours.c
-	$(CC) -DTRUE_COLOUR=1 -I${incdir} tests/tstfont.c ${srcdir}/xbasic.c ${srcdir}/colours.c -lgd -lpng -ljpeg -lm -lX11 -o $@
+	$(CC) -DTRUE_COLOUR=1 $(CFLAGS) $(INCLUDES) tests/tstfont.c ${srcdir}/${uibasic}.${srcext} ${srcdir}/colours.c $(LIBS) -o $@
 

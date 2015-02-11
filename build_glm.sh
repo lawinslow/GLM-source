@@ -1,25 +1,21 @@
 #!/bin/bash
 
-
-## Some info:
-# If your netcdf library is not available on PATH, you need to define
-# its location using the environment variable NETCDFLIB. 
-# Example: export NETCDFLIB=/opt/local/lib
-#
-
-
-export FABM=true
-export AED2=true
-export USE_DL=false
-
-export FORTRAN_COMPILER=IFORT
-# export FORTRAN_COMPILER=GFORTRAN
-# export FORTRAN_COMPILER=OPEN64
+. GLM_CONFIG
 
 export OSTYPE=`uname -s`
 
 if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
-   . /opt/intel/bin/compilervars.sh intel64
+   if [ -d /opt/intel/bin ] ; then
+      . /opt/intel/bin/compilervars.sh intel64
+   fi
+   which ifort >& /dev/null
+   if [ $? != 0 ] ; then
+      echo ifort compiler requested, but not found
+      exit 1
+   fi
+fi
+
+if [ "$FORTRAN_COMPILER" = "IFORT" ] ; then
    export PATH="/opt/intel/bin:$PATH"
    export FC=ifort
 elif [ "$FORTRAN_COMPILER" = "IFORT11" ] ; then
@@ -54,15 +50,29 @@ fi
 export PLOTDIR=${CURDIR}/libplot
 export AED2DIR=${CURDIR}/libaed2
 
-if [ ! -d $FABMDIR ] ; then
-   echo "FABM directory not found - building a non-FABM version"
-   export FABM=false
+if [ "$FABM" = "true" ] ; then
+   if [ ! -d $FABMDIR ] ; then
+      echo "FABM directory not found"
+      export FABM=false
+   else
+      which cmake >& /dev/null
+      if [ $? != 0 ] ; then
+         echo "cmake not found - FABM cannot be built"
+         export FABM=false
+      fi
+   fi
+   if [ "$FABM" = "false" ] ; then
+      echo build with FABM requested but FABM cannot be built
+      exit 1
+   fi
 fi
 
 export COMPILATION_MODE=production
 
-cd ${AED2DIR}
-make || exit 1
+if [ "${AED2}" = "true" ] ; then
+  cd ${AED2DIR}
+  make || exit 1
+fi
 
 if [ "${FABM}" = "true" ] ; then
   export FABMHOST=glm
@@ -78,7 +88,7 @@ if [ "${FABM}" = "true" ] ; then
   make || exit 1
 fi
 
-if [ "$OSTYPE" != "Darwin" ] && [ "$OSTYPE" != "Linux" ] ; then
+if [ "$WITH_PLOTS" = "true" ] ; then
   cd ${PLOTDIR}
   make || exit 1
 fi
@@ -94,7 +104,7 @@ make || exit 1
 
 cd ${CURDIR}/glm-aed
 
-if [ "$OSTYPE" != "Darwin" ]  && [ "$OSTYPE" != "Linux" ] ; then
+if [ "$OSTYPE" = "Linux" ] ; then
   VERSION=`grep GLM_VERSION src/glm.h | cut -f2 -d\"`
   echo glm version $VERSION
   VERSDEB=`head -1 debian/changelog | cut -f2 -d\( | cut -f1 -d-`

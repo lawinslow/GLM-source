@@ -5,7 +5,7 @@ for src in glm-aed glm-manual glm-egs ; do
    cd $src
    git add .
    git commit -a -m 'update changes'
-   git push origin master
+   git push # origin master
    cd ..
 done
 
@@ -14,6 +14,6 @@ for src in libaed2 libutil libplot ; do
    cd $src
    git add .
    git commit -a -m 'update changes'
-   git push origin master
+   git push # origin master
    cd ..
 done

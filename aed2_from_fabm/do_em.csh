@@ -16,6 +16,7 @@ end
 
 
 set LIST=( \
+           aed_bivalve.F90         \
            aed_carbon.F90         \
            aed_chlorophylla.F90   \
            aed_iron.F90           \
