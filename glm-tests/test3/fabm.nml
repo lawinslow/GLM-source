@@ -10,10 +10,12 @@
             'aed_phosphorus',
             'aed_organic_matter',
             'aed_phytoplankton',
-            'aed_zooplankton',
+         !  'aed_zooplankton',
+            'aed_bivalve',
             'aed_pathogens',
             'aed_tracer',
-            'aed_totals'
+            'aed_totals',
+            'aed_test'
 /
 
 !###############################################################################
@@ -495,6 +497,39 @@
 &aed_zooplankton
    num_zoops = 1
    the_zoops = 1
+   dn_target_variable='aed_organic_matter_don'  ! dissolved nitrogen target variable
+   pn_target_variable='aed_organic_matter_pon'  ! particulate nitrogen target variable
+   dp_target_variable='aed_organic_matter_dop'  ! dissolved phosphorus target variable
+   pp_target_variable='aed_organic_matter_pop'  ! particulate phosphorus target variable
+   dc_target_variable='aed_organic_matter_doc'  ! dissolved carbon target variable
+   pc_target_variable='aed_organic_matter_poc'  ! particulate carbon target variable
+/
+
+!###############################################################################
+! aed_bivalve - AED bivalve model
+!-------------------------------------------------------------------------------
+! num_zoops      [integer]
+!                   number of zooplankton groups within this module to include
+! the_zoops      [integer]
+!                   list of ID's of groups in aed_zoop_pars.nml (len=num_zoops)
+! dX_target_variable  [string]
+!                   state variable linked to provide/receive dissoved OM
+! pX_target_variable  [string]
+!                   state variable linked to provide/receive particulate OM
+!
+! NOTE: Users must supply a valid "aed_bivalves_pars.nml" file
+!
+!
+! NOTE: Processes such as zoop grazing or turbidity calc within any other
+!       AED modules should be configured to use the following names:
+!        aed_zooplankton_name        (where name is as defined in the nml)
+!
+! DIAGNOSTICS:
+!
+!-------------------------------------------------------------------------------
+&aed_bivalve
+   num_biv = 1
+   the_biv = 1
    dn_target_variable='aed_organic_matter_don'  ! dissolved nitrogen target variable
    pn_target_variable='aed_organic_matter_pon'  ! particulate nitrogen target variable
    dp_target_variable='aed_organic_matter_dop'  ! dissolved phosphorus target variable

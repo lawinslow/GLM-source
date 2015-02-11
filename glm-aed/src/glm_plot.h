@@ -47,15 +47,23 @@
         AED_REAL,INTENT(in) :: crest
      END SUBROUTINE init_plots
 
-     SUBROUTINE put_xplot_val(name,len,wlev,val) BIND(C,name="put_xplot_val_")
+     SUBROUTINE put_glm_val_s(plot_id,val) BIND(C,name="put_glm_val_s_")
 #       if defined( _WIN32 ) && USE_DL_LOADER
-        !DEC$ ATTRIBUTES DLLIMPORT :: put_xplot_val_
+        !DEC$ ATTRIBUTES DLLIMPORT :: put_glm_val_s_
 #       endif
         USE ISO_C_BINDING
-        CCHARACTER,INTENT(in):: name(*)
-        CINTEGER,INTENT(in)  :: len, wlev
-        AED_REAL,INTENT(in)  :: val(*)
-     END SUBROUTINE put_xplot_val
+        CINTEGER,INTENT(in) :: plot_id
+        AED_REAL,INTENT(in) :: val(*)
+     END SUBROUTINE put_glm_val_s
+
+     SUBROUTINE put_glm_val(plot_id,val) BIND(C,name="put_glm_val_")
+#       if defined( _WIN32 ) && USE_DL_LOADER
+        !DEC$ ATTRIBUTES DLLIMPORT :: put_glm_val_
+#       endif
+        USE ISO_C_BINDING
+        CINTEGER,INTENT(in) :: plot_id
+        AED_REAL,INTENT(in) :: val(*)
+     END SUBROUTINE put_glm_val
      !++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
   END INTERFACE
@@ -68,17 +76,19 @@
     extern int xdisp;
 #endif
     extern CLOGICAL do_plots, saveall;
-    extern int nplots, theplots[MAX_PLOTS+1];
-    extern char **vars;
-    extern int today;
+    extern int today, plotstep;
+    extern AED_REAL psubday;
 
 /******************************************************************************/
 void init_plots(int jstart, int ndays, AED_REAL crest);
-void put_xplot_val(char *name, int wlev, AED_REAL *val);
+void put_glm_val_s(int plot_id, AED_REAL *val);
+void put_glm_val(int plot_id, AED_REAL *val);
+void do_internal_plots(const int plot_id[]);
 
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 void init_plots_(int *jstart, int *ndays, AED_REAL *crest);
-void put_xplot_val_(char *name, int *len, int *wlev, AED_REAL *val);
+void put_glm_val_s_(int *plot_id, AED_REAL *val);
+void put_glm_val_(int *plot_id, AED_REAL *val);
 
 #endif
 

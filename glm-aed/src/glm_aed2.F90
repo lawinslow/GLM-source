@@ -45,7 +45,7 @@
 #define _NO_ODE_ 1
 
 #ifdef __GFORTRAN__
-!#  define _LINK_POINTER_(dst, src)  CALL link_pointer(dst, src)
+#  define _LINK_POINTER_(dst, src)  CALL link_pointer(dst, src)
 #  warning   "gfortran version does not work yet"
 #  if __GNUC__ >= 4
 #    if __GNUC__ == 4 && __GNUC_MINOR__ >=  9
@@ -54,14 +54,14 @@
 #    endif
 #  endif
 #else
-!#  define _LINK_POINTER_(dst, src)  dst => src
+#  define _LINK_POINTER_(dst, src)  dst => src
 #  ifndef isnan
 #    define isnan(x) ieee_is_nan(x)
 #    define HAVE_IEEE_ARITH
 #  endif
 #endif
 
-#define _LINK_POINTER_(dst, src)  dst => src
+!#define _LINK_POINTER_(dst, src)  dst => src
 
 !-------------------------------------------------------------------------------
 MODULE glm_aed2
@@ -90,6 +90,7 @@ MODULE glm_aed2
 # define _WQ_WRITE_GLM_      "wq_write_glm"
 # define _WQ_VAR_INDEX_C     "wq_var_index_c"
 # define _WQ_SET_FLAGS       "wq_set_flags"
+# define _WQ_IS_VAR          "wq_is_var"
 #else
 # define _WQ_INIT_GLM        "aed2_init_glm"
 # define _WQ_SET_GLM_DATA    "aed2_set_glm_data"
@@ -99,6 +100,7 @@ MODULE glm_aed2
 # define _WQ_WRITE_GLM_      "aed2_write_glm"
 # define _WQ_VAR_INDEX_C     "aed2_var_index_c"
 # define _WQ_SET_FLAGS       "aed2_set_flags"
+# define _WQ_IS_VAR          "aed2_is_var"
 #endif
 !
 !-------------------------------------------------------------------------------
@@ -145,6 +147,9 @@ MODULE glm_aed2
 
    TYPE (aed2_column_t),ALLOCATABLE,DIMENSION(:) :: column
    INTEGER,ALLOCATABLE,DIMENSION(:) :: externalid
+#if PLOTS
+   INTEGER,ALLOCATABLE,DIMENSION(:) :: plot_id_v, plot_id_sv, plot_id_d, plot_id_sd
+#endif
 
    INTEGER :: n_aed2_vars, n_vars, n_vars_ben, n_vars_diag, n_vars_diag_sheet
 !===============================================================================
@@ -225,7 +230,7 @@ END SUBROUTINE aed2_set_flags
 
 
 !###############################################################################
-SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,pKw) BIND(C, name=_WQ_INIT_GLM)
+SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,NumWQ_Ben,pKw) BIND(C, name=_WQ_INIT_GLM)
 !-------------------------------------------------------------------------------
 ! Initialize the GLM-AED2 driver by reading settings from aed.nml.
 !-------------------------------------------------------------------------------
@@ -233,7 +238,7 @@ SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,pKw) BIND(C, name=_WQ_
    CCHARACTER,INTENT(in) :: i_fname(*)
    CINTEGER,INTENT(in)   :: len
    CINTEGER,INTENT(in)   :: MaxLayers
-   CINTEGER,INTENT(out)  :: NumWQ_Vars
+   CINTEGER,INTENT(out)  :: NumWQ_Vars, NumWQ_Ben
    AED_REAL,INTENT(in)   :: pKw
 !
 !LOCALS
@@ -298,15 +303,24 @@ SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,pKw) BIND(C, name=_WQ_
    ALLOCATE(bennames(n_vars_ben),stat=status)
    IF (status /= 0) STOP 'allocate_memory(): Error allocating (bennames)'
 
-   NumWQ_Vars = n_vars + n_vars_ben
+#if PLOTS
+   ALLOCATE(plot_id_v(n_vars))
+   ALLOCATE(plot_id_sv(n_vars_ben))
+   ALLOCATE(plot_id_d(n_vars_diag))
+   ALLOCATE(plot_id_sd(n_vars_diag_sheet))
+   plot_id_v = -1; plot_id_sv = -1; plot_id_d = -1; plot_id_sd = -1
+#endif
+
+   NumWQ_Vars = n_vars
+   NumWQ_Ben  = n_vars_ben
    !# Now that we know how many vars we need, we can allocate space for them
-   ALLOCATE(cc(MaxLayers, NumWQ_Vars),stat=status)
+   ALLOCATE(cc(MaxLayers, (n_vars + n_vars_ben)),stat=status)
    IF (status /= 0) STOP 'allocate_memory(): Error allocating (CC)'
    cc = 0.         !# initialise to zero
 
    CALL set_c_wqvars_ptr(cc)
 
-   ALLOCATE(min_(NumWQ_Vars)) ; ALLOCATE(max_(NumWQ_Vars))
+   ALLOCATE(min_((n_vars + n_vars_ben))) ; ALLOCATE(max_((n_vars + n_vars_ben)))
 
    j = 0
    DO i=1,n_aed2_vars
@@ -338,7 +352,7 @@ SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,pKw) BIND(C, name=_WQ_
    DO i=1,n_aed2_vars
       IF ( aed2_get_var(i, tvar) ) THEN
          IF ( tvar%diag ) THEN
-            if ( .not.  tvar%sheet ) then
+            if ( .NOT.  tvar%sheet ) then
                j = j + 1
                print *,"AED2 diag name(",j,") : ", TRIM(tvar%name)
             endif
@@ -420,14 +434,63 @@ END SUBROUTINE aed2_init_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+!###############################################################################
+CINTEGER FUNCTION aed2_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CINTEGER,INTENT(in)   :: id
+   CCHARACTER,INTENT(in) :: i_vname(*)
+   CINTEGER,INTENT(in)   :: len
+!LOCALS
+   CHARACTER(len=45) :: vname
+   TYPE(aed2_variable_t),POINTER :: tvar
+   INTEGER :: i, v, sv, d, sd
+!-------------------------------------------------------------------------------
+!BEGIN
+   CALL make_string(vname, i_vname, len)
+
+   v = 0; sv = 0; d = 0; sd = 0
+   DO i=1,n_aed2_vars
+      IF ( aed2_get_var(i, tvar) ) THEN
+         IF ( .NOT. (tvar%diag .OR. tvar%extern) ) THEN
+            IF (tvar%sheet) THEN ; sv=sv+1; ELSE ; v=v+1 ; ENDIF
+            IF ( TRIM(tvar%name) == vname ) THEN
+                IF (tvar%sheet) THEN
+                   aed2_is_var=-sv
+                   plot_id_sv(sv) = id;
+                ELSE
+                   aed2_is_var=v
+                   plot_id_v(v) = id;
+                ENDIF
+                RETURN
+            ENDIF
+         ELSEIF ( tvar%diag ) THEN
+            IF (tvar%sheet) THEN ; sd=sd+1; ELSE ; d=d+1 ; ENDIF
+            IF ( TRIM(tvar%name) == vname ) THEN
+                IF (tvar%sheet) THEN
+                   aed2_is_var=-sd
+                   plot_id_sd(sd) = id;
+                ELSE
+                   aed2_is_var=d
+                   plot_id_d(d) = id;
+                ENDIF
+                RETURN
+            ENDIF
+         ENDIF
+      ENDIF
+   ENDDO
+   aed2_is_var = 0
+END FUNCTION aed2_is_var
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
 #ifdef __GFORTRAN__
 !###############################################################################
 !# This is a fudge for gFortran. I'm guessing intel fortran creates the
 !# required structures in global space for the associations, but gfortran
-!# only creates them on the local stack so they are lost once the subroutine exits
+!# only creates them on the local stack so they are lost once the subroutine
+!# that was called from C exits.
 !# Linking fails with "undefined reference to `span.0'"
-!# With more recent gfortran (4.8, 4.9 and 5.0beta) the direct assignment segfaults
-!# with internal compiler error
 !# It only applies to Lake which is the only array.
 !# This routine is accessed by the macro _LINK_POINTER_ which for non-gfortran
 !# compilers will just be dst => src but for gfortran becauses a routine
@@ -465,7 +528,7 @@ SUBROUTINE aed2_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(z, Lake%Height)
    _LINK_POINTER_(temp, Lake%Temp)
    _LINK_POINTER_(salt, Lake%Salinity)
-   _LINK_POINTER_(rho, Lake%SPDensity)
+   _LINK_POINTER_(rho, Lake%Density)
    _LINK_POINTER_(area, Lake%LayerArea)
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
@@ -824,6 +887,9 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
             cc(lev, v) = cc(lev, v) + dt_eff*flux(lev, v)
          ENDDO
       ENDDO
+      DO v = n_vars+1, n_vars+n_vars_ben
+         cc(1, v) = cc(1, v) + dt_eff*flux_ben(v)
+      ENDDO
 #endif
       CALL check_states(column,wlev)
    ENDDO
@@ -977,14 +1043,14 @@ SUBROUTINE aed2_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
                !# Process and store diagnostic variables defined on horizontal slices of the domain.
                CALL store_nc_scalar(ncid, externalid(i), XYT_SHAPE, scalar=cc_diag_hz(sd))
 #ifdef PLOTS
-               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc_diag_hz(sd))
+               IF ( do_plots .AND. plot_id_sd(sd).GE.0 ) CALL put_glm_val_s(plot_id_sd(sd),cc_diag_hz(sd))
 #endif
             ELSE
                d = d + 1
                !# Store diagnostic variable values.
                CALL store_nc_array(ncid, externalid(i), XYZT_SHAPE, wlev, nlev, array=cc_diag(:, d))
 #ifdef PLOTS
-               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc_diag(1:wlev, d))
+               IF ( do_plots .AND. plot_id_d(d).GE.0 ) CALL put_glm_val(plot_id_d(d), cc_diag(1:wlev, d))
 #endif
             ENDIF
          ELSE IF ( .NOT. tv%extern ) THEN
@@ -993,14 +1059,14 @@ SUBROUTINE aed2_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
                !# Store benthic biogeochemical state variables.
                CALL store_nc_scalar(ncid, externalid(i), XYT_SHAPE, scalar=cc(1, n_vars+sv))
 #ifdef PLOTS
-               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc(1, n_vars+sv))
+               IF ( do_plots .AND. plot_id_sv(sv).GE.0 ) CALL put_glm_val_s(plot_id_sv(sv), cc(1, n_vars+sv))
 #endif
             ELSE
                v = v + 1
                !# Store pelagic biogeochemical state variables.
                CALL store_nc_array(ncid, externalid(i), XYZT_SHAPE, wlev, nlev, array=cc(:, v))
 #ifdef PLOTS
-               IF ( do_plots ) CALL put_xplot_val(tv%name, len_trim(tv%name), wlev, cc(1:wlev, v))
+               IF ( do_plots .AND. plot_id_v(v).GE.0 ) CALL put_glm_val(plot_id_v(v), cc(1:wlev, v))
 #endif
                DO j=1,point_nlevs
                   IF (lvl(j) .GE. 0) THEN ; val_out = cc(lvl(j)+1, v)

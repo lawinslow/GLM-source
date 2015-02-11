@@ -39,11 +39,9 @@
 #include <colours.h>
 
 #ifdef _WIN32
- #include <WinBasic.h>
  #define snprintf _snprintf
-#else
- #include <xbasic.h>
 #endif
+#include <ui_basic.h>
 
 #define pushButton        0
 
@@ -82,7 +80,7 @@ int main(int argc, char *argv[])
     int item_id, okItm;
 
     maxx=420; maxy=360;
-    InitX(&maxx, &maxy);
+    InitUI(&maxx, &maxy);
 
     okItm = NewControl(pushButton, "Done", 310, 320, 80, 20);
     DisableControl(okItm);
@@ -111,6 +109,6 @@ int main(int argc, char *argv[])
 
     gdImageDestroy(im);
 
-    CleanupX();
+    CleanupUI();
     exit(0);
 }

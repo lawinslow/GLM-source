@@ -150,12 +150,12 @@
   <ItemGroup>
     <ClCompile Include="..\..\src\colours.c" />
     <ClCompile Include="..\..\src\plotter.c" />
-    <ClCompile Include="..\..\src\WinBasic.c" />
+    <ClCompile Include="..\..\src\winbasic.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\include\colours.h" />
     <ClInclude Include="..\..\include\plotter.h" />
-    <ClInclude Include="..\..\include\WinBasic.h" />
+    <ClInclude Include="..\..\include\ui_basic.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

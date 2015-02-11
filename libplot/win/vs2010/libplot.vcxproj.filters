@@ -21,7 +21,7 @@
     <ClCompile Include="..\..\src\plotter.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\src\WinBasic.c">
+    <ClCompile Include="..\..\src\winbasic.c">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -32,7 +32,7 @@
     <ClInclude Include="..\..\include\plotter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\..\include\WinBasic.h">
+    <ClInclude Include="..\..\include\ui_basic.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

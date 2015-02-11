@@ -1,3 +1,11 @@
+Version 1.0.12
+Added preliminary mac version
+Conditional compile to not try font change when on windows (it didnt work anyway)
+
+Version 1.0.11
+Changed InitX and CleanupX to InitUI and CleanupUI to be more generic
+Removed WinBasic.h and renamed xbasic.h to ui_basic.h
+
 Version 1.0.6
 
 Axis labelling auto-selects scientific notation is ((max/min > 0 && < 0.01) || > 10000)

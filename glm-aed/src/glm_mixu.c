@@ -46,26 +46,21 @@
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-void add_this_layer(AED_REAL *VMbig, AED_REAL *VMsml, AED_REAL *Tbig, AED_REAL *Tsml,
-                    AED_REAL *Sbig, AED_REAL *Ssml, AED_REAL *VMLOC, AED_REAL *TMLOC,
+void add_this_layer(AED_REAL *VMsum, AED_REAL *Tsum,
+                    AED_REAL *Ssum, AED_REAL *VMLOC, AED_REAL *TMLOC,
                     AED_REAL *SMLOC, AED_REAL *DFLOC, int idx)
 {
-    AED_REAL WTbig;
-    AED_REAL WTsml;
+    AED_REAL Layer_Mass;
 
-    WTbig = rho0 * Lake[idx].LayerVol;
-    WTsml = Lake[idx].SPDensity * Lake[idx].LayerVol;
+    Layer_Mass = Lake[idx].Density * Lake[idx].LayerVol;
 
-    *VMbig += WTbig;
-    *VMsml += WTsml;
-    *Tbig  += (Lake[idx].Temp * WTbig);
-    *Tsml  += (Lake[idx].Temp * WTsml);
-    *Sbig  += (Lake[idx].Salinity * WTbig);
-    *Ssml  += (Lake[idx].Salinity * WTsml);
+    *VMsum += Layer_Mass;
+    *Tsum  += (Lake[idx].Temp * Layer_Mass);
+    *Ssum  += (Lake[idx].Salinity * Layer_Mass);
 
-    *VMLOC = *VMbig + *VMsml;
-    *TMLOC = (*Tsml + *Tbig) / (*VMLOC);
-    *SMLOC = (*Ssml + *Sbig) / (*VMLOC);
+    *VMLOC = *VMsum;            //Combined volumetic mass
+    *TMLOC = *Tsum / (*VMLOC);  //Combined temperature
+    *SMLOC = *Ssum / (*VMLOC);  //Combined salinity
 
     *DFLOC = calculate_density(*TMLOC,*SMLOC);
 }
@@ -84,7 +79,7 @@ void average_layer(int *j, int *k,
     for (i = jl; i < NumLayers; i++) {
         Lake[i].Temp = MeanTemp;
         Lake[i].Salinity = MeanSalt;
-        Lake[i].SPDensity = Dens;
+        Lake[i].Density = Dens;
     }
 
     (*j) -= 1;
@@ -139,7 +134,7 @@ void resize_internals(int icode, int lnu)
          **********************************************************************/
         VolSum = 0.0;
         for (k = 0; k < NumInf; k++)
-            VolSum += Inflows[k].TotIn*ML2m3;
+            VolSum += Inflows[k].TotIn;
 
  //     while(1) {
         while(NumLayers > 1) { // stop at 1
@@ -159,12 +154,12 @@ void resize_internals(int icode, int lnu)
             Lake[surfLayer-1].LayerArea = Lake[surfLayer].LayerArea;
             Lake[surfLayer-1].Height = Lake[surfLayer].Height;
             Lake[surfLayer-1].Temp =
-                    combine(Lake[surfLayer-1].Temp, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].SPDensity,
-                            Lake[surfLayer].Temp,   Lake[surfLayer].LayerVol,   Lake[surfLayer].SPDensity);
+                    combine(Lake[surfLayer-1].Temp, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].Density,
+                            Lake[surfLayer].Temp,   Lake[surfLayer].LayerVol,   Lake[surfLayer].Density);
             Lake[surfLayer-1].Salinity =
-                    combine(Lake[surfLayer-1].Salinity, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].SPDensity,
-                            Lake[surfLayer].Salinity,   Lake[surfLayer].LayerVol,   Lake[surfLayer].SPDensity);
-            Lake[surfLayer-1].SPDensity = calculate_density(Lake[surfLayer-1].Temp, Lake[surfLayer-1].Salinity);
+                    combine(Lake[surfLayer-1].Salinity, Lake[surfLayer-1].LayerVol, Lake[surfLayer-1].Density,
+                            Lake[surfLayer].Salinity,   Lake[surfLayer].LayerVol,   Lake[surfLayer].Density);
+            Lake[surfLayer-1].Density = calculate_density(Lake[surfLayer-1].Temp, Lake[surfLayer-1].Salinity);
 
             NumLayers--;
             if (surfLayer < ln) {
@@ -181,7 +176,7 @@ void resize_internals(int icode, int lnu)
          **********************************************************************/
         VolSum = Lake[surfLayer].Vol1;
         for (i = 0; i < NumInf; i++)
-            VolSum += Inflows[i].TotIn*ML2m3;
+            VolSum += Inflows[i].TotIn;
 
         j = 0;
         while (j < Nmorph) {

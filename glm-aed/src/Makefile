@@ -33,12 +33,13 @@
 #                                                                             #
 ###############################################################################
 
-ifeq ($(OSTYPE),Darwin)
-  WITH_PLOTS=false
-  WITH_XPLOTS=false
-else
+OSTYPE=$(shell uname -s)
+
+ifeq ($(WITH_PLOTS),)
   WITH_PLOTS=true
-  WITH_XPLOTS=true
+  ifeq ($(WITH_XPLOTS),)
+    WITH_XPLOTS=true
+  endif
 endif
 
 UTILDIR=../../libutil
@@ -59,6 +60,8 @@ endif
 ifeq ($(SINGLE),true)
   DEFINES += -DSINGLE=1
 endif
+
+DEFINES += -DBUBBLER=1
 
 ifeq ($(OSTYPE),Darwin)
   FINCLUDES+=-I/opt/local/include
@@ -198,7 +201,11 @@ LIBS+=-lnetcdf
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
-    LIBS+=-lX11
+    ifeq ($(OSTYPE),Darwin)
+      LIBS+=-framework Cocoa
+    else
+      LIBS+=-lX11
+    endif
   endif
 endif
 
@@ -256,8 +263,8 @@ glm: $(OBJS) $(GLM_DEPS)
 	$(CC) -o glm $(EXTRALINKFLAGS) $(OBJS) $(LIBS)
 
 clean:
-	@touch 1.o 1.mod 1.t 1__genmod.f90 glm 1.so
-	@/bin/rm *.mod *.o *.t *__genmod.f90 glm *.so
+	@touch 1.o 1.mod 1.t 1__genmod.f90 glm 1.so glm_test_bird
+	@/bin/rm *.mod *.o *.t *__genmod.f90 glm *.so glm_test_bird
 	@echo Made clean
 
 distclean: clean

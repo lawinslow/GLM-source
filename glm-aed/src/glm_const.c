@@ -55,8 +55,8 @@ const AED_REAL SecsPerDay = 86400.0;
 const AED_REAL missing    = MISVAL;
 
 const AED_REAL Kelvin = 273.15;     // kelvin to celsius conversion
-const AED_REAL latent = 2.453E+9;
-const AED_REAL SPHEAT = 4.186;      // Specific heat of water  J/(kg·K) (15 °C, 101.325 kPa)
+const AED_REAL Latent_Heat_Evap = 2.453E+6;  // Latent heat of evaporation J/kg
+const AED_REAL SPHEAT = 4185.5;      // Specific heat of water  J/(kg·K) (15 °C, 101.325 kPa)
 const AED_REAL Rspecific = 287.058; // Gas constant  J/kg/K
 const AED_REAL Stefan_Boltzman = 5.67E-8;  //# Stefan-Boltzman constant
 

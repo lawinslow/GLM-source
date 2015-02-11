@@ -86,6 +86,7 @@ extern AED_REAL Kw;      //* background light attenuation (m**-1)
 extern int wq_calc;      //* are we doing water quality calcs
 
 extern int Num_WQ_Vars;      //* number of water quality variables
+extern int Num_WQ_Ben;       //* number of benthic water quality variables
 extern AED_REAL *WQ_Vars;    //* water quality array : nlayers, nvars
 
 extern CLOGICAL atm_stab;      // Account for non-neutral atmospheric stability
@@ -164,7 +165,7 @@ extern int      cloud_mode;
 
 /*----------------------------------------------------------------------------*/
 
-extern AED_REAL timezone, timezone_m, timezone_i, timezone_o;
+extern AED_REAL timezone_r, timezone_m, timezone_i, timezone_o;
 
 /*----------------------------------------------------------------------------*/
 

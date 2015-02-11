@@ -37,4 +37,6 @@ void write_diags(int jday, AED_REAL LakeNum);
 void write_outflow(int of_idx, int jday, AED_REAL vol);
 void close_output(void);
 
+int intern_is_var(int id, const char *v);
+
 #endif

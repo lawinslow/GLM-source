@@ -187,7 +187,7 @@ SUBROUTINE phyto_internal_nitrogen(phytos,group,do_N2uptake,phy,IN,primprod,   &
    AED_REAL,INTENT(in)                         :: IN
    AED_REAL,INTENT(in)                         :: primprod
    AED_REAL,INTENT(in)                         :: fT,no3up,nh4up
-   AED_REAL,INTENT(out)                        :: a_nfix
+   AED_REAL,INTENT(inout)                      :: a_nfix
    AED_REAL,INTENT(in)                         :: respiration,exudation
    AED_REAL,INTENT(out)                        :: PNf
    AED_REAL,INTENT(out)                        :: uptake(:),excretion,mortality
