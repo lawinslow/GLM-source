@@ -445,7 +445,9 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%state_variables,1)
       IF ( TRIM(model%info%state_variables(i)%name) == vname ) THEN
          fabm_is_var=i
+#ifdef PLOTS
          plot_id_v(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
@@ -453,7 +455,9 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%state_variables_ben,1)
       IF ( TRIM(model%info%state_variables_ben(i)%name) == vname ) THEN
          fabm_is_var=-i
+#ifdef PLOTS
          plot_id_sv(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
@@ -461,7 +465,9 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%diagnostic_variables,1)
       IF ( TRIM(model%info%diagnostic_variables(i)%name) == vname ) THEN
          fabm_is_var=i
+#ifdef PLOTS
          plot_id_d(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
@@ -469,7 +475,9 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%diagnostic_variables_hz,1)
       IF ( TRIM(model%info%diagnostic_variables_hz(i)%name) == vname ) THEN
          fabm_is_var=-i
+#ifdef PLOTS
          plot_id_sd(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO

@@ -457,10 +457,14 @@ CINTEGER FUNCTION aed2_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
             IF ( TRIM(tvar%name) == vname ) THEN
                 IF (tvar%sheet) THEN
                    aed2_is_var=-sv
+#ifdef PLOTS
                    plot_id_sv(sv) = id;
+#endif
                 ELSE
                    aed2_is_var=v
+#ifdef PLOTS
                    plot_id_v(v) = id;
+#endif
                 ENDIF
                 RETURN
             ENDIF
@@ -469,10 +473,14 @@ CINTEGER FUNCTION aed2_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
             IF ( TRIM(tvar%name) == vname ) THEN
                 IF (tvar%sheet) THEN
                    aed2_is_var=-sd
+#ifdef PLOTS
                    plot_id_sd(sd) = id;
+#endif
                 ELSE
                    aed2_is_var=d
+#ifdef PLOTS
                    plot_id_d(d) = id;
+#endif
                 ENDIF
                 RETURN
             ENDIF
