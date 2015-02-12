@@ -118,7 +118,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     char           *stop  = NULL;
     AED_REAL        dt;        // timestep
     int             num_days;  // number of days to run the sim
-//  AED_REAL        timezone;
+//  AED_REAL        timezone_r;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
@@ -129,6 +129,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 //  LOGICAL         out_lkn;
 //  int             nsave;
     int             csv_point_nlevs  = 0;
+    LOGICAL        *csv_point_frombot = NULL;
     char           *csv_point_fname  = NULL;
     AED_REAL       *csv_point_at     = NULL;
     int             csv_point_nvars  = 0;
@@ -243,7 +244,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "stop",              TYPE_STR,              &stop              },
           { "dt",                TYPE_DOUBLE,           &dt                },
           { "num_days",          TYPE_INT,              &num_days          },
-          { "timezone",          TYPE_DOUBLE,           &timezone          },
+          { "timezone",          TYPE_DOUBLE,           &timezone_r        },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST output[] = {
@@ -254,6 +255,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "nsave",             TYPE_INT,               nsave             },
           { "csv_point_nlevs",   TYPE_INT,              &csv_point_nlevs   },
           { "csv_point_fname",   TYPE_STR,              &csv_point_fname   },
+          { "csv_point_frombot",   TYPE_BOOL|MASK_LIST, &csv_point_frombot },
           { "csv_point_at",      TYPE_DOUBLE|MASK_LIST, &csv_point_at      },
           { "csv_point_nvars",   TYPE_INT,              &csv_point_nvars   },
           { "csv_point_vars",    TYPE_STR|MASK_LIST,    &csv_point_vars    },
@@ -365,9 +367,6 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
     wq_calc   = TRUE;
 
-//  fprintf(stderr,
-//      "0) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-//                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
     if ( get_namelist(namlst, wq_setup) ) {
         fprintf(stderr, "No WQ config\n");
         wq_lib            = "aed2";
@@ -376,13 +375,6 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
-//  } else {
-//      fprintf(stderr, "WQ Config :\n  wq_lib   = '%s'\n  wq_nml_file = '%s'\n",
-//           wq_lib,
-//           wq_nml_file);
-//  fprintf(stderr,
-//      "1) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-//                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
     }
 
     //-------------------------------------------------
@@ -391,9 +383,9 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         exit(1);
     }
     // set met, inflow and outflow data file timezones to be the default value.
-    timezone_m = timezone;
-    timezone_i = timezone;
-    timezone_o = timezone;
+    timezone_m = timezone_r;
+    timezone_i = timezone_r;
+    timezone_o = timezone_r;
 
     nDays = num_days;
     timestep = dt;
@@ -422,6 +414,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     if ( csv_point_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_point_nlevs must be < %d\n", MaxCSVOutVars); exit(1); }
     if ( csv_outlet_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_outlet_nlevs must be < %d\n", MaxCSVOutVars); exit(1); }
 
+    if ( csv_point_frombot == NULL ) {
+            csv_point_frombot = malloc(sizeof(LOGICAL)*csv_point_nlevs);
+            for (i = 0; i < csv_point_nlevs; i++) csv_point_frombot[i] = TRUE;
+        }
+
     if ( wq_calc ) {
         for (i = 0; i < csv_point_nvars; i++)
             set_csv_point_varname(i, csv_point_vars[i]);
@@ -438,7 +435,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         }
         csv_point_nvars = tn;
     }
-    configure_csv(csv_point_nlevs, csv_point_at, csv_point_fname, csv_point_nvars, csv_lake_fname);
+    configure_csv(csv_point_nlevs, csv_point_at, csv_point_fname, csv_point_frombot, csv_point_nvars, csv_lake_fname);
 
     if ( wq_calc ) {
         for (i = 0; i < csv_outlet_nvars; i++)
@@ -624,11 +621,8 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     if ( wq_calc ) {
         int l = strlen(wq_nml_file);
 
-//  fprintf(stderr,
-//      "2) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-//                  split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
         prime_glm_wq(wq_lib);
-        wq_init_glm(wq_nml_file, &l, &MaxLayers, &Num_WQ_Vars, &Kw); // Reads WQ namelist file
+        wq_init_glm(wq_nml_file, &l, &MaxLayers, &Num_WQ_Vars, &Num_WQ_Ben, &Kw); // Reads WQ namelist file
         fprintf(stderr, "Num_WQ_Vars = %d\n", Num_WQ_Vars);
         if ( Num_WQ_Vars > MaxVars ) {
             fprintf(stderr, "Sorry, this version of GLM only supports %d water quality variables\n", MaxVars);
@@ -768,7 +762,6 @@ void create_lake(int namlst)
     }
 
     for (i = 0; i < bsn_vals; i++) {
-        //A[i] /= 1000.0;
         H[i] -= Base;
 
         if (A[i] <= 0.0 ) kar++;
@@ -878,7 +871,7 @@ void create_lake(int namlst)
     y = AMOD(x, 1.0);
     ij = x-y;
     if (ij >= Nmorph) {
-        y =+ (ij - Nmorph);
+        y += (ij - Nmorph);
         ij = Nmorph;
     }
     ij--;
@@ -1040,7 +1033,7 @@ void initialise_lake(int namlst)
 
     // calculate the density from the temp and salinity just read in
     for (i = botmLayer; i < NumLayers; i++)
-        Lake[i].SPDensity = calculate_density(Lake[i].Temp, Lake[i].Salinity);
+        Lake[i].Density = calculate_density(Lake[i].Temp, Lake[i].Salinity);
 
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/

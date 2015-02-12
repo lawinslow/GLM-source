@@ -94,7 +94,7 @@ AED_REAL sqr(AED_REAL x) { return x*x; }
  * and rho_ref = (rho1 + rho2)                                                *
  ******************************************************************************/
 AED_REAL gprime(AED_REAL rho1, AED_REAL rho2)
-{ return ((rho2 - rho1) * 9.81 * 2.0) / ((rho1 + rho2) + 2000.0); }
+{ return g * (rho2 - rho1) / ((rho1 + rho2) / 2.0); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 #endif
 
@@ -186,21 +186,14 @@ AED_REAL delta_volume(AED_REAL z1, AED_REAL z2, AED_REAL da, AED_REAL avdel,
 AED_REAL combine(AED_REAL c1, AED_REAL v1, AED_REAL d1,
                  AED_REAL c2, AED_REAL v2, AED_REAL d2)
 {
-    AED_REAL M1big, M1sml;
-    AED_REAL M2big, M2sml;
     AED_REAL MTotal;
 
 /*----------------------------------------------------------------------------*/
     if (fabs(c1-c2) < 1e-5 && fabs(d1-d2) < 1e-5) return c1;
 
-    M1big = v1 * rho0;
-    M1sml = v1 * d1;
-    M2big = v2 * rho0;
-    M2sml = v2 * d2;
+    MTotal = v1 * d1 + v2 * d2;
 
-    MTotal = M1sml + M2sml + M1big + M2big;
-
-    return ((c1*M1sml+c2*M2sml) + rho0*(c1*v1+c2*v2)) / MTotal;
+    return (c1 * v1 * d1 + c2 * v2 * d2) / MTotal;
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
@@ -221,9 +214,6 @@ AED_REAL combine_vol(AED_REAL c1,AED_REAL v1,AED_REAL c2,AED_REAL v2)
  * Function to calculate the density (rho) of water at a given temperature    *
  * (deg C) and salinity (ppm) based on UNESCO (1981) polynomial               *
  *                                                                            *
- * Note: this estimate actually returns (density - 1000)                      *
- *       c1 accounts for this correction (=999.842594) is desired             *
- *                                                                            *
  ******************************************************************************/
 AED_REAL calculate_density(AED_REAL temp, AED_REAL salt)
 {
@@ -236,7 +226,7 @@ AED_REAL calculate_density(AED_REAL temp, AED_REAL salt)
 
     AED_REAL term[15];
 
-    const AED_REAL c1=0.157406,    c2=6.793952E-2, c3=9.095290E-3,
+    const AED_REAL c1=999.842594,  c2=6.793952E-2, c3=9.095290E-3,
                    c4=1.001685E-4, c5=1.120083E-6, c6=6.536332E-9,
                    d1=8.24493E-1,  d2=4.0899E-3,   d3=7.6438E-5,
                    d4=8.2467E-7,   d5=5.3875E-9,   d6=5.72466E-3,
@@ -254,7 +244,7 @@ AED_REAL calculate_density(AED_REAL temp, AED_REAL salt)
     s2 = s1*s1;
     s32 = pow(s1,1.5);
 
-    term[0]  = -c1;
+    term[0]  =  c1;
     term[1]  =  c2 * t1;
     term[2]  = -c3 * t2;
     term[3]  =  c4 * t3;

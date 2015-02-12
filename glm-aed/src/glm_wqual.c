@@ -62,11 +62,9 @@ wq_init_glm_output_t p_wq_init_glm_output = NULL;
 wq_write_glm_t       p_wq_write_glm       = NULL;
 wq_var_index_c_t     p_wq_var_index_c     = NULL;
 wq_set_flags_t       p_wq_set_flags       = NULL;
+wq_is_var_t          p_wq_is_var          = NULL;
 
 
-//extern int ode_method, split_factor;
-//extern CLOGICAL bioshade_feedback, repair_state, multi_ben;
-//extern CLOGICAL mobility_off;     //  !# flag to turn mobility off
 int ode_method = 1, split_factor = 1;
 CLOGICAL bioshade_feedback = TRUE, repair_state = TRUE, multi_ben = TRUE;
 CLOGICAL mobility_off = FALSE;     //  !# flag to turn mobility off
@@ -128,6 +126,7 @@ int prime_glm_wq(const char *which)
     p_wq_write_glm       =       (wq_write_glm_t) find_entry(glm_wq_handle, "wq_write_glm");
     p_wq_var_index_c     =     (wq_var_index_c_t) find_entry(glm_wq_handle, "wq_var_index_c");
     p_wq_set_flags       =       (wq_set_flags_t) find_entry(glm_wq_handle, "wq_set_flags");
+    p_wq_is_var          =          (wq_is_var_t) find_entry(glm_wq_handle, "wq_is_var");
 #ifdef _WIN32
     p_set_funcs          =          (set_funcs_t) find_entry(glm_wq_handle, "set_funcs");
 
@@ -149,6 +148,7 @@ int prime_glm_wq(const char *which)
         p_wq_write_glm       =       (wq_write_glm_t) fabm_write_glm;
         p_wq_var_index_c     =     (wq_var_index_c_t) fabm_var_index_c;
         p_wq_set_flags       =       (wq_set_flags_t) fabm_set_flags;
+        p_wq_is_var          =          (wq_is_var_t) fabm_is_var;
 #else
         fprintf(stderr, "FABM not supported in this build\n");
         exit(1);
@@ -163,6 +163,7 @@ int prime_glm_wq(const char *which)
         p_wq_write_glm       =       (wq_write_glm_t) aed2_write_glm;
         p_wq_var_index_c     =     (wq_var_index_c_t) aed2_var_index_c;
         p_wq_set_flags       =       (wq_set_flags_t) aed2_set_flags;
+        p_wq_is_var          =          (wq_is_var_t) aed2_is_var;
 #else
         fprintf(stderr, "AED2 not supported in this build\n");
         exit(1);
@@ -170,6 +171,8 @@ int prime_glm_wq(const char *which)
     }
 #endif
 
+    // This is weird. Comment out the debug frpintf below and the flags come out wrong, leave the debug in and
+    // they are OK ....
     fprintf(stderr,
         "X) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
                     split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);

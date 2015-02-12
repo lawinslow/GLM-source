@@ -28,7 +28,7 @@
 #ifndef _LIB_PLOT_H_
 #define _LIB_PLOT_H_
 
-#define LIB_PLOT_VERSION "1.0.10"
+#define LIB_PLOT_VERSION "1.0.12"
 
 #define PF_TITLE  1
 #define PF_LABEL  2
@@ -152,6 +152,7 @@
    void plot_value(int plot, double x, double y, double z);
 #  ifdef XPLOTS
    void flush_plot(int plot);
+   void flush_all_plots(void);
 #  endif
    void do_cleanup(int saveall);
 

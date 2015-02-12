@@ -139,7 +139,7 @@ typedef char filname[80];
    // Structured type for key global lake environmental vars
    // A Lake will be an allocated array of MaxLayers of these
    typedef struct LakeDataType {
-       AED_REAL SPDensity;       // specific density
+       AED_REAL Density;         // Density kg/m3
        AED_REAL Temp;            // temperature
        AED_REAL Salinity;        // salinity
        AED_REAL Height;          // 1-D depth array

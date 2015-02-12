@@ -43,7 +43,7 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include <xbasic.h>
+#include <ui_basic.h>
 
 /******************************************************************************/
 
@@ -132,10 +132,10 @@ typedef struct _pic_item {
 } PictureItem;
 
 /******************************************************************************/
+#define MENU_BAR_HEIGHT 20
 #if INCLUDE_MENUS
 
 #define MENU_ITEM_HEIGHT 20
-#define MENU_BAR_HEIGHT 20
 
 typedef struct _menu_info {
     int    menuID;
@@ -1131,6 +1131,16 @@ void InvertRoundRect(int left, int top, int width, int height,
 }
 
 /******************************************************************************
+ * The FlushUI was added for Mac, butmay be a good idea for X if properly     *
+ * implemented - for now this is a simple fudge                               *
+ ******************************************************************************/
+void FlushUI()
+{
+    if ( _window == 0L ) return;
+    _check_event();
+}
+
+/******************************************************************************
  *                                                                            *
  ******************************************************************************/
 int CheckUI()
@@ -1688,7 +1698,7 @@ unsigned long int MakeColour(int red, int green, int blue)
 }
 
 /******************************************************************************/
-int InitX(int *width, int *height)
+int InitUI(int *width, int *height)
 {
     display = XOpenDisplay(NULL);  /* open the default display */
     if ( display == NULL ) {
@@ -1732,7 +1742,7 @@ int InitX(int *width, int *height)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-int CleanupX()
+int CleanupUI()
 {
     if ( _window == 0L ) return -1;
 

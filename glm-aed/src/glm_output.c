@@ -32,6 +32,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #ifndef _WIN32
@@ -65,6 +66,7 @@ void wq_write_glm(int ncid, int wlev, int nlev, int *lvl, int point_nlevs)
 
 extern AED_REAL XLW, XCO, XEV, QSW;
 
+static int plot_id[10];
 
 /******************************************************************************
  * Initialise output streams                                                  *
@@ -100,7 +102,11 @@ void init_output(int jstart, const char *out_dir, const char *out_fn,
     if (wq_calc) wq_init_glm_output(&ncid, &x_dim, &y_dim, &z_dim, &time_dim);
 
 #ifdef PLOTS
-    if ( do_plots ) init_plots(jstart,nDays,CrestLevel);
+    if ( do_plots ) {
+        int i;
+        for (i = 0; i < 10; i++) plot_id[i] = -1;
+        init_plots(jstart,nDays,CrestLevel);
+    }
 #endif
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
@@ -168,6 +174,32 @@ static AED_REAL max_dtdz_at(LakeDataType *Lake, int count)
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
+#ifdef PLOTS
+/******************************************************************************
+ * Return a number > 0 if regular var, < 0 if sheet var, 0 if not a var       *
+ ******************************************************************************/
+int _intern_is_var(const char *v)
+{
+    if ( do_plots ) {
+        if (strcmp("temp", v) == 0) return 1;
+        if (strcmp("salt", v) == 0) return 2;
+        if (strcmp("rad",  v) == 0) return 3;
+        if (strcmp("extc", v) == 0) return 4;
+        if (strcmp("dens", v) == 0) return 5;
+        if (strcmp("uorb", v) == 0) return 6;
+        if (strcmp("taub", v) == 0) return 7;
+    }
+    return 0;
+}
+int intern_is_var(int id, const char *v)
+{
+    int vid = _intern_is_var(v);
+    if ( !vid ) return 0;
+    plot_id[abs(vid)-1] = id;
+    return vid;
+}
+#endif
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 /******************************************************************************
  * Write the various output files and/or plots.                               *
@@ -186,12 +218,25 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
             write_csv_point(i, "time", 0.0, ts, FALSE);
 
             //# find which level csv_at is in
-            for (n = 0; n < NumLayers; n++) {
-                if ( Lake[n].Height >= csv_point_at[i] ) {
-                    lvl[i] = n;
-                    break;
-                }
-            }
+            if (csv_point_frombot[i]) { //Measure as height from bottom layer
+               for (n = 0; n < NumLayers; n++) {
+                   if ( Lake[n].Height >= csv_point_at[i] ) {
+                       lvl[i] = n;
+                       break;
+                   }
+               }
+               }
+            else { //Measure as depth from surface
+               for (n = NumLayers-1; n >= botmLayer; n--) {
+                   if ( (Lake[surfLayer].Height - Lake[n].Height) >= csv_point_at[i] ) {
+                       lvl[i] = n + 1;
+                       break;
+                   }
+                   //If reached bottom layer
+                   if (lvl[i] == -1) lvl[i] = botmLayer;
+               }
+               }
+
 
             write_csv_point(i, "temp", Lake[lvl[i]].Temp,     NULL, FALSE);
             write_csv_point(i, "salt", Lake[lvl[i]].Salinity, NULL, FALSE);
@@ -199,15 +244,7 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
     }
 
 #ifdef PLOTS
-    if ( do_plots ) {
-        put_xplot_val("temp", NumLayers, NULL);
-        put_xplot_val("salt", NumLayers, NULL);
-        put_xplot_val("rad", NumLayers, NULL);
-        put_xplot_val("extc", NumLayers, NULL);
-        put_xplot_val("dens", NumLayers, NULL);
-        put_xplot_val("uorb", NumLayers, NULL);
-        put_xplot_val("taub", NumLayers, NULL);
-    }
+    if ( do_plots ) do_internal_plots(plot_id);
 #endif
 
     write_glm_ncdf(ncid, NumLayers, MaxLayers, stepnum, timestep);
@@ -220,14 +257,6 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
         for (i = 0; i < csv_point_nlevs; i++)
             write_csv_point(i, "", 0.0, NULL, TRUE);
     }
-
-#ifdef PLOTS
-# ifdef XPLOTS
-    if ( xdisp ) {
-        for (i = 0; i < nplots; i++) flush_plot(theplots[i]);
-    }
-# endif
-#endif
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 

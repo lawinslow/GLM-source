@@ -45,7 +45,7 @@
         CINTEGER,INTENT(in)   :: f
         CCHARACTER,INTENT(in) :: name(*)
         CINTEGER,INTENT(in)   :: len
-        AED_REAL,INTENT(in)   :: val
+        AED_REAL,INTENT(in)  :: val
         CCHARACTER,INTENT(in) :: cval(*)
         CINTEGER,INTENT(in)   :: vlen
         CLOGICAL,INTENT(in)   :: last
@@ -55,7 +55,7 @@
         USE ISO_C_BINDING
         CCHARACTER,INTENT(in) :: name(*)
         CINTEGER,INTENT(in)   :: len
-        AED_REAL,INTENT(in)   :: val
+        AED_REAL,INTENT(in)  :: val
         CCHARACTER,INTENT(in) :: cval(*)
         CINTEGER,INTENT(in)   :: vlen
         CLOGICAL,INTENT(in)   :: last
@@ -73,6 +73,7 @@
 /*############################################################################*/
 
 extern AED_REAL csv_point_at[MaxPointCSV];
+extern int csv_point_frombot[MaxPointCSV];
 extern int csv_point_nlevs;
 extern int csv_lake_file;
 
@@ -85,7 +86,7 @@ void glm_close_csv_output(void);
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 void configure_csv(int point_nlevs, AED_REAL *point_at, const char *point_fname,
-                                        int point_nvars, const char *lake_fname);
+                             int *point_frombot, int point_nvars, const char *lake_fname);
 
 void set_csv_point_varname(int which, const char *point_varnam);
 

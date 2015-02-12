@@ -58,7 +58,7 @@ extern const AED_REAL SecsPerDay;
 extern const AED_REAL missing;
 
 extern const AED_REAL Kelvin;           // kelvin to celsius conversion
-extern const AED_REAL latent;
+extern const AED_REAL Latent_Heat_Evap; // Latent heat of evaporation J/kg
 extern const AED_REAL SPHEAT;           // Specific heat of water  J/(kg·K) (15 °C, 101.325 kPa)
 extern const AED_REAL Rspecific;        // Gas constant  J/kg/K
 extern const AED_REAL Stefan_Boltzman;  //# Stefan-Boltzman constant

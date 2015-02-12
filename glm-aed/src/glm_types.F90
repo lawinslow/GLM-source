@@ -56,7 +56,7 @@ MODULE glm_types
    !# Structured type for key global lake environmental vars
    !# A Lake will be an allocated array of MaxLayers of these
    TYPE,BIND(C) :: LakeDataType
-      AED_REAL :: SPDensity        !# specific density
+      AED_REAL :: Density          !# density kg/m3
       AED_REAL :: Temp             !# temperature
       AED_REAL :: Salinity         !# salinity
       AED_REAL :: Height           !# 1-D depth array
@@ -150,8 +150,8 @@ FUNCTION make_c_string(s1,s2) RESULT(len)
    CCHARACTER,INTENT(out) :: s1(*)
    CHARACTER(len=*),INTENT(in) :: s2
 !LOCALS
-   INTEGER  :: i
-   CINTEGER :: len
+   INTEGER :: i
+   INTEGER :: len
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -159,7 +159,7 @@ FUNCTION make_c_string(s1,s2) RESULT(len)
    DO i=1,len
       s1(i) = s2(i:i)
    ENDDO
-   s1(len+1) = C_NULL_CHAR
+   s1(len+1) = ACHAR(0)
 END FUNCTION make_c_string
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

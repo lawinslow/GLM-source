@@ -3,6 +3,7 @@
 #
 # -- Since 1.4.0
 #
+# Improved plotting routines
 # Updated to latest fabm (as at 20141205)
 # Changed the WQ array index order to accommodate the new FABM
 # Added atmospheric stability to surface calcs

@@ -37,8 +37,8 @@
 ! vars  = 'temp','salt','aed_oxygen_oxy','aed_phytoplankton_green','aed_phytoplankton_diatom','aed_phytoplankton_crypto','aed_nitrogen_nit','aed_phosphorus_frp','aed_phytoplankton_green_IN'
 ! min_z =  0.0, 0.0,   0.0,   0.0,   0.0,  0.0,   0., 0., 0.
 ! max_z = 27.0, 0.91, 600.0, 150.0, 350.0, 2.5, 100., 5., 5.
-  title = 'Temperature', 'Salinity','DO','Green','Diatom','Crypto','NO3','PO4','TCHLA'
-  vars  = 'temp','salt','aed_oxygen_oxy','aed_phytoplankton_green','aed_phytoplankton_diatom','aed_phytoplankton_crypto','aed_nitrogen_nit','aed_phosphorus_frp','aed_phytoplankton_TCHLA'
+  title = 'Temperature', 'Salinity','DO','Green','Diatom','Crypto','NO3','PO4','BVZ1'
+  vars  = 'temp','salt','aed_oxygen_oxy','aed_phytoplankton_green','aed_phytoplankton_diatom','aed_phytoplankton_crypto','aed_nitrogen_nit','aed_phosphorus_frp','aed_bivalve_zoo01'
   min_z =  0.0, 0.00,   0.0,  0.0,   0.0,  0.0,  0., 0.0,  0.
   max_z = 27.0, 0.91, 400.0, 10.0, 200.0,  6.0, 60., 1.5, 32.
 /

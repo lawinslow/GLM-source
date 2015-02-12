@@ -132,7 +132,7 @@ void do_deep_mixing()
     if (iTop > botmLayer) {
         i = botmLayer + 1;
         while (i <= iTop) {
-            if (Lake[i].SPDensity-Lake[i-1].SPDensity > dens_tol) {
+            if (Lake[i].Density-Lake[i-1].Density > dens_tol) {
                 flag = FALSE;
                 break;
             }
@@ -143,7 +143,7 @@ void do_deep_mixing()
     //# Create buoyancy frequency distribution
     for (i = (botmLayer+2); i <= iTop-1; i++) {
         //# Eq XX in GLM manual
-        NSquared = gprime(Lake[i+2].SPDensity, Lake[i-2].SPDensity) / (Lake[i+2].MeanHeight - Lake[i-2].MeanHeight);
+        NSquared = gprime(Lake[i+2].Density, Lake[i-2].Density) / (Lake[i+2].MeanHeight - Lake[i-2].MeanHeight);
         if (NSquared <= 1.E-6)
             NSquared = zero;
 
@@ -201,18 +201,18 @@ void do_deep_mixing()
     for (i = 0; i < NumLayers; i++) {
         //# Update T, S and WQ
         Lake[i].Temp = _Scalars(i,0);
-        Lake[i].Salinity = _Scalars(i,1) / (Lake[i].SPDensity+rho0);
+        Lake[i].Salinity = _Scalars(i,1) / Lake[i].Density;
         for (j = 2; j < Num_WQ_Vars+2; j++)
             _WQ_Vars(j-2,i) = _Scalars(i,j);
 
         //# Calculate the new densities
-        Lake[i].SPDensity = calculate_density(Lake[i].Temp,Lake[i].Salinity);
+        Lake[i].Density = calculate_density(Lake[i].Temp,Lake[i].Salinity);
     }
 
     //# Check for instabilities - call check_layer_stability to mix
     i = botmLayer + 1;
     while (i <= surfLayer) {
-        if (Lake[i].SPDensity >= Lake[i-1].SPDensity) {
+        if (Lake[i].Density >= Lake[i-1].Density) {
             check_layer_stability();
             break;
         }
@@ -349,17 +349,14 @@ void do_dissipation()
     AED_REAL WindPower;
     AED_REAL uStar;
     AED_REAL dz_top;
-    AED_REAL Sbig;
-    AED_REAL Ssml;
+    AED_REAL Ssum;
     AED_REAL SMLOC;
     AED_REAL Sigma0M;
     AED_REAL Sigma2M;
-    AED_REAL Tbig;
-    AED_REAL Tsml;
+    AED_REAL Tsum;
     AED_REAL TMLOC;
     AED_REAL VMLOC;
-    AED_REAL VMbig;
-    AED_REAL VMsml;
+    AED_REAL VMsum;
     AED_REAL XZI;
 
     int i, kl;
@@ -391,7 +388,7 @@ void do_dissipation()
     Lake[0].MeanHeight = Lake[0].Height/2.0;
     for (i = 1; i < NumLayers; i++) {
         Lake[i].MeanHeight = (Lake[i].Height+Lake[i-1].Height)/2.0;
-        Nsquared[i] = gprime(Lake[i].SPDensity,Lake[i-1].SPDensity) /
+        Nsquared[i] = gprime(Lake[i].Density,Lake[i-1].Density) /
                             (Lake[i].MeanHeight-Lake[i-1].MeanHeight);
         XMoment1 = XMoment1 + Lake[i-1].Height*Nsquared[i]*(Lake[i].LayerVol+Lake[i-1].LayerVol)/2.0;
         XMoment0 = XMoment0 + Nsquared[i]*(Lake[i].LayerVol+Lake[i-1].LayerVol)/2.0;
@@ -412,17 +409,14 @@ void do_dissipation()
      **************************************************************************/
     CentreMassSML = zero;
     CentreMassMIX = zero;
-    Tbig  = zero;
-    Tsml  = zero;
-    Sbig  = zero;
-    Ssml  = zero;
-    VMbig = zero;
-    VMsml = zero;
+    Tsum  = zero;
+    Ssum  = zero;
+    VMsum = zero;
 
     //# Calculate first moments
     for (i = 0; i < NumLayers; i++) {
-        add_this_layer(&VMbig, &VMsml, &Tbig, &Tsml, &Sbig, &Ssml, &VMLOC, &TMLOC, &SMLOC, &DFLOC, i);
-        CentreMassSML = CentreMassSML + Lake[i].MeanHeight * Lake[i].SPDensity * Lake[i].LayerVol;
+        add_this_layer(&VMsum, &Tsum, &Ssum, &VMLOC, &TMLOC, &SMLOC, &DFLOC, i);
+        CentreMassSML = CentreMassSML + Lake[i].MeanHeight * (Lake[i].Density - rho0) * Lake[i].LayerVol;
         CentreMassMIX = CentreMassMIX + Lake[i].MeanHeight * Lake[i].LayerVol;
     }
 
@@ -479,7 +473,7 @@ void do_dissipation()
      * i.e. the change in potential energy (see do_inflows)                   *
      **************************************************************************/
     MixLayerVol = VTilda - Lake[surfLayer].LayerVol;
-    MeanDensity = rho0 + (Lake[0].SPDensity + Lake[surfLayer].SPDensity) / 2.0;
+    MeanDensity = (Lake[0].Density + Lake[surfLayer].Density) / 2.0;
     EINFW = einff / (MixLayerVol*MeanDensity);
 
     //# Include rate of working of the wind
@@ -514,7 +508,7 @@ static void join_scalar_colums(AED_REAL *Scalars)
 
     for (i = 0; i < NumLayers; i++) {
         _Scalars(i,0) = Lake[i].Temp;
-        _Scalars(i,1) = Lake[i].Salinity*(Lake[i].SPDensity+rho0);
+        _Scalars(i,1) = Lake[i].Salinity*Lake[i].Density;
 
         for (j = 2; j < Num_WQ_Vars+2; j++)
             _Scalars(i,j) = _WQ_Vars(j-2,i);
@@ -533,16 +527,16 @@ void check_layer_stability()
     while (surfLayer != botmLayer) {
         //# find an unstable layer configuration (instability)
         for (k = surfLayer; k >= (botmLayer+1); k--)
-            if (Lake[k].SPDensity > Lake[k-1].SPDensity) break;
+            if (Lake[k].Density > Lake[k-1].Density) break;
 
         if (k < (botmLayer+1)) return ;
 
         //# mix the unstable layer with the layer below
         //# do separately for T, S and WQ array
-        Lake[k-1].Temp = combine(Lake[k].Temp,   Lake[k].LayerVol,   Lake[k].SPDensity,
-                                 Lake[k-1].Temp, Lake[k-1].LayerVol, Lake[k-1].SPDensity);
-        Lake[k-1].Salinity = combine(Lake[k].Salinity,   Lake[k].LayerVol,   Lake[k].SPDensity,
-                                     Lake[k-1].Salinity, Lake[k-1].LayerVol, Lake[k-1].SPDensity);
+        Lake[k-1].Temp = combine(Lake[k].Temp,   Lake[k].LayerVol,   Lake[k].Density,
+                                 Lake[k-1].Temp, Lake[k-1].LayerVol, Lake[k-1].Density);
+        Lake[k-1].Salinity = combine(Lake[k].Salinity,   Lake[k].LayerVol,   Lake[k].Density,
+                                     Lake[k-1].Salinity, Lake[k-1].LayerVol, Lake[k-1].Density);
 
         for (wqvidx = 0; wqvidx < Num_WQ_Vars; wqvidx++)
             _WQ_Vars(wqvidx,k-1) = combine_vol(_WQ_Vars(wqvidx,k),   Lake[k].LayerVol,
@@ -556,7 +550,7 @@ void check_layer_stability()
         Lake[k-1].MeanHeight = Lake[0].Height/2.0;
         if ((k-1) != botmLayer)
             Lake[k-1].MeanHeight = (Lake[k-1].Height + Lake[k-2].Height) / 2.0;
-        Lake[k-1].SPDensity = calculate_density(Lake[k-1].Temp, Lake[k-1].Salinity);
+        Lake[k-1].Density = calculate_density(Lake[k-1].Temp, Lake[k-1].Salinity);
         Lake[k-1].Epsilon = Lake[k].Epsilon;
 
         //# adjust layer numbering of layers above mixing include water quality and particles
@@ -574,7 +568,7 @@ void check_layer_stability()
             Lake[i].LayerVol = Lake[i+1].LayerVol;
             Lake[i].Vol1 = Lake[i+1].Vol1;
             Lake[i].LayerArea = Lake[i+1].LayerArea;
-            Lake[i].SPDensity = Lake[i+1].SPDensity;
+            Lake[i].Density = Lake[i+1].Density;
         }
     }
 }

@@ -100,6 +100,7 @@ ${objdir}/aed2_iron.o \
 ${objdir}/aed2_sulfur.o \
 ${objdir}/aed2_tracer.o \
 ${objdir}/aed2_totals.o \
+${objdir}/aed2_test.o \
 ${objdir}/aed2_common.o
 
 
