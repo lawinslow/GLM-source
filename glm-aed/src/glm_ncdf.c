@@ -245,7 +245,7 @@ void write_glm_ncdf(int ncid, int wlev, int nlev, int stepnum, AED_REAL timestep
         vols[i] = Lake[i].LayerVol;
         salts[i] = Lake[i].Salinity;
         temps[i] = Lake[i].Temp;
-        dens[i] = Lake[i].SPDensity;
+        dens[i] = Lake[i].Density;
         qsw[i] = Lake[i].Light;
         extc_coef[i] = Lake[i].ExtcCoefSW;
         u_mean[i] = Lake[i].Umean;

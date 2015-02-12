@@ -94,6 +94,7 @@ MODULE glm_fabm
 # define _WQ_WRITE_GLM_      "wq_write_glm"
 # define _WQ_VAR_INDEX_C     "wq_var_index_c"
 # define _WQ_SET_FLAGS       "wq_set_flags"
+# define _WQ_IS_VAR          "wq_is_var"
 #else
 # define _WQ_INIT_GLM        "fabm_init_glm"
 # define _WQ_SET_GLM_DATA    "fabm_set_glm_data"
@@ -103,6 +104,7 @@ MODULE glm_fabm
 # define _WQ_WRITE_GLM_      "fabm_write_glm"
 # define _WQ_VAR_INDEX_C     "fabm_var_index_c"
 # define _WQ_SET_FLAGS       "fabm_set_flags"
+# define _WQ_IS_VAR          "fabm_is_var"
 #endif
 !
 !-------------------------------------------------------------------------------
@@ -143,6 +145,9 @@ MODULE glm_fabm
    AED_REAL,POINTER              :: precip, evap, bottom_stress
 
    CHARACTER(len=48),ALLOCATABLE :: names(:)
+#if PLOTS
+   INTEGER,ALLOCATABLE,DIMENSION(:) :: plot_id_v, plot_id_sv, plot_id_d, plot_id_sd
+#endif
 
    AED_REAL,ALLOCATABLE :: dz(:)         !# layer thickness
 !===============================================================================
@@ -211,7 +216,7 @@ END SUBROUTINE fabm_set_flags
 
 
 !###############################################################################
-SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ_INIT_GLM)
+SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumWQVars,NumWQBen,pKw) BIND(C, name=_WQ_INIT_GLM)
 !-------------------------------------------------------------------------------
 ! Initialize the GLM-FABM driver by reading settings from fabm.nml.
 !-------------------------------------------------------------------------------
@@ -219,12 +224,13 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ
    CCHARACTER,INTENT(in) :: i_fname(*)
    CINTEGER,INTENT(in)   :: len
    CINTEGER,INTENT(in)   :: MaxLayers
-   CINTEGER,INTENT(out)  :: NumFABMVars
+   CINTEGER,INTENT(out)  :: NumWQVars,NumWQBen
    AED_REAL,INTENT(in)   :: pKw
 !
 !LOCALS
    INTEGER :: i,rc,namlst
    CHARACTER(len=80) :: fname
+   INTEGER :: TotWQVars
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -312,19 +318,22 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ
    END SELECT
 #endif
 
-   NumFABMVars = ubound(model%info%state_variables,1) + ubound(model%info%state_variables_ben,1)
+   NumWQVars = ubound(model%info%state_variables,1)
+   NumWQBen  = ubound(model%info%state_variables_ben,1)
+
+   TotWQVars = ubound(model%info%state_variables,1) + ubound(model%info%state_variables_ben,1)
 
    ALLOCATE(dz(MaxLayers))
    dz = 0.  !# initialise to zero
 
    !# Now that we know how many vars we need, we can allocate space for them
-   ALLOCATE(cc(MaxLayers,NumFABMVars))
+   ALLOCATE(cc(MaxLayers,TotWQVars))
    cc = 0.         !# initialise to zero
 
    CALL set_c_wqvars_ptr(cc)
 
 !  print *,"Variable names :"
-   ALLOCATE(names(1:NumFABMVars),stat=rc)
+   ALLOCATE(names(1:TotWQVars),stat=rc)
    IF (rc /= 0) STOP 'allocate_memory(): Error allocating (names)'
    DO i=1,ubound(model%info%state_variables,1)
       names(i) = trim(model%info%state_variables(i)%name)
@@ -332,6 +341,13 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ
    DO i=1,ubound(model%info%state_variables_ben,1)
       names(ubound(model%info%state_variables,1)+i) = trim(model%info%state_variables_ben(i)%name)
    ENDDO
+#if PLOTS
+   ALLOCATE(plot_id_v(ubound(model%info%state_variables,1)))
+   ALLOCATE(plot_id_sv(ubound(model%info%state_variables_ben,1)))
+   ALLOCATE(plot_id_d(ubound(model%info%diagnostic_variables,1)))
+   ALLOCATE(plot_id_sd(ubound(model%info%diagnostic_variables_hz,1)))
+   plot_id_v = -1; plot_id_sv = -1; plot_id_d = -1; plot_id_sd = -1
+#endif
 
 !  print *,"Diag-Variable names :"
 !  IF ( .not. allocated(diagnames) ) ALLOCATE(diagnames(ubound(model%info%diagnostic_variables,1)))
@@ -377,7 +393,7 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ
    ENDDO
 
    !# Allocate array for mass fluxes and initialize these to zero (no flux).
-   ALLOCATE(rhs_flux(MaxLayers,NumFABMVars),stat=rc)
+   ALLOCATE(rhs_flux(MaxLayers,TotWQVars),stat=rc)
    IF (rc /= 0) STOP 'allocate_memory(): Error allocating (rhs_flux)'
    rhs_flux = _ZERO_
 
@@ -409,6 +425,65 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumFABMVars,pKw) BIND(C, name=_WQ
 
    CALL fabm_link_bulk_data(model,varname_tss,tss)
 END SUBROUTINE fabm_init_glm
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   CINTEGER,INTENT(in)   :: id
+   CCHARACTER,INTENT(in) :: i_vname(*)
+   CINTEGER,INTENT(in)   :: len
+!LOCALS
+   CHARACTER(len=45) :: vname
+   INTEGER :: i
+!-------------------------------------------------------------------------------
+!BEGIN
+   CALL make_string(vname, i_vname, len)
+
+   DO i=1,ubound(model%info%state_variables,1)
+      IF ( TRIM(model%info%state_variables(i)%name) == vname ) THEN
+         fabm_is_var=i
+#ifdef PLOTS
+         plot_id_v(i) = id;
+#endif
+         RETURN
+      ENDIF
+   ENDDO
+
+   DO i=1,ubound(model%info%state_variables_ben,1)
+      IF ( TRIM(model%info%state_variables_ben(i)%name) == vname ) THEN
+         fabm_is_var=-i
+#ifdef PLOTS
+         plot_id_sv(i) = id;
+#endif
+         RETURN
+      ENDIF
+   ENDDO
+
+   DO i=1,ubound(model%info%diagnostic_variables,1)
+      IF ( TRIM(model%info%diagnostic_variables(i)%name) == vname ) THEN
+         fabm_is_var=i
+#ifdef PLOTS
+         plot_id_d(i) = id;
+#endif
+         RETURN
+      ENDIF
+   ENDDO
+
+   DO i=1,ubound(model%info%diagnostic_variables_hz,1)
+      IF ( TRIM(model%info%diagnostic_variables_hz(i)%name) == vname ) THEN
+         fabm_is_var=-i
+#ifdef PLOTS
+         plot_id_sd(i) = id;
+#endif
+         RETURN
+      ENDIF
+   ENDDO
+
+   fabm_is_var = 0
+END FUNCTION fabm_is_var
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -458,7 +533,7 @@ SUBROUTINE fabm_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(z, Lake%Height)
    _LINK_POINTER_(temp, Lake%Temp)
    _LINK_POINTER_(salt, Lake%Salinity)
-   _LINK_POINTER_(rho, Lake%SPDensity)
+   _LINK_POINTER_(rho, Lake%Density)
    _LINK_POINTER_(area, Lake%LayerArea)
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
@@ -983,8 +1058,7 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
                              len_trim(model%info%state_variables(n)%name), val_out,"",0,last=last)
       ENDDO
 #ifdef PLOTS
-      IF ( do_plots ) CALL put_xplot_val(model%info%state_variables(n)%name,     &
-                                len_trim(model%info%state_variables(n)%name),wlev,cc(1:wlev, n))
+      IF ( do_plots .AND. plot_id_v(n).GE.0 ) CALL put_glm_val(plot_id_v(n),cc(1:wlev, n))
 #endif
    ENDDO
 
@@ -992,6 +1066,10 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
    DO n=1,ubound(model%info%state_variables_ben,1)
       CALL store_nc_scalar(ncid,model%info%state_variables_ben(n)%externalid, &
                                  XYT_SHAPE,scalar=cc(1, ubound(model%info%state_variables,1)+n))
+#ifdef PLOTS
+      IF ( do_plots .AND. plot_id_sv(n).GE.0 ) &
+         CALL put_glm_val_s(plot_id_sv(n), cc(1, ubound(model%info%state_variables,1)+n))
+#endif
    ENDDO
 
    !# Process and store diagnostic variables defined on the full domain.
@@ -1000,8 +1078,8 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
       CALL store_nc_array(ncid,model%info%diagnostic_variables(n)%externalid,XYZT_SHAPE,wlev,nlev,array=cc_diag(:, n))
 
 #ifdef PLOTS
-      IF ( do_plots ) CALL put_xplot_val(model%info%diagnostic_variables(n)%name,     &
-                                len_trim(model%info%diagnostic_variables(n)%name),wlev,cc_diag(1:wlev, n))
+      IF ( do_plots .AND. plot_id_d(n).GE.0 ) &
+         CALL put_glm_val(plot_id_d(n),cc_diag(1:wlev, n))
 #endif
    ENDDO
 
@@ -1009,6 +1087,10 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
    DO n=1,ubound(model%info%diagnostic_variables_hz,1)
       !# Store diagnostic variable values.
       CALL store_nc_scalar(ncid,model%info%diagnostic_variables_hz(n)%externalid,XYT_SHAPE,scalar=cc_diag_hz(n))
+#ifdef PLOTS
+      IF ( do_plots .AND. plot_id_sd(n).GE.0 ) &
+         CALL put_glm_val_s(plot_id_sd(n), cc_diag_hz(n))
+#endif
    ENDDO
 
    !# Integrate conserved quantities over depth.

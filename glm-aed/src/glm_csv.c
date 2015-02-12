@@ -53,6 +53,7 @@ int csv_point_nlevs = 0;
 static int csv_points[MaxPointCSV];
 AED_REAL csv_point_at[MaxPointCSV];
 static char * csv_point_fname = NULL;
+int csv_point_frombot[MaxPointCSV];
 int csv_point_nvars = 0;
 static VARNAME csv_point_vars[MaxCSVOutVars];
 
@@ -76,12 +77,14 @@ int ofl_wq_idx[MaxCSVOutVars];
  *                                                                            *
  ******************************************************************************/
 void configure_csv(int point_nlevs, AED_REAL *point_at, const char *point_fname,
-                                        int point_nvars, const char *lake_fname)
+                                        int *point_frombot, int point_nvars, const char *lake_fname)
 {
     int i;
     csv_point_nlevs = point_nlevs;
-    for (i = 0; i < csv_point_nlevs; i++)
+    for (i = 0; i < csv_point_nlevs; i++) {
         csv_point_at[i] = point_at[i];
+        csv_point_frombot[i] = point_frombot[i];
+    }
     if ( point_fname != NULL ) csv_point_fname = strdup(point_fname);
     csv_point_nvars = point_nvars;
     if ( lake_fname != NULL ) csv_lake_fname = strdup(lake_fname);

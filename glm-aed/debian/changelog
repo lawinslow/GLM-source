@@ -1,12 +1,17 @@
-glm (2.0.0beta7-0) UNRELEASED; urgency=low
+glm (2.0.0beta10-0) UNRELEASED; urgency=low
 
   [ Casper Boon ]
   * new version 2.0.0beta6
 
   [ hydro ]
   * new version 2.0.0beta7
+  * new version 2.0.0beta8
+  * new version 2.0.0beta9
 
- -- hydro <hydro@aquarius>  Thu, 08 Jan 2015 15:39:05 +0800
+  [ Casper Boon ]
+  * new version 2.0.0beta10
+
+ -- Casper Boon <casper@eridanus>  Tue, 03 Feb 2015 11:50:12 +0800
 
 glm (1.4.0-0) UNRELEASED; urgency=low
 

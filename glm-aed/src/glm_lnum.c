@@ -113,8 +113,8 @@ AED_REAL calculate_lake_number(void)
 
     lnpe3(NLayers, iheight, density, &xp, &zc, &xmass);
 
-    lake_top = -xp * (xmass * 1e6) * (1.0 - ((iheight[NLayers-1] - thermdepth) / iheight[NLayers-1]));
-    lake_bottom = 1000 * usquared * pow((MphLevelArea[(NLayers-1)+1] * 1e6), 1.5) *
+    lake_top = -xp * xmass * (1.0 - ((iheight[NLayers-1] - thermdepth) / iheight[NLayers-1]));
+    lake_bottom = 1000 * usquared * pow(MphLevelArea[(NLayers-1)+1] , 1.5) *
                                                       (1.0 - (zc / iheight[NLayers-1]));
 
 #ifdef _VISUAL_C_
@@ -148,7 +148,7 @@ static int interpolate_layer_data(AED_REAL *iheight, AED_REAL *density)
     for (j = 0; j < NumLayers; j++) {
         while (this_height <= Lake[j].Height) {
             iheight[i] = this_height;
-            density[i] = Lake[j].SPDensity;
+            density[i] = Lake[j].Density;
             this_height += 0.1;
             i++;
             if ( i > Nmorph ) {
@@ -204,7 +204,7 @@ void lnpe3(int NLayers, AED_REAL *iheight, AED_REAL *density, AED_REAL *xpp,
     for (i_pe3 = 0; i_pe3 <= (ij-1); i_pe3++) {
         il = il + 1;
 
-        dens = (density[il] + rho0);
+        dens = density[il];
         ht = ht + 0.1;
         if (i_pe3 != 0) da = (dMphLevelArea[(i_pe3-1)+1] * 10.0);
         zcvp = ab * ((0.1 * ht) - 0.005) + (da / 6) * ((0.03 * ht) - 0.001);
@@ -229,7 +229,7 @@ void lnpe3(int NLayers, AED_REAL *iheight, AED_REAL *density, AED_REAL *xpp,
         xmass = xmass + xmassp;
     } else {
         for (l = il; l <= (NLayers-1); l++) {
-            dens = density[l];
+            dens = density[l] - rho0;
             ht = iheight[l];
             zcvp = ab * ((0.1 * ht) - 0.005) + (da / 6) * ((0.03 * ht) - 0.001);
             zcv = zcv + zcvp;

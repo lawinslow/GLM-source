@@ -293,7 +293,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\src\WinBasic.c"
+				RelativePath="..\..\src\winbasic.c"
 				>
 			</File>
 		</Filter>
@@ -311,7 +311,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\..\include\WinBasic.h"
+				RelativePath="..\..\include\ui_basic.h"
 				>
 			</File>
 		</Filter>

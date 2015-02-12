@@ -18,8 +18,10 @@ add_library(fabm_models_aed OBJECT
             aed_totals.F90
             aed_tracer.F90
             aed_util.F90
+            aed_bivalve.F90
             aed_zooplankton.F90
             aed_zoop_utils.F90
+            aed_test.F90
            )
 
 add_dependencies(fabm_models_aed fabm_base)

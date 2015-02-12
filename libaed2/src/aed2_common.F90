@@ -47,6 +47,7 @@ MODULE aed2_common
    USE aed2_zooplankton
    USE aed2_tracer
    USE aed2_totals
+   USE aed2_test
 
    IMPLICIT NONE
 
@@ -106,7 +107,8 @@ FUNCTION aed2_new_model(modelname) RESULT(model)
       CASE ('aed2_sulfur');         prefix = 'SLF'; ALLOCATE(aed2_sulfur_data_t::model)
       CASE ('aed2_tracer');         prefix = 'TRC'; ALLOCATE(aed2_tracer_data_t::model)
       CASE ('aed2_totals');         prefix = 'TOT'; ALLOCATE(aed2_totals_data_t::model)
-      CASE DEFAULT;                print *,'*** Unknown module ', modelname
+      CASE ('aed2_test');           prefix = 'TST'; ALLOCATE(aed2_test_data_t::model)
+      CASE DEFAULT;                 print *,'*** Unknown module ', modelname
    END SELECT
 
    model%aed2_model_name = modelname

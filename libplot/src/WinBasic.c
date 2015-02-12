@@ -1,6 +1,6 @@
 /******************************************************************************
  *                                                                            *
- * WinBasic.c                                                                 *
+ * winbasic.c                                                                 *
  *                                                                            *
  *   A simple MS Windows interface.                                           *
  *                                                                            *
@@ -39,7 +39,7 @@
 #include <string.h>
 #include <stdio.h>
 
-#include <WinBasic.h>
+#include <ui_basic.h>
 
 #define PLOT_CLASS  L"Plot Window"
 
@@ -322,7 +322,7 @@ static WindowItem *_find_item_of_type(Window win, int type)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
-int InitX(int *width, int *height) {
+int InitUI(int *width, int *height) {
     WNDCLASS WndClass;
     HINSTANCE hInstance = NULL;
 
@@ -431,7 +431,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage,
 }
 
 /******************************************************************************/
-int CleanupX(void)
+int CleanupUI(void)
 {
     if ( _window == NULL ) return -1;
 
@@ -469,6 +469,16 @@ static int _check_event()
         }
     }
     return 0;
+}
+
+/******************************************************************************
+ * The FlushUI was added for Mac, butmay be a good idea for win if properly   *
+ * implemented - for now this is a simple fudge                               *
+ ******************************************************************************/
+void FlushUI(void)
+{
+    if ( _window == 0L ) return;
+    _check_event();
 }
 
 /******************************************************************************/
@@ -767,3 +777,13 @@ static WindowPtr _find_window(Window win)
 }
 
 /******************************************************************************/
+#if INCLUDE_MENUS
+static void _draw_mbar(MenuBar *mbar)
+{
+}
+
+static void _draw_menu(Menu *menu)
+{
+}
+
+#endif

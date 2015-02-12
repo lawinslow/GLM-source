@@ -41,6 +41,9 @@
 #include "glm_globals.h"
 #include "glm_plot.h"
 
+#include "glm_output.h"
+#include "glm_wqual.h"
+
 #include "namelist.h"
 #include "libplot.h"
 
@@ -130,9 +133,8 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
 
     set_progname(glm_vers);
 #ifdef XPLOTS
-    if ( xdisp ) {
+    if ( xdisp )
         if ( init_plotter(&maxx, &maxy) < 0 ) exit(1);
-    }
 #endif
 
     acrs = (maxx + 90) / (100 + plot_width);
@@ -147,6 +149,19 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
     w = 10;
     h = 10;
     for (i = 0; i < nplots; i++) {
+        int vn;
+        if ( ! (vn = intern_is_var(i, vars[i])) ) {
+            int l = strlen(vars[i]);
+            if ( ! (vn = wq_is_var(&i, vars[i], &l)) ) {
+                fprintf(stderr, "No plottable var \"%s\"\n", vars[i]);
+                continue;
+            }
+//          else if ( vn < 0 ) fprintf(stderr, "WQ sheet var \"%s\"\n", vars[i]);
+//          else  fprintf(stderr, "WQ var \"%s\"\n", vars[i]);
+        }
+//      else if ( vn < 0 ) fprintf(stderr, "Internal sheet var \"%s\"\n", vars[i]);
+//      else  fprintf(stderr, "Internal var \"%s\"\n", vars[i]);
+
         theplots[i] = create_plot(w, h, plot_width, plot_height, title[i]);
         w += plot_width + 100;
         if ( ((i+1) % acrs) == 0 ) {
@@ -154,11 +169,15 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
             h += plot_height + 100;
         }
         set_plot_x_label(theplots[i], "Time");
-        set_plot_y_label(theplots[i], "Depth");
-   //   set_plot_z_label(theplots[i], "m-mol/L");
         set_plot_x_limits(theplots[i], min_x, max_x);
-        set_plot_y_limits(theplots[i], min_y, max_y);
-        set_plot_z_limits(theplots[i], min_z[i], max_z[i]);
+        if ( vn > 0 ) {
+            set_plot_y_label(theplots[i], "Depth");
+            set_plot_y_limits(theplots[i], min_y, max_y);
+            set_plot_z_limits(theplots[i], min_z[i], max_z[i]);
+        } else {
+            set_plot_y_label(theplots[i], "m-mol/L");
+            set_plot_y_limits(theplots[i], min_z[i], max_z[i]);
+        }
         set_plot_version(theplots[i], glm_vers);
         set_plot_varname(theplots[i], vars[i]);
     }
@@ -168,80 +187,66 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
 
 
 /******************************************************************************/
-void put_xplot_val(char *name, int wlev, AED_REAL *val)
+void do_internal_plots(const int plot_id[])
 {
-    int i, j, which = 0;
+    AED_REAL todayish;
+    int i, j;
+
+    todayish = psubday;
+    todayish *= plotstep;
+    todayish += today;
+    for (i = 0; i < NumLayers; i++) {
+        if ( (j=plot_id[0]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Temp);
+        if ( (j=plot_id[1]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Salinity);
+        if ( (j=plot_id[2]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Light);
+        if ( (j=plot_id[3]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].ExtcCoefSW);
+        if ( (j=plot_id[4]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Density);
+        if ( (j=plot_id[5]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Uorb);
+        if ( (j=plot_id[6]) >= 0 ) plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].LayerStress);
+    }
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+
+/******************************************************************************/
+void put_glm_val_s_(int *plot_id, AED_REAL *val)
+{ put_glm_val_s(*plot_id, val); }
+/******************************************************************************/
+void put_glm_val_s(int plot_id, AED_REAL *val)
+{
     AED_REAL todayish;
 
 /*----------------------------------------------------------------------------*/
-    if ( ! do_plots ) return;
-
-    if ( today <= 0 ) return;
-
-    if ( wlev != NumLayers ) fprintf(stderr,"wlev = %d sufLayer = %d\n",wlev,surfLayer);
+    if ( !do_plots || plot_id >= nplots || today <= 0 ) return;
 
     todayish = psubday;
     todayish *= plotstep;
     todayish += today;
 
-//  fprintf(stderr, "plot %3d %d %f %f\n", plotstep, today, psubday, todayish);
-
-    j = 0;
-    while (j < nplots) {
-        if ( strcasecmp(name, vars[j]) == 0 ) {
-//          fprintf(stderr, "plotting \"%s\" (%e)\n", name, (val!=NULL)?val[0]:-1.);
-            if (strcasecmp(name, "temp") == 0) which = 1;
-            else if (strcasecmp(name, "salt") == 0) which = 2;
-            else if (strcasecmp(name, "rad") == 0) which = 3;
-            else if (strcasecmp(name, "extc") == 0) which = 4;
-            else if (strcasecmp(name, "dens") == 0) which = 5;
-            else if (strcasecmp(name, "uorb") == 0) which = 6;
-            else if (strcasecmp(name, "taub") == 0) which = 7;
-
-            for (i = 0; i < NumLayers; i++) {
-                switch (which) {
-                    case 0:
-                        plot_value(theplots[j], todayish, Lake[i].Height, val[i]);
-                        break;
-                    case 1:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Temp);
-                        break;
-                    case 2:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Salinity);
-                        break;
-                    case 3:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Light);
-                        break;
-                    case 4:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].ExtcCoefSW);
-                        break;
-                    case 5:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].SPDensity);
-                        break;
-                    case 6:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].Uorb);
-                        break;
-                    case 7:
-                        plot_value(theplots[j], todayish, Lake[i].Height, Lake[i].LayerStress);
-                        break;
-                }
-            }
-            break;
-        }
-        j++;
-    }
+    plot_value(theplots[plot_id], todayish, val[0], 0.);
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
-/******************************************************************************
- * for Fortran                                                                *
- ******************************************************************************/
-void put_xplot_val_(char *name, int *len, int *wlev, AED_REAL *val)
+
+/******************************************************************************/
+void put_glm_val_(int *plot_id, AED_REAL *val)
+{ put_glm_val(*plot_id, val); }
+/******************************************************************************/
+void put_glm_val(int plot_id, AED_REAL *val)
 {
-    char *n = malloc(*len + 1);
-    strncpy(n, name, *len); n[*len] = 0;
-    put_xplot_val(n, *wlev, val);
-    free(n);
+    int i;
+    AED_REAL todayish;
+
+/*----------------------------------------------------------------------------*/
+    if ( !do_plots || plot_id >= nplots || today <= 0 ) return;
+
+    todayish = psubday;
+    todayish *= plotstep;
+    todayish += today;
+
+    for (i = 0; i < NumLayers; i++)
+        plot_value(theplots[plot_id], todayish, Lake[i].Height, val[i]);
 }
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 #endif
