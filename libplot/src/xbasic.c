@@ -133,6 +133,7 @@ typedef struct _pic_item {
 
 /******************************************************************************/
 #define MENU_BAR_HEIGHT 20
+
 #if INCLUDE_MENUS
 
 #define MENU_ITEM_HEIGHT 20
