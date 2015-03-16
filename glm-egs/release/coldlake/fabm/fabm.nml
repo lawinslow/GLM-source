@@ -153,7 +153,7 @@
    oxy_initial = 225.0
    Fsed_oxy = -50.0
    Ksed_oxy = 50.0
-   theta_sed_oxy = 1.05
+   theta_sed_oxy = 1.08
 !  Fsed_oxy_variable = 'aed_sedflux_Fsed_oxy'
 /
 
@@ -555,9 +555,16 @@
 !-------------------------------------------------------------------------------
 &aed_tracer
    num_tracers = 1
-   decay = 0 !, 0, 0, ...
-   settling = 0 !, 0, 0, ....
-   fsed = 0 !, 0, 0, ...
+   decay = 0      !, 0, 0, ...
+!  settling = -0.1  !, 0, 0, ....
+   settling = -0.0  !, 0, 0, ....
+   fsed = 0       !, 0, 0, ...
+   resuspension = .false.
+   epsilon = 0.02 !, 0.02, 0.02
+   tau_0 = 0.01   !, 0.01, 0.01
+   tau_r = 1.0    !, 1.0, 1.0
+   Ke_ss = 0.02   !, 0.02, 0.02
+   retention_time = .true.
 /
 
 !-------------------------------------------------------------------------------
