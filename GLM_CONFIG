@@ -9,6 +9,7 @@ export WITH_PLOTS=false
 export WITH_XPLOTS=false
 
 export FORTRAN_COMPILER=IFORT
+# NB: At the moment only ifort build actually works
 # export FORTRAN_COMPILER=GFORTRAN
 # export FORTRAN_COMPILER=OPEN64
 

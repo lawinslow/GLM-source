@@ -71,8 +71,8 @@ endif
 all: libplot.a
 
 libplot.a: ${objdir} ${OBJS}
-	ar rv libplot.a ${OBJS}
-	ranlib libplot.a
+	ar rv $@ ${OBJS}
+	ranlib $@
 
 clean: ${objdir}
 	@touch ${objdir}/1.o

@@ -201,17 +201,17 @@
    out_fn = 'output'
    nsave = 24
 
-   csv_point_nlevs = 2
+   csv_point_nlevs = 0
    csv_point_fname = 'WQ_'
    csv_point_at = 15., 17.
    csv_point_nvars = 16
    csv_point_vars = 'temp',
                     'salt',
                     'aed_oxygen_oxy',
-                    'aed_silicon_rsi',
+                    'aed_silica_rsi',
                     'aed_nitrogen_amm',
                     'aed_nitrogen_nit',
-                    'aed_phosoforus_frp',
+                    'aed_phosphorus_frp',
                     'aed_organic_matter_don',
                     'aed_organic_matter_pon',
                     'aed_organic_matter_dop',
@@ -231,7 +231,7 @@
                      'temp',
                      'salt',
                      'aed_oxygen_oxy',
-                     'aed_silicon_rsi',
+                     'aed_silica_rsi',
                      'aed_nitrogen_amm',
                      'aed_nitrogen_nit',
                      'aed_phosphorus_frp',
@@ -384,6 +384,7 @@
 &inflow
    num_inflows    = 1
    names_of_strms = 'river1'     
+   subm_flag      = .false.
    strm_hf_angle  = 85.0         
    strmbd_slope   = 0.573        
    strmbd_drag    = 0.0160       
@@ -394,7 +395,7 @@
                     'TEMP',
                     'SALT',
                     'aed_oxygen_oxy',
-                    'aed_silicon_rsi',
+                    'aed_silica_rsi',
                     'aed_nitrogen_amm',
                     'aed_nitrogen_nit',
                     'aed_phosphorus_frp',

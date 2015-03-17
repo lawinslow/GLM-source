@@ -251,11 +251,10 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "output",            TYPE_START,            NULL               },
           { "out_dir",           TYPE_STR,              &out_dir           },
           { "out_fn",            TYPE_STR,              &out_fn            },
-//        { "out_lkn",           TYPE_BOOL,             &out_lkn           },
           { "nsave",             TYPE_INT,               nsave             },
           { "csv_point_nlevs",   TYPE_INT,              &csv_point_nlevs   },
           { "csv_point_fname",   TYPE_STR,              &csv_point_fname   },
-          { "csv_point_frombot",   TYPE_BOOL|MASK_LIST, &csv_point_frombot },
+          { "csv_point_frombot", TYPE_BOOL|MASK_LIST,   &csv_point_frombot },
           { "csv_point_at",      TYPE_DOUBLE|MASK_LIST, &csv_point_at      },
           { "csv_point_nvars",   TYPE_INT,              &csv_point_nvars   },
           { "csv_point_vars",    TYPE_STR|MASK_LIST,    &csv_point_vars    },
@@ -411,13 +410,13 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     }
 
     if ( csv_point_nlevs > MaxPointCSV ) { fprintf(stderr, "csv_point_nlevs must be < %d\n", MaxPointCSV); exit(1); }
-    if ( csv_point_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_point_nlevs must be < %d\n", MaxCSVOutVars); exit(1); }
-    if ( csv_outlet_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_outlet_nlevs must be < %d\n", MaxCSVOutVars); exit(1); }
+    if ( csv_point_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_point_nvars must be < %d\n", MaxCSVOutVars); exit(1); }
+    if ( csv_outlet_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_outlet_nvars must be < %d\n", MaxCSVOutVars); exit(1); }
 
     if ( csv_point_frombot == NULL ) {
-            csv_point_frombot = malloc(sizeof(LOGICAL)*csv_point_nlevs);
-            for (i = 0; i < csv_point_nlevs; i++) csv_point_frombot[i] = TRUE;
-        }
+        csv_point_frombot = malloc(sizeof(LOGICAL)*csv_point_nlevs);
+        for (i = 0; i < csv_point_nlevs; i++) csv_point_frombot[i] = TRUE;
+    }
 
     if ( wq_calc ) {
         for (i = 0; i < csv_point_nvars; i++)

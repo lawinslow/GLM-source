@@ -72,8 +72,8 @@
 
 /*############################################################################*/
 
-extern AED_REAL csv_point_at[MaxPointCSV];
-extern int csv_point_frombot[MaxPointCSV];
+extern AED_REAL csv_point_at[];
+extern int csv_point_frombot[];
 extern int csv_point_nlevs;
 extern int csv_lake_file;
 
