@@ -16,7 +16,7 @@ end
 
 
 set LIST=( \
-           aed_bivalve.F90         \
+           aed_bivalve.F90        \
            aed_carbon.F90         \
            aed_chlorophylla.F90   \
            aed_iron.F90           \
@@ -29,6 +29,7 @@ set LIST=( \
            aed_sedflux.F90        \
            aed_silica.F90         \
            aed_sulfur.F90         \
+           aed_test.F90           \
            aed_totals.F90         \
            aed_tracer.F90         \
            aed_zoop_utils.F90     \

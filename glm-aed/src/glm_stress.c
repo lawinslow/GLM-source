@@ -49,7 +49,7 @@ AED_REAL Hs = 0., T = 0., L = 0.;
 AED_REAL BottomStress = 0.;
 
 #define DEBUG_STRESS  0
-#define DEBUG_STRESS_CSV  1
+#define DEBUG_STRESS_CSV  0
 
 #if DEBUG_STRESS
 #undef DEBUG_STRESS_CSV

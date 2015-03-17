@@ -10,12 +10,10 @@
             'aed_phosphorus',
             'aed_organic_matter',
             'aed_phytoplankton',
-         !  'aed_zooplankton',
-            'aed_bivalve',
+            'aed_zooplankton',
             'aed_pathogens',
             'aed_tracer',
-            'aed_totals',
-            'aed_test'
+            'aed_totals'
 /
 
 !###############################################################################
