@@ -50,8 +50,8 @@ endif
 all: libutil.a
 
 libutil.a: ${objdir} ${OBJS}
-	ar rv libutil.a ${OBJS}
-	ranlib libutil.a
+	ar rv $@ ${OBJS}
+	ranlib $@
 
 clean: ${objdir}
 	@touch ${objdir}/1.o

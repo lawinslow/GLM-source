@@ -51,9 +51,9 @@ typedef char FILNAME[80];
 
 int csv_point_nlevs = 0;
 static int csv_points[MaxPointCSV];
-AED_REAL csv_point_at[MaxPointCSV];
+AED_REAL csv_point_at[MaxPointCSV+1];
 static char * csv_point_fname = NULL;
-int csv_point_frombot[MaxPointCSV];
+int csv_point_frombot[MaxPointCSV+1];
 int csv_point_nvars = 0;
 static VARNAME csv_point_vars[MaxCSVOutVars];
 

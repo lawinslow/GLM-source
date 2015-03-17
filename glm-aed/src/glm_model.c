@@ -62,6 +62,7 @@
 #include "glm_stress.h"
 #include "glm_bubbler.h"
 #if PLOTS
+#include <libplot.h>
 #include "glm_plot.h"
 #endif
 

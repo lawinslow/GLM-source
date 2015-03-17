@@ -601,7 +601,7 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    IF ( .NOT. mobility_off ) THEN
       !# Get updated vertical movement (m/s, positive for upwards) for biological state variables.
 #ifdef _FABM_USE_1D_LOOP_
-      CALL fabm_get_vertical_movement(model,1,wlev,ws)
+      CALL fabm_get_vertical_movement(model,1,wlev,ws(1:wlev,:))
 #else
       DO i=1,wlev
          CALL fabm_get_vertical_movement(model,i,ws(i,:))
