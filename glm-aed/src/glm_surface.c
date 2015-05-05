@@ -631,7 +631,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         
         // Add snow directly to surface layer height if there is no ice. 
         // If there is ice, snow will be handled in the next block
-        Lake[surfLayer].Height += MetData.Snow * Lake[surfLayer].LayerArea * (RHOSNO/rho0) * (noSecs / SecsPerDay)
+        Lake[surfLayer].Height += MetData.Snow * Lake[surfLayer].LayerArea * (RHOSNO/rho0) * (noSecs / SecsPerDay);
         
         recalc_surface_salt();
     }
