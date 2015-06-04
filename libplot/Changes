@@ -1,3 +1,6 @@
+Version 1.0.13
+Fix to menu on mac
+
 Version 1.0.12
 Added preliminary mac version
 Conditional compile to not try font change when on windows (it didnt work anyway)

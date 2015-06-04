@@ -628,6 +628,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             exit(1);
         }
     }
+    NumDif += Num_WQ_Vars;
 
     initialise_lake(namlst);
 

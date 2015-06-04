@@ -127,56 +127,62 @@ void do_deep_mixing()
 
     //# Now calculate the turbulent diffusivities
 
-    flag = TRUE;
-    //# Look for any density variation
-    if (iTop > botmLayer) {
-        i = botmLayer + 1;
-        while (i <= iTop) {
-            if (Lake[i].Density-Lake[i-1].Density > dens_tol) {
-                flag = FALSE;
-                break;
+    if (deep_mixing==1) {
+        for (i = 0; i < NumLayers; i++)
+          Lake[i].Epsilon = coef_mix_hyp;
+    }
+    else if (deep_mixing==2) {
+        flag = TRUE;
+        //# Look for any density variation
+        if (iTop > botmLayer) {
+            i = botmLayer + 1;
+            while (i <= iTop) {
+                if (Lake[i].Density-Lake[i-1].Density > dens_tol) {
+                    flag = FALSE;
+                    break;
+                }
+                i++;
             }
-            i++;
         }
+
+        //# Create buoyancy frequency distribution
+        for (i = (botmLayer+2); i <= iTop-1; i++) {
+            //# Eq XX in GLM manual
+            NSquared = gprime(Lake[i+2].Density, Lake[i-2].Density) / (Lake[i+2].MeanHeight - Lake[i-2].MeanHeight);
+            if (NSquared <= 1.E-6)
+                NSquared = zero;
+
+            if (NSquared == 0.0 || vel == 0.0 || WaveNumSquared < 0.0) {
+                Lake[i].Epsilon = zero;
+                continue;
+            }
+            if (NSquared < 1.E-6 && vel < 1.E-6 && WaveNumSquared < 1.E-6) {
+                Lake[i].Epsilon = zero;
+                continue;
+            } else
+                Lake[i].Epsilon = coef_mix_hyp * dissipation / (NSquared + 0.600 * WaveNumSquared * vel * vel);
+
+            if (flag && i == iTop) continue;
+            if (Lake[i].Height > XMoment1) continue;
+            if (H_sig <= zero) {
+                 Lake[i].Epsilon = zero;
+                 continue;
+            }
+            //* Exponent for diffusivity equation
+            dif_exp=(-1.0 * sqr(Lake[surfLayer].Height-H_sml-Lake[i].Height))/H_sig;
+            //* Dissipation (Eq. X GLM manual)
+            if (dif_exp < exchk2) Lake[i].Epsilon = zero;
+            else                   Lake[i].Epsilon *= (exp(dif_exp)+1.E-7);
+        }
+
+        if (iTop == botmLayer) Lake[iTop].Epsilon = zero;
+        else                   Lake[iTop].Epsilon = Lake[iTop-1].Epsilon;
+
+        // Set boundary epsilons
+        Lake[surfLayer].Epsilon = Lake[iTop].Epsilon;
+        Lake[1].Epsilon = Lake[2].Epsilon;
+        Lake[0].Epsilon = Lake[1].Epsilon;
     }
-
-    //# Create buoyancy frequency distribution
-    for (i = (botmLayer+2); i <= iTop-1; i++) {
-        //# Eq XX in GLM manual
-        NSquared = gprime(Lake[i+2].Density, Lake[i-2].Density) / (Lake[i+2].MeanHeight - Lake[i-2].MeanHeight);
-        if (NSquared <= 1.E-6)
-            NSquared = zero;
-
-        if (NSquared == 0.0 || vel == 0.0 || WaveNumSquared < 0.0) {
-            Lake[i].Epsilon = zero;
-            continue;
-        }
-        if (NSquared < 1.E-6 && vel < 1.E-6 && WaveNumSquared < 1.E-6) {
-            Lake[i].Epsilon = zero;
-            continue;
-        } else
-            Lake[i].Epsilon = coef_mix_hyp * dissipation / (NSquared + 0.600 * WaveNumSquared * vel * vel);
-
-        if (flag && i == iTop) continue;
-        if (Lake[i].Height > XMoment1) continue;
-        if (H_sig <= zero) {
-             Lake[i].Epsilon = zero;
-             continue;
-        }
-        //* Exponent for diffusivity equation
-        dif_exp=(-1.0 * sqr(Lake[surfLayer].Height-H_sml-Lake[i].Height))/H_sig;
-        //* Dissipation (Eq. X GLM manual)
-        if (dif_exp < exchk2) Lake[i].Epsilon = zero;
-        else                   Lake[i].Epsilon *= (exp(dif_exp)+1.E-7);
-    }
-
-    if (iTop == botmLayer) Lake[iTop].Epsilon = zero;
-    else                   Lake[iTop].Epsilon = Lake[iTop-1].Epsilon;
-
-    // Set boundary epsilons
-    Lake[surfLayer].Epsilon = Lake[iTop].Epsilon;
-    Lake[1].Epsilon = Lake[2].Epsilon;
-    Lake[0].Epsilon = Lake[1].Epsilon;
 
     // Special case for epsilon under ice cover
     if (ice) {

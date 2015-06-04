@@ -79,13 +79,6 @@ static Controller *sharedController;
 /*----------------------------------------------------------------------------*/
 - (void) addMenus
 {
-    /*------------------------------------------------------------------------*
-     * This is commented out because neither variant works. Some exploring of *
-     * the net tells me that making menus work can only be done with a .nib   *
-     * file - so thats for the future                                         *
-     *------------------------------------------------------------------------*/
-#if 0
-#if 1
     id menubar = [[NSMenu new] autorelease];
     id appMenuItem = [[NSMenuItem new] autorelease];
     [menubar addItem:appMenuItem];
@@ -97,15 +90,6 @@ static Controller *sharedController;
         action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
     [appMenu addItem:quitMenuItem];
     [appMenuItem setSubmenu:appMenu];
-#else
-    NSMenu *mm = [NSApp mainMenu];
-    NSMenuItem *mi1 = [mm itemAtIndex:0];
-    NSMenu *subMenu = [mi1 submenu];
-    NSMenuItem *prefMenu = [subMenu itemWithTag:100];
-    prefMenu.target = self;
-//  prefMenu.action = @selector(showPreferencesMenu);
-#endif
-#endif
 }
 
 /*----------------------------------------------------------------------------*/
@@ -361,6 +345,7 @@ int InitUI(int *width, int * height)
     [controller addWindow:0 ypos:0 width:(*width) height:(*height)];
     [controller startSession];
 
+    [NSApp finishLaunching];
     return 0;
 }
 

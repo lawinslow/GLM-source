@@ -78,12 +78,12 @@ clean: ${objdir}
 	@touch ${objdir}/1.o
 	@/bin/rm ${objdir}/*.o
 	@/bin/rmdir ${objdir}
-	@touch libplot.a
-	@/bin/rm libplot.a
 	@touch tstmap tstfont
 	@/bin/rm tstmap tstfont
 
 distclean: clean
+	@touch libplot.a
+	@/bin/rm libplot.a
 
 ${objdir}:
 	@mkdir ${objdir}
