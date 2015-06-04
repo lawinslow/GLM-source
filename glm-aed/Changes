@@ -1,3 +1,19 @@
+# 2015/04/28
+# Version 2.0.2
+#
+# -- Since 2.0.1
+#
+# Fixed hypolimnion mixing problem
+# Additional deep mixing options
+#
+# 2015/04/08
+# Version 2.0.1
+#
+# -- Since 2.0.0
+#
+# Added CH4 to carbon module in libaed2
+#
+#
 # 2015/03/10
 # Version 2.0.0
 #

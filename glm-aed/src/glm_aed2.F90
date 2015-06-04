@@ -139,6 +139,7 @@ MODULE glm_aed2
    AED_REAL,POINTER,DIMENSION(:) :: extc_coef, layer_stress
    AED_REAL,POINTER :: precip, evap, bottom_stress
    AED_REAL,POINTER :: I_0, wnd
+   AED_REAL,ALLOCATABLE,DIMENSION(:),TARGET :: depth
 
    CHARACTER(len=48),ALLOCATABLE :: names(:)
    CHARACTER(len=48),ALLOCATABLE :: bennames(:)
@@ -541,6 +542,7 @@ SUBROUTINE aed2_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
    _LINK_POINTER_(layer_stress, Lake%LayerStress)
+   ALLOCATE(depth(MaxLayers))
 
    precip => MetData%Rain
    evap   => SurfData%Evap
@@ -591,6 +593,8 @@ SUBROUTINE check_data
             CASE ( 'extc_coef' )   ; tvar%found = .true.
             CASE ( 'tss' )         ; tvar%found = .true.
             CASE ( 'par' )         ; tvar%found = .true.
+            CASE ( 'pressure' )    ; tvar%found = .true.
+            CASE ( 'depth' )       ; tvar%found = .true.
             CASE ( 'sed_zone' )    ; tvar%found = .true.
             CASE ( 'wind_speed' )  ; tvar%found = .true.
             CASE ( 'par_sf' )      ; tvar%found = .true.
@@ -660,6 +664,8 @@ SUBROUTINE define_column(column, top, cc, cc_diag, flux_pel, flux_atm, flux_ben)
             CASE ( 'extc_coef' )   ; column(av)%cell => extc_coef(:)
             CASE ( 'tss' )         ; column(av)%cell => tss(:)
             CASE ( 'par' )         ; column(av)%cell => par(:)
+            CASE ( 'pressure' )    ; column(av)%cell => pres(:)
+            CASE ( 'depth' )       ; column(av)%cell => depth(:)
             CASE ( 'sed_zone' )    ; column(av)%cell_sheet => sed_zones(1)
             CASE ( 'wind_speed' )  ; column(av)%cell_sheet => wnd
             CASE ( 'par_sf' )      ; column(av)%cell_sheet => I_0
@@ -820,7 +826,7 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
 !LOCALS
    TYPE(aed2_variable_t),POINTER :: tv
 
-   AED_REAL :: min_C
+   AED_REAL :: min_C, surf
    INTEGER  :: i, v, lev, split
 
    TYPE (aed2_column_t) :: column(n_aed2_vars)
@@ -838,10 +844,13 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
 !BEGIN
    lIce = pIce
 
-   !# re-compute the layer heights
+   surf = z(wlev)
+   !# re-compute the layer heights and depths
    dz(1) = z(1)
+   depth(1) = surf - z(1)
    DO i=2,wlev
       dz(i) = z(i) - z(i-1)
+      depth(i) = surf - z(i)
    ENDDO
 
    !# Calculate local pressure

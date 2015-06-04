@@ -44,6 +44,9 @@ INCLUDES=-I${incdir}
 ifeq ($(F90),ifort)
   FFLAGS=-warn all -i-static -mp1 -stand f03 -fPIC
 else
+  ifeq ($(F90),)
+    F90=gfortran
+  endif
   FFLAGS=-fPIC -Wall -ffree-line-length-none -std=f2003 -fall-intrinsics
 endif
 
