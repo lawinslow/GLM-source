@@ -38,7 +38,7 @@ MODULE aed2_carbon
    TYPE,extends(aed2_model_data_t) :: aed2_carbon_data_t
       !# Variable identifiers
       INTEGER  :: id_dic, id_pH, id_ch4, id_oxy
-      INTEGER  :: id_Fsed_dic
+      INTEGER  :: id_Fsed_dic, id_Fsed_ch4
       INTEGER  :: id_temp, id_salt
       INTEGER  :: id_wind
       INTEGER  :: id_ch4ox
@@ -161,8 +161,10 @@ SUBROUTINE aed2_define_carbon(data, namlst)
    ENDIF
 
    data%use_sed_model = Fsed_dic_variable .NE. ''
-   IF (data%use_sed_model) &
+   IF (data%use_sed_model) THEN
        data%id_Fsed_dic = aed2_locate_global_sheet(Fsed_dic_variable)
+       data%id_Fsed_ch4 = aed2_locate_global_sheet(Fsed_ch4_variable)
+   ENDIF
 
    !# Register diagnostic variables
    data%id_ch4ox = aed2_define_diag_variable('ch4ox','/d', 'methane oxidation rate')
@@ -376,7 +378,7 @@ SUBROUTINE aed2_calculate_benthic_carbon(data,column,layer_idx)
    AED_REAL :: dic,oxy
 
    ! Temporary variables
-   AED_REAL :: dic_flux, Fsed_dic
+   AED_REAL :: dic_flux, ch4_flux, Fsed_dic, Fsed_ch4
 
    ! Parameters
    AED_REAL,PARAMETER :: secs_pr_day = 86400.
@@ -395,17 +397,21 @@ SUBROUTINE aed2_calculate_benthic_carbon(data,column,layer_idx)
 
    IF ( data%use_sed_model ) THEN
       Fsed_dic = _STATE_VAR_S_(data%id_Fsed_dic)
+      Fsed_ch4 = _STATE_VAR_S_(data%id_Fsed_ch4)
    ELSE
        Fsed_dic = data%Fsed_dic
+       Fsed_ch4 = data%Fsed_ch4
    ENDIF
 
    IF (data%use_oxy) THEN
       ! Sediment flux dependent on oxygen and temperature
       oxy = _STATE_VAR_(data%id_oxy)
-      dic_flux = Fsed_dic * data%Ksed_dic/(data%Ksed_dic+oxy) * (data%theta_sed_dic**(temp-20.0))
+      dic_flux = Fsed_dic * oxy/(data%Ksed_dic+oxy) * (data%theta_sed_dic**(temp-20.0))
+      ch4_flux = Fsed_ch4 * data%Ksed_ch4/(data%Ksed_ch4+oxy) * (data%theta_sed_ch4**(temp-20.0))
    ELSE
       ! Sediment flux dependent on temperature only.
       dic_flux = Fsed_dic * (data%theta_sed_dic**(temp-20.0))
+      ch4_flux = Fsed_ch4 * (data%theta_sed_ch4**(temp-20.0))
    ENDIF
 
    ! TODO:
@@ -417,6 +423,7 @@ SUBROUTINE aed2_calculate_benthic_carbon(data,column,layer_idx)
    !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_pr_day)
    !_SET_SED_FLUX_(data%id_dic,dic_flux)
    _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (dic_flux)
+   _FLUX_VAR_(data%id_ch4) = _FLUX_VAR_(data%id_ch4) + (ch4_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
