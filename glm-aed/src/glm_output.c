@@ -285,6 +285,7 @@ void write_diags(int jday, AED_REAL LakeNum)
     write_csv_lake("Surface Area",    Lake[surfLayer].LayerArea, NULL, FALSE);
     write_csv_lake("Black Ice",       SurfData.HeightBlackIce,   NULL, FALSE);
     write_csv_lake("Snow",            SurfData.HeightSnow,       NULL, FALSE);
+    write_csv_lake("Rho Snow",        SurfData.RhoSnow,          NULL, FALSE);
     write_csv_lake("White Ice",       SurfData.HeightWhiteIce,   NULL, FALSE);
     write_csv_lake("Max Temp",        max_temp(Lake, NumLayers), NULL, FALSE);
     write_csv_lake("Min Temp",        min_temp(Lake, NumLayers), NULL, FALSE);

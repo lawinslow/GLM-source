@@ -171,6 +171,7 @@ void init_csv_output(const char *out_dir)
         csv_header_var (csv_lake_file, "Surface Area"); //, "m2");
         csv_header_var (csv_lake_file, "Black Ice");
         csv_header_var (csv_lake_file, "Snow");
+        csv_header_var (csv_lake_file, "Rho Snow");
         csv_header_var (csv_lake_file, "White Ice");
         csv_header_var (csv_lake_file, "Max Temp");
         csv_header_var (csv_lake_file, "Min Temp");

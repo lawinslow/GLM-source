@@ -221,7 +221,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     QSI = 0.0;
     QSI1 = 0.0;
     QRL = 0.0;
-    RHOSNO = 0.0;
+    RHOSNO = SurfData.RhoSnow;
     underFlow = FALSE;
 
     //# Snow conductivity and avoid division by zero
@@ -229,6 +229,11 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         K_S = 0.31;
     else
         K_S = 0.021+(0.0042*RHOSNO)+(2.2E-09*pow(RHOSNO, 3));
+
+//fprintf(stderr, "K_S = %e\n", K_S);
+if(iclock==0)fprintf(stdout, "Snow in %f\n", MetData.Snow);
+if(iclock==0)fprintf(stdout, "Snow on the water %f\n", SurfData.HeightSnow);
+if(iclock==0)fprintf(stdout, "Starting rhosno %f\n", RHOSNO);
 
     // Initialize T001 to the Air Temperature
     T001 = MetData.AirTemp;
@@ -493,6 +498,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
        SurfData.dailyQh += Q_sensibleheat * Lake[surfLayer].LayerArea * noSecs;
        SurfData.dailyQlw += Q_longwave * Lake[surfLayer].LayerArea * noSecs;
 
+       
     }
 
     // Now look at the ice or water interface
@@ -641,6 +647,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         // Snow cover as well as ice cover
         if (SurfData.HeightSnow > 0.0) {
             if (MetData.Snow > 0.0 && MetData.Rain >= 0.0) {
+fprintf(stdout, "Snow on snow\n");
                 // SNOWFALL ON Snow
                 if (MetData.Rain == 0.0) MetData.Rain = MetData.Snow*0.15;
                 if (MetData.AirTemp > 0.0)
@@ -656,6 +663,7 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                 if (RHOSNO < RHOMNSNO) RHOSNO = RHOMNSNO;
                 QRL = 0.0;
             } else if (MetData.Snow == 0.0 && MetData.Rain == 0.0) {
+fprintf(stdout, "Snow compaction\n");
                 // No snowfall or rainfall, compaction only of snow
                 if (MetData.AirTemp > 0.0) KCOMSNO = 0.166;
                 else                        KCOMSNO = 0.088;
@@ -664,11 +672,13 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
                 SurfData.HeightSnow = SurfData.HeightSnow*RHOSNO/RHOLDSNO;
                 RHOSNO = RHOLDSNO;
                 QRL = 0.0;
+fprintf(stdout,"Compaction Exit RHOSNO %f\n", RHOSNO);
             } else if (MetData.Snow == 0.0 && MetData.Rain > 0.0) {
                 /********************************************************************
                  * Rainfall on Snow. Check the air temperature. If AirTemp > 0 then *
                  * add the Rain. If AirTemp < 0 then add the rainfall to Snow.      *
                  ********************************************************************/
+fprintf(stdout, "Rain on snow\n");
                 if (MetData.AirTemp > 0.0) {
                     KCOMSNO = 0.166+0.834*(1.-exp(-1.*MetData.Rain));
                     RHOLDSNO = RHOSNO+(RHOMXSNO-RHOSNO)*KCOMSNO;
@@ -693,12 +703,15 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
             }
         } else {  // no snow
             if (MetData.Snow > 0.0 && MetData.Rain >= 0.0) {
+fprintf(stdout,"Snow add on ice %f\n", SurfData.HeightSnow);
                 // Snowfall on ice
                 if (MetData.Rain == 0.0)MetData.Rain = MetData.Snow*0.15;
                 SurfData.HeightSnow = MetData.Snow;
+ 
                 RHOSNO = rho0*MetData.Rain/MetData.Snow;
+fprintf(stdout,"Umm rhosno from rain snow combo?? %f\n", RHOSNO); 
                 if (RHOSNO > RHOMXSNO)RHOSNO = RHOMXSNO;
-                if (RHOSNO < RHOMNSNO)RHOSNO = RHOMNSNO;
+                if (RHOSNO < RHOMNSNO)RHOSNO = RHOMNSNO; 
                 QRL = 0.0;
             } else if (MetData.Snow == 0.0 && MetData.Rain == 0.0) {
                 // No snowfall or rainfall
@@ -783,6 +796,10 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         SurfData.HeightWhiteIce = 0.0;
         SurfData.HeightSnow = 0.0;
     }
+    SurfData.RhoSnow = RHOSNO;
+if(iclock==0)fprintf(stdout,"Exit RHOSNO %f\n", RHOSNO);
+if(iclock==0)fprintf(stdout,"Exit Snow on water %f\n", SurfData.HeightSnow);
+    
     // for (i = botmLayer; i <= surfLayer; i++)
     //     printf("Light = %10.5f\n",Lake[surfLayer].Light);
     //     printf("surfLayer = %d\n",surfLayer);

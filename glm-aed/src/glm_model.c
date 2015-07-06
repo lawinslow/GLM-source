@@ -251,7 +251,7 @@ void do_model(int jstart, int nsave)
         SurfData.dailyRain = 0.; SurfData.dailyEvap = 0.;
         SurfData.dailyQsw = 0.; SurfData.dailyQe = 0.;
         SurfData.dailyQh = 0.; SurfData.dailyQlw = 0.;
-        SurfData.dailyInflow = 0.;
+        SurfData.dailyInflow = 0.; 
         SurfData.dailyOutflow = 0.; SurfData.dailyOverflow = 0.;
 
         read_daily_inflow(jday, NumInf, FlowNew, TempNew, SaltNew, WQNew);
