@@ -348,9 +348,11 @@ void open_met_file(const char *fname, int snow_sw, int rain_sw,
     else
         LWTypeName = "LongWave";
 
-    if ((lwav_idx = find_csv_var(metf, LWTypeName)) < 0 ) {
-        fprintf(stderr,"Error in met file, '%s' not found!\n", LWTypeName);
-        exit(1);
+    if ( rad_mode != 3 && rad_mode != 5 ) {
+        if ((lwav_idx = find_csv_var(metf, LWTypeName)) < 0 ) {
+            fprintf(stderr,"Error in met file, '%s' not found!\n", LWTypeName);
+            exit(1);
+        }
     }
     sw_idx = find_csv_var(metf,"ShortWave");
     atmp_idx = find_csv_var(metf,"AirTemp");

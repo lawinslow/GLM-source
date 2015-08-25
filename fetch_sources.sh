@@ -10,6 +10,8 @@ fetch_it () {
       dst=$2
    fi
 
+   echo "fetching $dst"
+
    if [ -d $dst ] ; then
       cd $dst
       git pull # origin master

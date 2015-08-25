@@ -44,7 +44,7 @@ MODULE aed2_nitrogen
       !# Model parameters
       AED_REAL :: Rnitrif,Rdenit,Fsed_amm,Fsed_nit,Knitrif,Kdenit,Ksed_amm,Ksed_nit, &
                           theta_nitrif,theta_denit,theta_sed_amm,theta_sed_nit
-      LOGICAL  :: use_oxy,use_no2,use_sed_model
+      LOGICAL  :: use_oxy,use_no2,use_sed_model_amm, use_sed_model_nit
 
      CONTAINS
          PROCEDURE :: define            => aed2_define_nitrogen
@@ -144,11 +144,12 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
    data%use_no2 = denit_product_variable .NE. '' !This means n2 module switched on
    IF (data%use_no2) data%id_denit_product = aed2_locate_variable(denit_product_variable)
 
-   data%use_sed_model = Fsed_amm_variable .NE. ''
-   IF (data%use_sed_model) THEN
+   data%use_sed_model_amm = Fsed_amm_variable .NE. ''
+   IF (data%use_sed_model_amm) &
      data%id_Fsed_amm = aed2_locate_global_sheet(Fsed_amm_variable)
+   data%use_sed_model_nit = Fsed_amm_variable .NE. ''
+   IF (data%use_sed_model_nit) &
      data%id_Fsed_nit = aed2_locate_global_sheet(Fsed_nit_variable)
-   ENDIF
 
    ! Register diagnostic variables
    data%id_nitrif = aed2_define_diag_variable('nitrif','mmol/m**3/d',       &
@@ -260,11 +261,14 @@ SUBROUTINE aed2_calculate_benthic_nitrogen(data,column,layer_idx)
    amm = _STATE_VAR_(data%id_amm)! ammonium
    nit = _STATE_VAR_(data%id_nit)! nitrate
 
-   IF (data%use_sed_model) THEN
+   IF (data%use_sed_model_amm) THEN
       Fsed_amm = _STATE_VAR_S_(data%id_Fsed_amm)
-      Fsed_nit = _STATE_VAR_S_(data%id_Fsed_nit)
    ELSE
       Fsed_amm = data%Fsed_amm
+   ENDIF
+   IF (data%use_sed_model_nit) THEN
+      Fsed_nit = _STATE_VAR_S_(data%id_Fsed_nit)
+   ELSE
       Fsed_nit = data%Fsed_nit
    ENDIF
 
