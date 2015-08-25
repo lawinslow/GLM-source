@@ -263,7 +263,7 @@
    theta_denit = 1.08,
    theta_sed_amm = 1.08,
    theta_sed_nit = 1.08,
-   nitrif_reactant_variable='OXY_oxy',   
+   nitrif_reactant_variable='OXY_oxy',
    denit_product_variable='', !'N20',
    !Fsed_amm_variable='Fsed_amm'
    !Fsed_nit_variable='Fsed_nit'
@@ -393,7 +393,7 @@
    theta_pon_miner = 1.08,
    theta_don_miner = 1.08,
    theta_sed_don = 1.08,
-   !pon_miner_reactant_variable='oxy',   
+   !pon_miner_reactant_variable='oxy',
    don_miner_product_variable='NIT_amm',
    !-- ORGANIC PHOSPHORUS
    pop_initial = 8.3,
@@ -409,7 +409,7 @@
    theta_pop_miner = 1.08,
    theta_dop_miner = 1.08,
    theta_sed_dop = 1.08,
-   !pop_miner_reactant_variable='',   
+   !pop_miner_reactant_variable='',
    dop_miner_product_variable='',
     !-- ORGANIC CARBON
    poc_initial = 78.5, !average for 08-Sep-2009
@@ -425,7 +425,7 @@
    theta_poc_miner = 1.08,
    theta_doc_miner = 1.08,
    theta_sed_doc = 1.08,
-   doc_miner_reactant_variable='',   
+   doc_miner_reactant_variable='',
    doc_miner_product_variable='',
 !  Fsed_pon_variable='Fsed_pon'
 !  Fsed_don_variable='Fsed_don'
@@ -562,9 +562,9 @@
          'PHY_grn',
          'PHY_bga'
 !  TOC_varscale = 1.0, 1.0, 1.0, 1.0
-!  TSS_vars = 'PHY_grn' 
+!  TSS_vars = 'PHY_grn'
 !  TSS_vars = 'aed_tracer_ss1',
-!         'PHY_grn' !, .... 
+!         'PHY_grn' !, ....
 !  TSS_varscale = 0.1,0.1,0.,0.1            !,  <vector same length as TSS names>
 /
 

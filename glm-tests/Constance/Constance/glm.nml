@@ -2,11 +2,11 @@
 ! general model setup
 !-------------------------------------------------------------------------------
 !
-! sim_name         [string]  title of simulation       
-! max_layers       [integer] maximum number of layers  
-! min_layer_vol    [real]    minimum layer volume (m3 * 1000)      
-! min_layer_thick  [real]    minimum layer thickness (m)  
-! max_layer_thick  [real]    maximum layer thickness (m) 
+! sim_name         [string]  title of simulation
+! max_layers       [integer] maximum number of layers
+! min_layer_vol    [real]    minimum layer volume (m3 * 1000)
+! min_layer_thick  [real]    minimum layer thickness (m)
+! max_layer_thick  [real]    maximum layer thickness (m)
 ! Kw               [real]    background light attenuation (m**-1)
 ! coef_inf_entrain [real]    entrainment coefficient inflow
 ! coef_mix_conv    [real]    mixing efficiency - convective overturn
@@ -97,44 +97,44 @@
    base_elev  = 142.000
    crest_elev = 398.0
    bsn_len    = 60000
-   bsn_wid    = 15000 
+   bsn_wid    = 15000
    bsn_vals   = 93
    !   H(m)  A(m2 * 1000) V(m3 * 1000)
-   H = 142.00, 143.00, 146.00, 149.00, 152.00, 155.00, 
-       158.00, 161.00, 164.00, 167.00, 170.00, 173.00, 
-       176.00, 179.00, 182.00, 185.00, 188.00, 191.00, 
-       194.00, 197.00, 200.00, 203.00, 206.00, 209.00, 
-       212.00, 215.00, 218.00, 221.00, 224.00, 227.00, 
-       230.00, 233.00, 236.00, 239.00, 242.00, 245.00, 
-       248.00, 251.00, 254.00, 257.00, 260.00, 263.00, 
-       266.00, 269.00, 272.00, 275.00, 278.00, 
-       281.00, 284.00, 287.00, 290.00, 293.00, 
-       296.00, 299.00, 302.00, 305.00, 308.00, 
-       311.00, 314.00, 317.00, 320.00, 323.00, 
-       326.00, 329.00, 332.00, 335.00, 338.00, 
-       341.00, 344.00, 347.00, 350.00, 353.00, 
-       356.00, 359.00, 362.00, 365.00, 368.00, 
-       371.00, 374.00, 377.00, 380.00, 383.00, 
-       386.00, 387.00, 388.00, 389.00, 390.00, 
-       391.00, 392.00, 393.00, 394.00, 395.00, 
-       398.00 
-   A = 20.00, 2600.00, 6380.00, 11640.00, 15570.00, 18500.00, 
-       21040.00, 23270.00, 25730.00, 27740.00, 30190.00, 32420.00, 
-       34610.00, 37490.00, 40920.00, 43680.00, 46450.00, 49610.00, 
-       53090.00, 56200.00, 59140.00, 62450.00, 65640.00, 68740.00, 
-       72060.00, 75370.00, 78920.00, 85380.00, 90120.00, 94590.00, 
-       99410.00, 104120.00, 108870.00, 113790.00, 118990.00, 124200.00, 
-       129610.00, 136740.00, 143670.00, 149260.00, 155560.00, 161780.00, 
-       167690.00, 174060.00, 179790.00, 185730.00, 191540.00, 
-       197870.00, 203760.00, 209830.00, 215660.00, 221410.00, 
-       228220.00, 234000.00, 239290.00, 244630.00, 250630.00, 
-       255460.00, 260490.00, 265720.00, 270950.00, 276160.00, 
-       281260.00, 286570.00, 292040.00, 299530.00, 306500.00, 
-       313340.00, 319680.00, 326200.00, 332860.00, 340030.00, 
-       346820.00, 353150.00, 359490.00, 365350.00, 371440.00, 
-       377830.00, 383800.00, 389950.00, 395060.00, 399960.00, 
-       405070.00, 407000.00, 409550.00, 412070.00, 414980.00, 
-       418340.00, 422620.00, 427250.00, 432510.00, 472650.00, 
+   H = 142.00, 143.00, 146.00, 149.00, 152.00, 155.00,
+       158.00, 161.00, 164.00, 167.00, 170.00, 173.00,
+       176.00, 179.00, 182.00, 185.00, 188.00, 191.00,
+       194.00, 197.00, 200.00, 203.00, 206.00, 209.00,
+       212.00, 215.00, 218.00, 221.00, 224.00, 227.00,
+       230.00, 233.00, 236.00, 239.00, 242.00, 245.00,
+       248.00, 251.00, 254.00, 257.00, 260.00, 263.00,
+       266.00, 269.00, 272.00, 275.00, 278.00,
+       281.00, 284.00, 287.00, 290.00, 293.00,
+       296.00, 299.00, 302.00, 305.00, 308.00,
+       311.00, 314.00, 317.00, 320.00, 323.00,
+       326.00, 329.00, 332.00, 335.00, 338.00,
+       341.00, 344.00, 347.00, 350.00, 353.00,
+       356.00, 359.00, 362.00, 365.00, 368.00,
+       371.00, 374.00, 377.00, 380.00, 383.00,
+       386.00, 387.00, 388.00, 389.00, 390.00,
+       391.00, 392.00, 393.00, 394.00, 395.00,
+       398.00
+   A = 20.00, 2600.00, 6380.00, 11640.00, 15570.00, 18500.00,
+       21040.00, 23270.00, 25730.00, 27740.00, 30190.00, 32420.00,
+       34610.00, 37490.00, 40920.00, 43680.00, 46450.00, 49610.00,
+       53090.00, 56200.00, 59140.00, 62450.00, 65640.00, 68740.00,
+       72060.00, 75370.00, 78920.00, 85380.00, 90120.00, 94590.00,
+       99410.00, 104120.00, 108870.00, 113790.00, 118990.00, 124200.00,
+       129610.00, 136740.00, 143670.00, 149260.00, 155560.00, 161780.00,
+       167690.00, 174060.00, 179790.00, 185730.00, 191540.00,
+       197870.00, 203760.00, 209830.00, 215660.00, 221410.00,
+       228220.00, 234000.00, 239290.00, 244630.00, 250630.00,
+       255460.00, 260490.00, 265720.00, 270950.00, 276160.00,
+       281260.00, 286570.00, 292040.00, 299530.00, 306500.00,
+       313340.00, 319680.00, 326200.00, 332860.00, 340030.00,
+       346820.00, 353150.00, 359490.00, 365350.00, 371440.00,
+       377830.00, 383800.00, 389950.00, 395060.00, 399960.00,
+       405070.00, 407000.00, 409550.00, 412070.00, 414980.00,
+       418340.00, 422620.00, 427250.00, 432510.00, 472650.00,
        472650.00
 /
 !-------------------------------------------------------------------------------
@@ -145,9 +145,9 @@
 !             method to specify start and duration of model run
 !             1: duration computed from number of time steps, MaxN (bogus start
 !                date used) [no longer implemented!!]
-!             2: duration computed from given start and stop dates (number of 
+!             2: duration computed from given start and stop dates (number of
 !                time steps MaxN computed)
-!             3: duration computed from number of time steps, MaxN (start date 
+!             3: duration computed from number of time steps, MaxN (start date
 !                as specified, stop date computed)
 ! start     [string, format = "yyyy-mm-dd hh:mm:ss"]
 !             nominal start date
@@ -201,38 +201,38 @@
    csv_point_at = 240., 250.
    csv_point_nvars = 0
    csv_point_vars = 'temp',
-                    'salt'                    
+                    'salt'
    csv_lake_fname = 'lake'
 /
 !-------------------------------------------------------------------------------
 ! initial condition profiles
 !-------------------------------------------------------------------------------
-! num_depths   [integer] 
-!                  number of points of the initial depth profile 
-! the_depths   [real]    
+! num_depths   [integer]
+!                  number of points of the initial depth profile
+! the_depths   [real]
 !                  initial profile depths
-! the_temps    [real]    
+! the_temps    [real]
 !                  temperature at initial profile depths
-! the_sals     [real]    
+! the_sals     [real]
 !                  salinity at initial profile depths
-! num_wq_vars  [integer] 
+! num_wq_vars  [integer]
 !                  number of water quality variables in initial profile
-! wq_names     [string]  
-!                 names of water quality variables in initial profile, 
+! wq_names     [string]
+!                 names of water quality variables in initial profile,
 !                 order IS important ?????? XXXXXXXXXXXX
-! wq_init_vals [real]    
+! wq_init_vals [real]
 !                 values of water quality variables at initial profile depths
 !-------------------------------------------------------------------------------
 &init_profiles
     !num_heights = 12
     num_depths = 12
     lake_depth = 252.91 !253.0
-    the_depths = 0.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 100.0, 150.0, 200.0, 
+    the_depths = 0.0, 5.0, 10.0, 15.0, 20.0, 30.0, 50.0, 100.0, 150.0, 200.0,
                   230.0, 250.0
     the_temps = 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 4.7, 4.6, 4.6, 4.6
     the_sals = 0.2480, 0.2472, 0.2489, 0.2472, 0.2472, 0.2463, 0.2480, 0.2489,
-               0.2523, 0.2549, 0.2549, 0.2549             
-    !the_heights = 2.91, 22.91, 52.91, 102.91, 152.91, 202.91, 
+               0.2523, 0.2549, 0.2549, 0.2549
+    !the_heights = 2.91, 22.91, 52.91, 102.91, 152.91, 202.91,
     !             222.91, 232.91, 237.91, 242.91, 247.91, 252.91
     !the_temps  = 4.6, 4.6, 4.6, 4.7, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1, 5.1
     !the_sals   = 0.2549, 0.2549, 0.2549, 0.2523, 0.2489, 0.2480, 0.2463, 0.2472,
@@ -256,8 +256,8 @@
 !   ch            [real] bulk aerodynamic coefficient for sensible heat transfer
 !   coef_wind_drag       Bulk aerodynamic coefficient for transfer of momentum
 !   subdaily      [bool] daily meteorological input data (false)
-!                        subdaily meteorological input data (true); 
-!                        in subdaily case: timestep of meteorology data = dt 
+!                        subdaily meteorological input data (true);
+!                        in subdaily case: timestep of meteorology data = dt
 !
 !-------------------------------------------------------------------------------
 &meteorology
@@ -267,14 +267,14 @@
    snow_sw    = .false.
    atm_stab   = .false.
    meteo_fl   = 'metKN.csv'
-   wind_factor = 1.165  
+   wind_factor = 1.165
    ce = 0.0013
    ch = 0.0013
    coef_wind_drag = 0.0013
    subdaily = .true.
 /
 !-------------------------------------------------------------------------------
-! inflows 
+! inflows
 !-------------------------------------------------------------------------------
 !
 !  num_inflows       [integer] number of inflowing streams
@@ -290,23 +290,23 @@
 !-------------------------------------------------------------------------------
 &inflow
    num_inflows    = 13
-   names_of_strms = 'Rhein', 'Bregenzerach', 'Argen', 'Rhein-Binnenkanal', 
+   names_of_strms = 'Rhein', 'Bregenzerach', 'Argen', 'Rhein-Binnenkanal',
                     'Schussen', 'Dornbirnerach', 'Leiblach',  'Seefelderach',
-                    'Rotach', 'Stockacherach', 'Goldach', 'Steinach', 
+                    'Rotach', 'Stockacherach', 'Goldach', 'Steinach',
                     'Aach+rest'
    strm_hf_angle  = 88.0, 87.0, 88.0, 76.0, 89.0, 88.0, 89.0,
-                    89.0, 89.0, 88.0, 89.0, 89.0, 89.0  
+                    89.0, 89.0, 88.0, 89.0, 89.0, 89.0
    strmbd_slope   = 0.94, 0.87, 5.40, 1.66, 2.66, 0.83, 0.72,
                     3.02, 2.03, 0.98, 1.60, 2.95, 2.23
    strmbd_drag    = 0.015, 0.015, 0.015, 0.015, 0.015, 0.015, 0.015
-                    0.015, 0.015, 0.015, 0.015, 0.015, 0.015 
-   inflow_factor  = 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
+                    0.015, 0.015, 0.015, 0.015, 0.015, 0.015
+   inflow_factor  = 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
                     1.0, 1.0
    inflow_fl      = 'inflow_1.csv', 'inflow_2.csv', 'inflow_3.csv',
                     'inflow_4.csv', 'inflow_5.csv', 'inflow_6.csv',
                     'inflow_7.csv', 'inflow_8.csv', 'inflow_9.csv',
                     'inflow_10.csv', 'inflow_11.csv', 'inflow_12.csv',
-                    'inflow_13.csv'   
+                    'inflow_13.csv'
    inflow_varnum  = 3,
    inflow_vars    = 'FLOW',
                     'TEMP',

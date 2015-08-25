@@ -11,7 +11,7 @@
 !
 !-------------------------------------------------------------------------------
 &aed2_models
-   models = 'aed2_sedflux',
+   models = ! 'aed2_sedflux',
             'aed2_oxygen',
             'aed2_carbon',
             'aed2_silica',
@@ -159,7 +159,7 @@
    Fsed_dic = 3.0
    Ksed_dic = 20.0
    theta_sed_dic = 1.08
-   Fsed_dic_variable='SDF_Fsed_dic'
+!  Fsed_dic_variable='SDF_Fsed_dic'
    pH_initial = 7.5
    atmco2 = 370e-6
    ionic = 0.1
@@ -191,7 +191,7 @@
    Ksed_rsi = 50.0
    theta_sed_rsi = 1.08
    silica_reactant_variable='OXY_oxy'
-   Fsed_rsi_variable = 'SDF_Fsed_rsi'
+!  Fsed_rsi_variable = 'SDF_Fsed_rsi'
 /
 
 
@@ -257,8 +257,8 @@
    theta_sed_nit = 1.08
    nitrif_reactant_variable='OXY_oxy'
    denit_product_variable=''  !'NIT_N20'
-   Fsed_amm_variable='SDF_Fsed_amm'
-   Fsed_nit_variable='SDF_Fsed_nit'
+!  Fsed_amm_variable='SDF_Fsed_amm'
+!  Fsed_nit_variable='SDF_Fsed_nit'
 /
 
 !###############################################################################
@@ -575,6 +575,6 @@
               'PHY_green'
    TOC_varscale = 1.0, 1.0, 1.0, 1.0
    TSS_vars = 'TRC_ss1',
-              'PHY_green' !, .... 
+              'PHY_green' !, ....
 !  TSS_varscale = 0.1,0.1            !,  <vector same length as TSS names>
 /

@@ -1,13 +1,13 @@
 #!/usr/bin/make -f
 
 package=glm
-year=2014
-version=1.4.0
+year=2015
+version=2.0.3
 release=0.0
 
 #export DH_VERBOSE=1
 
-binary: 
+binary:
 	dh_testdir
 	-mkdir -p $(CURDIR)/debian/glm/usr/local/bin
 	-(cp $(CURDIR)/src/glm $(CURDIR)/debian/glm/usr/local/bin)

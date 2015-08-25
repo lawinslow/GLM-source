@@ -575,6 +575,8 @@ SUBROUTINE check_data
    DO av=1,n_aed2_vars
       IF ( .NOT.  aed2_get_var(av, tvar) ) STOP "Error getting variable info"
 
+!print *,"Dealing with var ",av," called '",TRIM(tvar%name),"'"
+
       IF ( tvar%extern ) THEN !# global variable
          ev = ev + 1
          SELECT CASE (tvar%name)
@@ -610,6 +612,7 @@ SUBROUTINE check_data
          print *, "ERROR: Undefined variable ", TRIM(tvar%name)
          err_count = err_count + 1
       ENDIF
+!print *,"Dealt with var ",av," called '",TRIM(tvar%name),"'"
    ENDDO
 
    IF ( n_vars < v ) print *,"More vars than expected",v,n_vars
@@ -662,7 +665,7 @@ SUBROUTINE define_column(column, top, cc, cc_diag, flux_pel, flux_atm, flux_ben)
             CASE ( 'wind_speed' )  ; column(av)%cell_sheet => wnd
             CASE ( 'par_sf' )      ; column(av)%cell_sheet => I_0
             CASE ( 'taub' )        ; column(av)%cell_sheet => bottom_stress
-            CASE DEFAULT ; CALL STOPIT("ERROR: external variable "//trim(tvar%name)//" not found.")
+            CASE DEFAULT ; CALL STOPIT("ERROR: external variable "//TRIM(tvar%name)//" not found.")
          END SELECT
       ELSEIF ( tvar%diag ) THEN  !# Diagnostic variable
          IF ( tvar%sheet ) THEN

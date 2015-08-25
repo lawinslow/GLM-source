@@ -181,13 +181,13 @@ static AED_REAL max_dtdz_at(LakeDataType *Lake, int count)
 int _intern_is_var(const char *v)
 {
     if ( do_plots ) {
-        if (strcmp("temp", v) == 0) return 1;
-        if (strcmp("salt", v) == 0) return 2;
-        if (strcmp("rad",  v) == 0) return 3;
-        if (strcmp("extc", v) == 0) return 4;
-        if (strcmp("dens", v) == 0) return 5;
-        if (strcmp("uorb", v) == 0) return 6;
-        if (strcmp("taub", v) == 0) return 7;
+        if (strcasecmp("temp", v) == 0) return 1;
+        if (strcasecmp("salt", v) == 0) return 2;
+        if (strcasecmp("rad",  v) == 0) return 3;
+        if (strcasecmp("extc", v) == 0) return 4;
+        if (strcasecmp("dens", v) == 0) return 5;
+        if (strcasecmp("uorb", v) == 0) return 6;
+        if (strcasecmp("taub", v) == 0) return 7;
     }
     return 0;
 }
@@ -358,7 +358,8 @@ void write_outflow(int of_idx, int jday, AED_REAL vol)
     write_csv_outfl(of_idx, "Salt",       Lake[lvl].Salinity,      NULL, FALSE);
 
     if (wq_calc) {   //# must do each of the WQ vars
-        for (i = 0; i < csv_outfl_nvars; i++)
+        // # the first 3 vars are flow, temp and salt
+        for (i = 3; i < csv_outfl_nvars; i++)
             write_csv_outfl_idx(of_idx, i,    state_of_v[i],       NULL, FALSE);
     }
 

@@ -43,13 +43,13 @@ MODULE aed2_carbon
       INTEGER  :: id_wind
       INTEGER  :: id_ch4ox
       INTEGER  :: id_sed_dic
-      INTEGER  :: id_atm_co2_exch,id_atm_ch4_exch
+      INTEGER  :: id_atm_co2_exch, id_atm_ch4_exch
 
       !# Model parameters
-      AED_REAL :: Fsed_dic,Ksed_dic,theta_sed_dic
-      AED_REAL :: Fsed_ch4,Ksed_ch4,theta_sed_ch4
-      AED_REAL :: Rch4ox,Kch4ox,vTch4ox,atmco2,ionic
-      LOGICAL  :: use_oxy,use_dic,use_sed_model
+      AED_REAL :: Fsed_dic, Ksed_dic, theta_sed_dic
+      AED_REAL :: Fsed_ch4, Ksed_ch4, theta_sed_ch4
+      AED_REAL :: Rch4ox, Kch4ox, vTch4ox, atmco2,ionic
+      LOGICAL  :: use_oxy, use_sed_model_dic, use_sed_model_ch4
       LOGICAL  :: simDIC, simCH4
 
      CONTAINS
@@ -141,30 +141,32 @@ SUBROUTINE aed2_define_carbon(data, namlst)
 
    ! Register state variables
    IF (dic_initial>MISVAL) THEN
-     data%id_dic = aed2_define_variable('dic','mmol/m**3','dissolved inorganic carbon',     &
-                                      dic_initial,minimum=zero_)
-     data%simDIC = .true.
-     data%id_pH = aed2_define_variable('pH','-','pH',     &
-                                      pH_initial,minimum=zero_)
+      data%id_dic = aed2_define_variable('dic','mmol/m**3','dissolved inorganic carbon',     &
+                                       dic_initial,minimum=zero_)
+      data%simDIC = .true.
+      data%id_pH = aed2_define_variable('pH','-','pH',     &
+                                       pH_initial,minimum=zero_)
    ENDIF
 
    IF (ch4_initial>MISVAL) THEN
-     data%id_ch4 = aed2_define_variable('ch4','mmol/m**3','methane',    &
-                                    ch4_initial,minimum=zero_)
-     data%simCH4 = .true.
+      data%id_ch4 = aed2_define_variable('ch4','mmol/m**3','methane',    &
+                                     ch4_initial,minimum=zero_)
+      data%simCH4 = .true.
    ENDIF
 
    !# Register external state variable dependencies
    data%use_oxy = methane_reactant_variable .NE. '' !This means oxygen module switched on
    IF (data%use_oxy) THEN
-     data%id_oxy = aed2_locate_variable(methane_reactant_variable)
+      data%id_oxy = aed2_locate_variable(methane_reactant_variable)
    ENDIF
 
-   data%use_sed_model = Fsed_dic_variable .NE. ''
-   IF (data%use_sed_model) THEN
-       data%id_Fsed_dic = aed2_locate_global_sheet(Fsed_dic_variable)
-       data%id_Fsed_ch4 = aed2_locate_global_sheet(Fsed_ch4_variable)
-   ENDIF
+   data%use_sed_model_dic = Fsed_dic_variable .NE. ''
+   IF (data%use_sed_model_dic) &
+      data%id_Fsed_dic = aed2_locate_global_sheet(Fsed_dic_variable)
+
+   data%use_sed_model_ch4 = Fsed_ch4_variable .NE. ''
+   IF (data%use_sed_model_ch4) &
+      data%id_Fsed_ch4 = aed2_locate_global_sheet(Fsed_ch4_variable)
 
    !# Register diagnostic variables
    data%id_ch4ox = aed2_define_diag_variable('ch4ox','/d', 'methane oxidation rate')
@@ -353,8 +355,6 @@ SUBROUTINE aed2_calculate_surface_carbon(data,column,layer_idx)
      ! Also store ch4 flux across the atm/water interface as diagnostic variable (mmmol/m2).
      _DIAG_VAR_S_(data%id_atm_ch4_exch) = FCH4
    END IF
-
-
 END SUBROUTINE aed2_calculate_surface_carbon
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -395,11 +395,14 @@ SUBROUTINE aed2_calculate_benthic_carbon(data,column,layer_idx)
     ! Retrieve current (local) state variable values.
    dic = _STATE_VAR_(data%id_dic)! carbon
 
-   IF ( data%use_sed_model ) THEN
+   IF ( data%use_sed_model_dic ) THEN
       Fsed_dic = _STATE_VAR_S_(data%id_Fsed_dic)
-      Fsed_ch4 = _STATE_VAR_S_(data%id_Fsed_ch4)
    ELSE
        Fsed_dic = data%Fsed_dic
+   ENDIF
+   IF ( data%use_sed_model_ch4 ) THEN
+      Fsed_ch4 = _STATE_VAR_S_(data%id_Fsed_ch4)
+   ELSE
        Fsed_ch4 = data%Fsed_ch4
    ENDIF
 
