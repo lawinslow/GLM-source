@@ -1,4 +1,4 @@
-glm (2.0.2-0) UNRELEASED; urgency=low
+glm (2.0.2-icefix-0) UNRELEASED; urgency=low
 
   [ hydro ]
   * new version 2.0.0
@@ -7,7 +7,10 @@ glm (2.0.2-0) UNRELEASED; urgency=low
   * new version 2.0.1
   * new version 2.0.2
 
- -- Casper Boon <casper@eridanus>  Tue, 28 Apr 2015 12:40:04 +0800
+  [ Luke Winslow ]
+  * new version 2.0.2-icefix
+
+ -- Luke Winslow <glm@glm>  Tue, 25 Aug 2015 16:13:43 -0500
 
 glm (1.4.0-0) UNRELEASED; urgency=low
 

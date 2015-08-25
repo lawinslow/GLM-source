@@ -276,16 +276,21 @@ void write_diags(int jday, AED_REAL LakeNum)
 
     write_csv_lake("time",            0.0,                       ts,   FALSE);
     write_csv_lake("Volume",          sum_lake_layervol(),       NULL, FALSE);
+    write_csv_lake("Vol Snow",        SurfData.HeightSnow * Lake[surfLayer].LayerArea * SurfData.RhoSnow/1000.0,     NULL, FALSE);
+    //Magic numbers for ice density are from glm_surface.c
+    write_csv_lake("Vol Black Ice",   SurfData.HeightBlackIce * Lake[surfLayer].LayerArea * 917.0/1000.0, NULL, FALSE); 
+    write_csv_lake("Vol White Ice",   SurfData.HeightWhiteIce * Lake[surfLayer].LayerArea * 890.0/1000.0, NULL, FALSE);
     write_csv_lake("Tot Inflow Vol",  SurfData.dailyInflow,      NULL, FALSE);
     write_csv_lake("Tot Outflow Vol", SurfData.dailyOutflow,     NULL, FALSE);
     write_csv_lake("Overflow Vol",    SurfData.dailyOverflow,    NULL, FALSE);
     write_csv_lake("Evaporation",     SurfData.dailyEvap,        NULL, FALSE);
     write_csv_lake("Rain",            SurfData.dailyRain,        NULL, FALSE);
+    write_csv_lake("Snowfall",        SurfData.dailySnow,        NULL, FALSE);
     write_csv_lake("Lake Level",      Lake[surfLayer].Height,    NULL, FALSE);
     write_csv_lake("Surface Area",    Lake[surfLayer].LayerArea, NULL, FALSE);
     write_csv_lake("Black Ice",       SurfData.HeightBlackIce,   NULL, FALSE);
-    write_csv_lake("Snow",            SurfData.HeightSnow,       NULL, FALSE);
-    write_csv_lake("Rho Snow",        SurfData.RhoSnow,          NULL, FALSE);
+    write_csv_lake("Snow Height",     SurfData.HeightSnow,       NULL, FALSE);
+    write_csv_lake("Snow Density",    SurfData.RhoSnow,          NULL, FALSE);
     write_csv_lake("White Ice",       SurfData.HeightWhiteIce,   NULL, FALSE);
     write_csv_lake("Max Temp",        max_temp(Lake, NumLayers), NULL, FALSE);
     write_csv_lake("Min Temp",        min_temp(Lake, NumLayers), NULL, FALSE);
