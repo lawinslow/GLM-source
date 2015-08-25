@@ -8,12 +8,12 @@
             'aed2_silica',
             'aed2_nitrogen',
             'aed2_phosphorus',
-            'aed2_organic_matter',
-            'aed2_phytoplankton',
-            'aed2_zooplankton',
-            'aed2_pathogens',
-            'aed2_tracer',
-            'aed2_totals',
+!           'aed2_organic_matter',
+!           'aed2_phytoplankton',
+!           'aed2_zooplankton',
+!           'aed2_pathogens',
+!           'aed2_tracer',
+!           'aed2_totals',
             'aed2_test'
 /
 
@@ -364,60 +364,76 @@
 !
 !-------------------------------------------------------------------------------
 &aed2_organic_matter
+    !-- ORGANIC CARBON
+   poc_initial = 78.5, !average for 08-Sep-2009
+   doc_initial = 389.9, !average for 08-Sep-2009
+   w_poc = -2.0,
+   Rpoc_miner = 0.005,
+   Rdoc_miner = 0.005,
+   Fsed_poc = 0.0,
+   Fsed_doc = 0.0,
+   Kpoc_miner = 31.25,
+   Kdoc_miner = 31.25,
+   Ksed_doc = 4.5,
+   theta_poc_miner = 1.08,
+   theta_doc_miner = 1.08,
+   theta_sed_doc = 1.08,
+   doc_miner_reactant_variable='',
+   doc_miner_product_variable='',
    !-- ORGANIC NITROGEN
-   pon_initial = 50.0
-   don_initial = 50.0
-   w_pon = -0.01
-   Rpon_miner = 0.01
-   Rdon_miner = 0.01
-   Fsed_pon = -0.01
-   Fsed_don = 5.0
-   Kpon_miner = 31.25
-   Kdon_miner = 31.25
-   Ksed_don = 4.5
-   theta_pon_miner = 1.08
-   theta_don_miner = 1.08
-   theta_sed_don = 1.08
-   don_miner_product_variable='NIT_amm'
+   pon_initial = 8.3, !average for 08-Sep-2009
+   don_initial = 14.3, !average for 08-Sep-2009
+   w_pon = -0.1,
+   Rpon_miner = 0.005,
+   Rdon_miner = 0.005,
+   Fsed_pon = 0.0,
+   Fsed_don = 0.0,
+   Kpon_miner = 31.25,
+   Kdon_miner = 31.25,
+   Ksed_don = 4.5,
+   theta_pon_miner = 1.08,
+   theta_don_miner = 1.08,
+   theta_sed_don = 1.08,
+   !pon_miner_reactant_variable='oxy',
+   don_miner_product_variable='NIT_amm',
    !-- ORGANIC PHOSPHORUS
-   pop_initial = 1.0
-   dop_initial = 1.0
-   w_pop = -0.01
-   Rpop_miner = 0.001
-   Rdop_miner = 0.0001
-   Fsed_pop = -0.01
-   Fsed_dop = -900.0
-   Kpop_miner = 31.25
-   Kdop_miner = 31.25
-   Ksed_dop = 40.5
-   theta_pop_miner = 1.08
-   theta_dop_miner = 1.08
-   theta_sed_dop = 1.08
-   dop_miner_product_variable='PHS_frp'
-   !-- ORGANIC CARBON
-   poc_initial = 80.0
-   doc_initial = 80.0
-   w_poc = -0.01
-   Rpoc_miner = 0.01
-   Rdoc_miner = 0.01
-   Fsed_poc = 0.00
-   Fsed_doc = 10.0
-   Kpoc_miner = 31.25
-   Kdoc_miner = 31.25
-   Ksed_doc = 4.5
-   theta_poc_miner = 1.08
-   theta_doc_miner = 1.08
-   theta_sed_doc = 1.08
-   KeDOM=0.001
-   KePOM=0.001
-   doc_miner_reactant_variable='OXY_oxy'
-   doc_miner_product_variable= 'CAR_dic'
-!  Fsed_pon_variable='SDF_Fsed_pon'
-!  Fsed_don_variable='SDF_Fsed_don'
-!  Fsed_pop_variable='SDF_Fsed_pop'
-!  Fsed_dop_variable='SDF_Fsed_dop'
-!  Fsed_poc_variable='SDF_Fsed_poc'
-!  Fsed_doc_variable='SDF_Fsed_doc'
+   pop_initial = 8.3,
+   dop_initial = 4.5,
+   w_pop = -2.0,
+   Rpop_miner = 0.005,
+   Rdop_miner = 0.005,
+   Fsed_pop = 0.0,
+   Fsed_dop = 0.0,
+   Kpop_miner = 31.25,
+   Kdop_miner = 31.25,
+   Ksed_dop = 4.5,
+   theta_pop_miner = 1.08,
+   theta_dop_miner = 1.08,
+   theta_sed_dop = 1.08,
+   !pop_miner_reactant_variable='',
+   dop_miner_product_variable='',
+!  Fsed_pon_variable='Fsed_pon'
+!  Fsed_don_variable='Fsed_don'
+!  Fsed_pop_variable='Fsed_pop'
+!  Fsed_dop_variable='Fsed_dop'
+!  Fsed_poc_variable='Fsed_poc'
+!  Fsed_doc_variable='Fsed_doc'
+   !-- REFRACTORY ORGANIC MATTER
+   simRPools = .true.
+   docr_initial = 1
+   donr_initial = 1
+   dopr_initial = 1
+   cpom_initial = 1
+   Rdocr_miner  = 0.001
+   Rdonr_miner  = 0.001
+   Rdopr_miner  = 0.001
+   Rcpom_bdown  = 0.001
+   w_cpom       = -0.01
+   X_cpom_n     = 0.005
+   X_cpom_p     = 0.0001
+   KeDOMR       = 0.02
+   KeCPOM       = 0.02
+   extra_diag   = .true.
 /
 
 
@@ -574,6 +590,5 @@
               'PHY_crypto'
    TOC_varscale = 1.0, 1.0, 1.0, 1.0
    TSS_vars = 'TRC_ss1',
-              'PHY_green' !, .... 
-!  TSS_varscale = 0.1,0.1,0.,0.1            !,  <vector same length as TSS names>
+              'PHY_green' !, ....
 /

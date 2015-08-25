@@ -1,5 +1,5 @@
 !-----------------------------------------------------------
-! plots_window defines the size of the window used for 
+! plots_window defines the size of the window used for
 ! display of the plots
 !
 ! builtin variables that can be plotted are :
@@ -26,7 +26,7 @@
 !  title  - list of titles, one for each plot
 !  min_z  - list of minimum values for the z component
 !  max_z  - list of maximum values for the z component
-! 
+!
 ! For the moment really only the min/max values are worth
 ! tinkering with
 !-----------------------------------------------------------
@@ -67,6 +67,6 @@
 
 !-----------------------------------------------------------
 &validation
-  time = 
+  time =
   depths =
 /

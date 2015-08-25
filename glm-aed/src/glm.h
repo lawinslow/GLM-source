@@ -38,7 +38,8 @@
 #endif
 #define USE_FILLVALUE 1
 
-#define GLM_VERSION  "2.0.2-icefix"
+#define GLM_VERSION  "2.0.3-icefix"
+
 
 #define POINT         0
 #define Z_SHAPE       1

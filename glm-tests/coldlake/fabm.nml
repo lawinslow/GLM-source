@@ -11,7 +11,7 @@
 !
 ! For further detail about available AED modules visit:
 !     aed.see.uwa.edu.au/research/models/AED
-!  
+!
 !-------------------------------------------------------------------------------
 &fabm_nml
    models = !'gotm_npzd',
@@ -143,9 +143,9 @@
 !                 Arrhenius temperature multiplier for sediment oxygen flux
 !
 ! NOTE: Processes such as photosynthesis and bacterial respiration from other
-!       AED modules should be configured to use the following names: 
+!       AED modules should be configured to use the following names:
 !        aed_oxygen_oxy
-! 
+!
 ! DIAGNOSTICS:
 !        -
 !-------------------------------------------------------------------------------
@@ -189,15 +189,15 @@
 !                 half-saturation oxygen concentration controlling CH4 flux
 ! theta_sed_ch4 [float, unit = - ]
 !                 Arrhenius temperature multiplier for sediment CH4 flux
-! methane_reactant_variable         
+! methane_reactant_variable
 !                 state variable to be consumed during CH4 oxidation
 !
 ! NOTE: Processes such as photosynthesis and bacterial respiration from other
-!       AED modules should be configured to use the following names: 
+!       AED modules should be configured to use the following names:
 !        aed_carbon_dic
 !        aed_carbon_ch4
 !        aed_carbon_pH
-! 
+!
 ! DIAGNOSTICS:
 !        -
 !-------------------------------------------------------------------------------
@@ -264,16 +264,16 @@
 !                 Arrhenius temperature multiplier for sediment NH4 flux
 ! theta_sed_nit [float, unit = - ]
 !                 Arrhenius temperature multiplier for sediment NO3 flux
-! nitrif_reactant_variable         
+! nitrif_reactant_variable
 !                 state variable to be consumed during nitrification
-! denit_product_variable         
+! denit_product_variable
 !                 state variable to be incremented from denitrification
 !
-! NOTE: Processes such as phytoplankton uptake and zooplankton excretion from 
-!       other AED modules should be configured to use the following names: 
+! NOTE: Processes such as phytoplankton uptake and zooplankton excretion from
+!       other AED modules should be configured to use the following names:
 !        aed_nitrogen_nit
 !        aed_nitrogen_amm
-! 
+!
 ! DIAGNOSTICS:
 !        aed_nitrogen_denit
 !
@@ -310,32 +310,32 @@
 !                 half-saturation oxygen concentration controlling PO4 flux
 ! theta_sed_frp [float, unit = - ]
 !                 Arrhenius temperature multiplier for sediment PO4 flux
-! phosphorus_reactant_variable   [string]       
+! phosphorus_reactant_variable   [string]
 !                 state variable linked to sediment release
 ! simPO4Adsorption               [bool]
 !                 switch to enable PO4 adsorption/desorption model
 ! ads_use_external_tss           [bool]
 !                 switch to set external environment variable as substrate
-! po4sorption_target_variable    [string]     
+! po4sorption_target_variable    [string]
 !                 variable PO4 will adsorb onto (if not ads_use_external_tss)
 ! PO4AdsorptionModel             [integer]
 !                 sorption algorithm to use
-! Kpo4p         [float, unit = ]                 
+! Kpo4p         [float, unit = ]
 !                 sorption constant
-! ads_use_pH    [bool]     
+! ads_use_pH    [bool]
 !                 switch to enagge pH dependency in sorption algorithm
-! Kadsratio     [float, unit = ]       
+! Kadsratio     [float, unit = ]
 !                 sorption constant
-! Qmax          [float, unit = ]   
+! Qmax          [float, unit = ]
 !                 sorption constant
-! w_po4ads      [float, unit = m/d]      
+! w_po4ads      [float, unit = m/d]
 !                 settling rate of adsorbed PO4
 !
 ! NOTE: Processes such as PO4 uptake and bacterial mineralisation from other
-!       AED modules should be configured to use the following names: 
+!       AED modules should be configured to use the following names:
 !        aed_phosphorus_frp
 !        aed_phosphorus_frp_ads
-! 
+!
 ! DIAGNOSTICS:
 !        -
 !
@@ -365,7 +365,7 @@
 !                   initial PON conc (can be overwritten by GLM or TFV IC)
 ! dom_initial     [float, unit = mmol/m^3]
 !                   initial DON conc (can be overwritten by GLM or TFV IC)
-! w_pom           [float, unit = m/day]      
+! w_pom           [float, unit = m/day]
 !                   settling rate of detrital N pool
 ! Rpom_miner      [float, unit = /day ]
 !                   hydrolysis/breakdown rate of detrital N pool @ 20C
@@ -374,7 +374,7 @@
 ! Fsed_pom        [float, unit = mmol/m^2/day]
 !                   sediment PON flux (note this is extra to sedimentation)
 ! Fsed_dom        [float, unit = mmol/m^2/day]
-!                   sediment DON flux 
+!                   sediment DON flux
 ! Kpom_miner      [float, unit = mmol/m^3 ]
 !                   half-saturation oxygen concentration for PON breakdown
 ! Kdom_miner      [float, unit = mmol/m^3 ]
@@ -387,23 +387,23 @@
 !                   Arrhenius temperature multiplier for DON mineralisation
 ! theta_sed_dom   [float, unit = - ]
 !                   Arrhenius temperature multiplier for sediment DON flux
-! dom_miner_product_variable   [string]       
-!                   state variable to be product of DON mineralisation 
+! dom_miner_product_variable   [string]
+!                   state variable to be product of DON mineralisation
 ! KeDOM           [float, unit = /m /(mmol C/m^3)]
 !                   specific light attenuation coefificent for DOM
 ! KePOM           [float, unit = /m /(mmol C/m^3)]
 !                   specific light attenuation coefificent for POM
-! doc_miner_reactant_variable  [string]       
-!                   state variable to be linked to rate of DOC mineralisation 
+! doc_miner_reactant_variable  [string]
+!                   state variable to be linked to rate of DOC mineralisation
 !
 ! NOTE: Generic use of POM/DOM in the above descriptions, use C/N/P below
 !
 ! NOTE: Processes such as phyto or zoop excretion within any other
-!       AED modules should be configured to use the following names: 
+!       AED modules should be configured to use the following names:
 !        aed_organic_matter_doc    aed_organic_matter_poc
 !        aed_organic_matter_don    aed_organic_matter_pon
 !        aed_organic_matter_dop    aed_organic_matter_pop
-! 
+!
 ! DIAGNOSTICS:
 !        -
 !
@@ -472,22 +472,22 @@
 !                   number of phytoplankton groups within this module to include
 ! num_phytos      [integer]
 !                   list of ID's of groups in aed_phyto_pars.nml (len=num_phyto)
-! X_excretion_target_variable  [string]       
+! X_excretion_target_variable  [string]
 !                   state variable to receive C, N or P from excretion
-! X_mortality_target_variable  [string]       
+! X_mortality_target_variable  [string]
 !                   state variable to receive C, N or P from mortality
-! X_uptake_target_variable  [string]       
+! X_uptake_target_variable  [string]
 !                   state variable to be linked for C,N,P,Si or O2 uptake
 !
 ! NOTE: Users must supply a valid "aed_phyto_pars.nml" file
-!       
+!
 !
 ! NOTE: Processes such as zoop grazing or turbidity calc within any other
-!       AED modules should be configured to use the following names: 
+!       AED modules should be configured to use the following names:
 !        aed_phytoplankton_name        (where name is as defined in the nml)
-!        aed_phytoplankton_name_IN     (internal nitrogen) 
-!        aed_phytoplankton_name_IP     (internal phosphorus) 
-! 
+!        aed_phytoplankton_name_IN     (internal nitrogen)
+!        aed_phytoplankton_name_IP     (internal phosphorus)
+!
 ! DIAGNOSTICS:
 !        aed_phytoplankton_name_fI     (light limitation)
 !        aed_phytoplankton_name_fT     (temp limitation)
@@ -525,18 +525,18 @@
 !                   number of zooplankton groups within this module to include
 ! the_zoops      [integer]
 !                   list of ID's of groups in aed_zoop_pars.nml (len=num_zoops)
-! dX_target_variable  [string]       
-!                   state variable linked to provide/receive dissoved OM 
-! pX_target_variable  [string]       
-!                   state variable linked to provide/receive particulate OM 
+! dX_target_variable  [string]
+!                   state variable linked to provide/receive dissoved OM
+! pX_target_variable  [string]
+!                   state variable linked to provide/receive particulate OM
 !
 ! NOTE: Users must supply a valid "aed_zoops_pars.nml" file
-!       
+!
 !
 ! NOTE: Processes such as zoop grazing or turbidity calc within any other
-!       AED modules should be configured to use the following names: 
+!       AED modules should be configured to use the following names:
 !        aed_zooplankton_name        (where name is as defined in the nml)
-! 
+!
 ! DIAGNOSTICS:
 !       -
 !

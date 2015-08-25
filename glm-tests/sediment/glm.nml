@@ -80,13 +80,13 @@
 !-------------------------------------------------------------------------------
 &morphometry
    lake_name  = 'SedTest'
-   latitude   = 0.0 
-   longitude  = 0.0 
-   base_elev  = 0.0 
-   crest_elev = 5.0 
+   latitude   = 0.0
+   longitude  = 0.0
+   base_elev  = 0.0
+   crest_elev = 5.0
    bsn_len    = 1
    bsn_wid    = 1
-   bsn_vals   = 7 
+   bsn_vals   = 7
    !   H(m)  A(m2 * 1000) V(m3 * 1000)
    H = 0.0,  1.0,  2.0,  3.0,  4.0,  5.0
    A = 0.0,  1.0,  2.0,  3.0,  4.0,  5.0
@@ -226,7 +226,7 @@
 /
 
 !-------------------------------------------------------------------------------
-! inflows 
+! inflows
 !-------------------------------------------------------------------------------
 !
 !  num_inflows       number of inflowing streams
@@ -282,7 +282,7 @@
    flt_off_sw   = .false.
    outl_elvs    = 0
    bsn_len_outl = 1
-   bsn_wid_outl =1 
+   bsn_wid_outl =1
    outflow_fl   = 'outflow.csv'
    outflow_factor = 0.0
 /

@@ -2,11 +2,11 @@
 ! general model setup
 !-------------------------------------------------------------------------------
 !
-! sim_name         [string]  title of simulation       
-! max_layers       [integer] maximum number of layers  
-! min_layer_vol    [real]    minimum layer volume (m3 * 1000)      
-! min_layer_thick  [real]    minimum layer thickness (m)  
-! max_layer_thick  [real]    maximum layer thickness (m) 
+! sim_name         [string]  title of simulation
+! max_layers       [integer] maximum number of layers
+! min_layer_vol    [real]    minimum layer volume (m3 * 1000)
+! min_layer_thick  [real]    minimum layer thickness (m)
+! max_layer_thick  [real]    maximum layer thickness (m)
 ! Kw               [real]    background light attenuation (m**-1)
 ! coef_inf_entrain [real]    entrainment coefficient for inflows
 ! coef_mix_conv    [real]    mixing efficiency - convective overturn
@@ -24,11 +24,11 @@
    max_layer_thick = 1.500
    Kw = 0.6
    coef_inf_entrain = 0.
-   coef_mix_conv = 0.125 
-   coef_wind_stir = 0.23      
-   coef_mix_shear = 0.20       
-   coef_mix_turb = 0.51       
-   coef_mix_KH = 0.30 
+   coef_mix_conv = 0.125
+   coef_wind_stir = 0.23
+   coef_mix_shear = 0.20
+   coef_mix_turb = 0.51
+   coef_mix_KH = 0.30
    coef_mix_hyp = 0.5
 /
 
@@ -250,7 +250,7 @@
 /
 
 !-------------------------------------------------------------------------------
-! inflows 
+! inflows
 !-------------------------------------------------------------------------------
 !
 !  num_inflows       number of inflowing streams

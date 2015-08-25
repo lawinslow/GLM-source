@@ -34,7 +34,7 @@ MODULE aed2_silica
 
       !# Model parameters
       AED_REAL :: Fsed_rsi,Ksed_rsi,theta_sed_rsi
-      LOGICAL  :: use_oxy,use_rsi,use_sed_model
+      LOGICAL  :: use_oxy,use_sed_model
 
      CONTAINS
          PROCEDURE :: define            => aed2_define_silica

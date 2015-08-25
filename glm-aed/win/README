@@ -16,7 +16,7 @@ Updating version numbers :
 			=======================
 
 
-You will need to configure visual studio to find fortran libs : see 
+You will need to configure visual studio to find fortran libs : see
 
      http://software.intel.com/en-us/articles/configuring-visual-studio-for-mixed-language-applications
 
@@ -32,7 +32,7 @@ Configuring Microsoft Visual Studio 2003, 2005 or 2008
 
 This configuration needs to be done one time only per install of Microsoft Visual Studio.
 
-Open Microsoft Visual Studio.  Select Tools > Options. In the left pane, expand Projects and Solutions, 
+Open Microsoft Visual Studio.  Select Tools > Options. In the left pane, expand Projects and Solutions,
    click on VC++ Directories. (Visual Studio .NET 2003 uses "Projects" instead of "Projects and Solutions")
    and then select "Library Files" for "Show directories for".
 

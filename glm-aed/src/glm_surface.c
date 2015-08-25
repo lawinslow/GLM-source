@@ -1076,7 +1076,7 @@ AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
     // Bound the iteration (e.g. 15 for 10m, 3 for 2m)
     zL_MAX = -15.0;
 
-    if (abs(WIND_HEIGHT-10.0) > 0.5)
+    if (fabs(WIND_HEIGHT-10.0) > 0.5)
         U10 = WindSp * (log(10.0/c_z0)/log(WIND_HEIGHT/c_z0));
     else
         U10 = WindSp;
@@ -1173,14 +1173,14 @@ AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
     // Monin - Obukhov Length
     L = -rho_air *Ux*Ux*Ux * T_virt / (vonK * 9.81
                             * ((SH/cp_air) + 0.61*(AirTemp+Kelvin)*LH));
-    if (abs(L) < 0.5)
+    if (fabs(L) < 0.5)
         L = SIGN(1.0e-20, dT);
     zL = HUMIDITY_HEIGHT/L;
 
     // Start Iterative Sequence for Heat Flux Calculations
     NCOUNT = 1;
     zL0 = zero;
-    while ((abs(zL - zL0) >= 0.0001*abs(zL)) && (abs(zL) <= abs(zL_MAX))) {
+    while ((fabs(zL - zL0) >= 0.0001*fabs(zL)) && (fabs(zL) <= fabs(zL_MAX))) {
         zL0 = zL;
         zL = WIND_HEIGHT/L;
 
@@ -1213,14 +1213,14 @@ AED_REAL  atmos_stability(AED_REAL *Q_latentheat,
         L = -rho_air *Ux*Ux*Ux * T_virt / (vonK * 9.81
                                 * ((SH/cp_air) + 0.61*(AirTemp+Kelvin)*LH));
 
-        if (abs(L) < 0.5)
+        if (fabs(L) < 0.5)
             L = SIGN(1.0e-20,dT);
         zL = HUMIDITY_HEIGHT/L;
     } // enddo
 
     // Last Calculation - But 1st, check for high values
-    if (abs(zL)>abs(zL_MAX))
-        zL = SIGN(abs(zL_MAX),zL);
+    if (fabs(zL)>fabs(zL_MAX))
+        zL = SIGN(fabs(zL_MAX),zL);
     else
         zL = WIND_HEIGHT/L;
 

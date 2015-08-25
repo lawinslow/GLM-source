@@ -127,5 +127,13 @@ if [ "$OSTYPE" = "Linux" ] ; then
   fi
   mv glm*.deb ubuntu/$(lsb_release -rs)/
 fi
+if [ "$OSTYPE" = "Darwin" ] ; then
+  if [ ! -d ${CURDIR}/macos ] ; then
+     mkdir ${CURDIR}/macos
+  fi
+  cd ${CURDIR}/glm-aed/macos
+  /bin/bash macpkg.sh
+  mv ${CURDIR}/glm-aed/macos/glm_*.zip ${CURDIR}/macos/
+fi
 
 exit 0
