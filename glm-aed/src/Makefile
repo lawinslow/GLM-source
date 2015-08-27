@@ -159,9 +159,6 @@ ifeq ($(F90),ifort)
   LIBS+=-L/opt/intel/lib
   LIBS+=-lifcore -lsvml
   LIBS+=-limf -lintlc
-# ifeq ($(OSTYPE),Linux)
-#   LIBS+=-Wl,-rpath=/opt/intel/lib
-# endif
 else ifeq ($(F90),open95)
   FINCLUDES+=-I/opt/open64/include
   DEBUG_FFLAGS=-g -fbacktrace
@@ -170,7 +167,6 @@ else ifeq ($(F90),open95)
   ifeq ($(WITH_CHECKS),true)
     FFLAGS+=-fcheck=all
   endif
-  LIBS+=-L/opt/open64/lib -Wl,-rpath=/opt/open64/lib
 else
   F90=gfortran
   FINCLUDES+=-I/usr/include

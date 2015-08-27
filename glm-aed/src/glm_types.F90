@@ -104,8 +104,10 @@ MODULE glm_types
       AED_REAL :: HeightWhiteIce   !# height of white ice layer
       AED_REAL :: HeightSnow       !# height of snow layer
       AED_REAL :: dHt              !# change in thickness of either the snow or ice layer
+      AED_REAL :: RhoSnow          !# Density of snow layer in kg/m^3
       AED_REAL :: dailyEvap        !# Daily Evaporation (ML/day)
       AED_REAL :: dailyRain        !# Daily Rain (ML/day)
+      AED_REAL :: dailySnow        !# Daily Snow (ML/day)
       AED_REAL :: dailyQsw         !# Daily Short Wave Radiation (J/day)
       AED_REAL :: dailyQe          !# Daily Latent Heat(J/day)
       AED_REAL :: dailyQh          !# Daily Sensible Heat (J/day)

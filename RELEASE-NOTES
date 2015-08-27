@@ -14,6 +14,6 @@ their input files.
        included as default output.
 
 2) The units for inflow input files have been changed from ML/day to m3/s, all
-   inflow files will need to be adjusted accordingly. 
+   inflow files will need to be adjusted accordingly.
 3) The units for outflow input files have been changed from ML/day to m3/s, all
    outflow files will need to be adjusted accordingly.

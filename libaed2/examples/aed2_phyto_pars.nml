@@ -11,8 +11,8 @@
 ! R_growth      [real]: Phyto max growth rate @20C (/day)
 ! fT_Method     [int]:  Specifies temperature limitation function of growth (-); 0 = no temperature limitation 1= CAEDYM style
 ! theta_growth  [real]: Arrenhius temperature scaling for growth function (-)
-! T_std         [real]: Standard temperature (deg C) 
-! T_opt         [real]: Optimum temperature (deg C) 
+! T_std         [real]: Standard temperature (deg C)
+! T_opt         [real]: Optimum temperature (deg C)
 ! T_max         [real]: Maximum temperature (deg C)
 !-- LIGHT parameters
 ! lightModel    [int]: Type of light response function [0 = no photoinhibition; 1 = photoinhibition]
@@ -34,7 +34,7 @@
 ! simDINUptake  [int]:  Simulate DIN uptake (0 = false, 1 = true)
 ! simDONUptake  [int]:  Simulate DON uptake (0 = false, 1 = true) - currently not functioning
 ! simNFixation  [int]:  Simulate N fixation (0 = false, 1 = true)
-! simINDynamics [int]:  Simulate internal N  (0 = assumed fixed C:N, 2 = dynamic C:N) 
+! simINDynamics [int]:  Simulate internal N  (0 = assumed fixed C:N, 2 = dynamic C:N)
 ! N_o           [real]: Nitrogen concentraion below which uptake is 0 (mmol N/m^3)
 ! K_N           [real]: Half-saturation concentration of nitrogen (mmol N/m^3)
 ! X_ncon        [real]: Constant internal nitrogen concentration (mmol N/ mmol C) used if simINDynamics = 0 or 1
@@ -44,8 +44,8 @@
 ! k_nfix        [real]: growth rate reduction under maximum nitrogen fixation (/day) used if simNFixation >0
 ! R_nfix        [real]: nitrogen fixation rate (mmol N/mmol C/day)
 !-- PHOSPHORUS parameters
-! simDIPUptake  [real]: Simulate DIP uptake (0 = false, 1 = true) 
-! simIPDynamics [real]: Simulate internal phosphorus dynamics (0 = assumed fixed C:P, 2 = dynamic C:P) 
+! simDIPUptake  [real]: Simulate DIP uptake (0 = false, 1 = true)
+! simIPDynamics [real]: Simulate internal phosphorus dynamics (0 = assumed fixed C:P, 2 = dynamic C:P)
 ! P_0           [real]: Phosphorus concentraion below which uptake is 0 (mmol P/m^3)
 ! K_P           [real]: Half-saturation concentration of phosphorus (mmol P/m^3)
 ! X_pcon        [real]: Constant internal phosphorus concentration (mmol P/ mmol C) used if simIPDynamics = 0 or 1

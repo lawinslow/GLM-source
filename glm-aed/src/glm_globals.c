@@ -122,7 +122,7 @@ AED_REAL coef_wind_stir = 0.23; //# wind stirring
 AED_REAL coef_mix_hyp = 0.5;    //# efficiency of hypolimnetic mixing
 
 CLOGICAL non_avg = FALSE;
-int deep_mixing = 1;
+int deep_mixing = 2;
 
 //
 CLOGICAL catchrain = FALSE;

@@ -271,9 +271,6 @@ void _draw_picture(PictureItem *pic)
                cga.a, cga.b, cga.c, cga.d, cga.tx, cga.ty);
 */
 
-// This is now done just the once when the image is created (a bit faster)
-//  NSFrameRect(NSMakeRect(x-1, y-1, w+2, h+2));
-
     CGImageRef bitMapImage = CGBitmapContextCreateImage(cg);
     CGContextDrawImage([[NSGraphicsContext currentContext] CGContext],
                         NSMakeRect(x, y, w, h), bitMapImage);

@@ -181,13 +181,13 @@ static AED_REAL max_dtdz_at(LakeDataType *Lake, int count)
 int _intern_is_var(const char *v)
 {
     if ( do_plots ) {
-        if (strcmp("temp", v) == 0) return 1;
-        if (strcmp("salt", v) == 0) return 2;
-        if (strcmp("rad",  v) == 0) return 3;
-        if (strcmp("extc", v) == 0) return 4;
-        if (strcmp("dens", v) == 0) return 5;
-        if (strcmp("uorb", v) == 0) return 6;
-        if (strcmp("taub", v) == 0) return 7;
+        if (strcasecmp("temp", v) == 0) return 1;
+        if (strcasecmp("salt", v) == 0) return 2;
+        if (strcasecmp("rad",  v) == 0) return 3;
+        if (strcasecmp("extc", v) == 0) return 4;
+        if (strcasecmp("dens", v) == 0) return 5;
+        if (strcasecmp("uorb", v) == 0) return 6;
+        if (strcasecmp("taub", v) == 0) return 7;
     }
     return 0;
 }
@@ -276,15 +276,21 @@ void write_diags(int jday, AED_REAL LakeNum)
 
     write_csv_lake("time",            0.0,                       ts,   FALSE);
     write_csv_lake("Volume",          sum_lake_layervol(),       NULL, FALSE);
+    write_csv_lake("Vol Snow",        SurfData.HeightSnow * Lake[surfLayer].LayerArea * SurfData.RhoSnow/1000.0,     NULL, FALSE);
+    //Magic numbers for ice density are from glm_surface.c
+    write_csv_lake("Vol Black Ice",   SurfData.HeightBlackIce * Lake[surfLayer].LayerArea * 917.0/1000.0, NULL, FALSE); 
+    write_csv_lake("Vol White Ice",   SurfData.HeightWhiteIce * Lake[surfLayer].LayerArea * 890.0/1000.0, NULL, FALSE);
     write_csv_lake("Tot Inflow Vol",  SurfData.dailyInflow,      NULL, FALSE);
     write_csv_lake("Tot Outflow Vol", SurfData.dailyOutflow,     NULL, FALSE);
     write_csv_lake("Overflow Vol",    SurfData.dailyOverflow,    NULL, FALSE);
     write_csv_lake("Evaporation",     SurfData.dailyEvap,        NULL, FALSE);
     write_csv_lake("Rain",            SurfData.dailyRain,        NULL, FALSE);
+    write_csv_lake("Snowfall",        SurfData.dailySnow,        NULL, FALSE);
     write_csv_lake("Lake Level",      Lake[surfLayer].Height,    NULL, FALSE);
     write_csv_lake("Surface Area",    Lake[surfLayer].LayerArea, NULL, FALSE);
     write_csv_lake("Black Ice",       SurfData.HeightBlackIce,   NULL, FALSE);
-    write_csv_lake("Snow",            SurfData.HeightSnow,       NULL, FALSE);
+    write_csv_lake("Snow Height",     SurfData.HeightSnow,       NULL, FALSE);
+    write_csv_lake("Snow Density",    SurfData.RhoSnow,          NULL, FALSE);
     write_csv_lake("White Ice",       SurfData.HeightWhiteIce,   NULL, FALSE);
     write_csv_lake("Max Temp",        max_temp(Lake, NumLayers), NULL, FALSE);
     write_csv_lake("Min Temp",        min_temp(Lake, NumLayers), NULL, FALSE);
@@ -358,7 +364,8 @@ void write_outflow(int of_idx, int jday, AED_REAL vol)
     write_csv_outfl(of_idx, "Salt",       Lake[lvl].Salinity,      NULL, FALSE);
 
     if (wq_calc) {   //# must do each of the WQ vars
-        for (i = 0; i < csv_outfl_nvars; i++)
+        // # the first 3 vars are flow, temp and salt
+        for (i = 3; i < csv_outfl_nvars; i++)
             write_csv_outfl_idx(of_idx, i,    state_of_v[i],       NULL, FALSE);
     }
 

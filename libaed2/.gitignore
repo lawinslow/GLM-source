@@ -3,5 +3,6 @@
 libaed2.a
 .*.swp
 .DS*
+*.i90
 cnv
 aed2_sedcandi_o.F90

@@ -8,4 +8,4 @@ build-stamp
 debian/files
 debian/glm.debhelper.log
 debian/glm.substvars
-
+macos/glm.app

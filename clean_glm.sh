@@ -26,6 +26,9 @@ if [ `uname -s` == "Linux" ] ; then
   cd ${CURDIR}/glm-aed
   fakeroot make -f debian/rules clean
 fi
+if [ `uname -s` == "Darwin" ] ; then
+  /bin/rm -rf ${CURDIR}/glm-aed/macos/glm.app
+fi
 
 clean_outputs() {
    cd ${CURDIR}/$1
