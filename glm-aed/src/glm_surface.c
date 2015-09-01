@@ -367,10 +367,12 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         T01_OLD = -50.;
         T001 = 0.;
         while (1) {
+            //Saturated vapor pressure above snow and ice is different than above water
+            //From Jeong S (2009), ultimately from Mellor (1964) "Properties of Snow"
             satvap = (1+(0.00972*T001)+(0.000042*pow(T001, 2)))*saturated_vapour(T001);
             
             //I think this might be wrong, resulting value seems way too small, even for ice
-            Q_latentheat = CE * MetData.WindSpeed * (satvap - MetData.SatVapDef);
+            Q_latentheat = -3.9 * MetData.WindSpeed * (satvap - MetData.SatVapDef);
             if (Q_latentheat > 0.0) Q_latentheat = 0.0;
             Q_sensibleheat = CH * MetData.WindSpeed * (T001 - MetData.AirTemp);
             Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+T001), 4.0);
