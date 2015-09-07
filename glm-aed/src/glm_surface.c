@@ -191,12 +191,13 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     AED_REAL QLATENT;
 
    //# New parameters for heat flux estimate
-//  AED_REAL KSED;
-//  AED_REAL TYEAR;
-//  AED_REAL ZSED;
+    AED_REAL KSED;
+    AED_REAL TYEAR;
+    AED_REAL ZSED;
 
     int i;
     int underFlow;
+    int kDays;
 
 /*----------------------------------------------------------------------------*/
 
@@ -612,25 +613,27 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
  * on Mendota ends up cooling Kinneret!  In the future we will code in a
  * sediment heating function but will need to be generic and parameterised so
  * best to remove for this version.
- *            -----------------------------------
- *
- *  // Input of heat from the sediments - based on rogers et al heat flux
- *  // sediment temperature measurements for lake mendota (birge et al 1927)
- *  // and basically invariant at 5m at deep station, LayerThickness is required
- *  TYEAR = 9.7+2.7*sin(((kDays-151.3)*2.*Pi)/365.);
- *  ZSED = 6.;
- *  KSED = 1.2;
- *  for (i = botmLayer+1; i <= surfLayer; i++) {
- *      Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
- *                (Lake[i].LayerArea-Lake[i-1].LayerArea)*
- *                 LayerThickness[i]*noSecs)/(SPHEAT*Lake[i].Density*Lake[i].LayerVol);
- *  }
- *  Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
- *                             Lake[botmLayer].LayerArea*LayerThickness[botmLayer] *
- *                         noSecs)/(SPHEAT*Lake[botmLayer].Density*Lake[botmLayer].LayerVol);
- *
- ******************************************************************************/
+ * LAW: Added a switch so we can experiment with this on.
+ * -----------------------------------*/
 
+    if(sed_heat_sw){
+        // Input of heat from the sediments - based on rogers et al heat flux
+        // sediment temperature measurements for lake mendota (birge et al 1927)
+        // and basically invariant at 5m at deep station, LayerThickness is required
+        kDays = day_of_year(jday);
+        TYEAR = 9.7+2.7*sin(((kDays-151.3)*2.*Pi)/365.);
+        ZSED = 6.;
+        KSED = 1.2;
+        for (i = botmLayer+1; i <= surfLayer; i++) {
+            Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
+                      (Lake[i].LayerArea-Lake[i-1].LayerArea)*
+                       LayerThickness[i]*noSecs)/(SPHEAT*Lake[i].Density*Lake[i].LayerVol);
+        }
+        Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
+                                   Lake[botmLayer].LayerArea*LayerThickness[botmLayer] *
+                               noSecs)/(SPHEAT*Lake[botmLayer].Density*Lake[botmLayer].LayerVol);
+    }
+    
     // precipitation, evaporation in the absence of ice
     if (! ice) {
 	AED_REAL catch_runoff = 0.;
@@ -897,8 +900,10 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
             if (T001 <= -5.)                   Albedo0 = 0.6;
             else if (T001 > -5.0 && T001 < 0.) Albedo0 = 0.44 - 0.032 * T001;
             else if (T001 >= 0.)               Albedo0 = 0.44;
-        } else
+        } else{
             Albedo0 = 0.08 + 0.44 * pow((SurfData.HeightBlackIce+SurfData.HeightWhiteIce-0.05), 0.28);
+
+        }
 
         if (SurfData.HeightSnow > 0.0) {
             if (T001 <= -5.)                   Albedo1 = 0.7;
@@ -909,6 +914,13 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
                 Albedo0 = Albedo1-(((0.1-SurfData.HeightSnow)/0.1)*(Albedo1-Albedo0));
             else
                 Albedo0 = Albedo1;
+            
+            //Adjust albedo based on multiplicative factor and back down to 1 if too large
+            Albedo0 = snow_albedo_factor * Albedo0;
+            if(Albedo0 > 1.0){
+                Albedo0 = 1.0;
+            }
+
         }
 
         Albedo1 = Albedo0;
@@ -949,6 +961,9 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
             default : break;
         }
     }
+
+    //Add albedo tracking to help debug ice/snow duration
+    SurfData.albedo = Albedo1;
 
     if ( subdaily )
         lQSW = ShortWave * (1.0-Albedo1);

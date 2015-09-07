@@ -253,6 +253,7 @@ void do_model(int jstart, int nsave)
         SurfData.dailyQh = 0.; SurfData.dailyQlw = 0.;
         SurfData.dailyInflow = 0.; SurfData.dailySnow = 0.;
         SurfData.dailyOutflow = 0.; SurfData.dailyOverflow = 0.;
+        SurfData.albedo = 0.;
 
         read_daily_inflow(jday, NumInf, FlowNew, TempNew, SaltNew, WQNew);
         //# Averaging of flows

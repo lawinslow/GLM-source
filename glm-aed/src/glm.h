@@ -38,7 +38,7 @@
 #endif
 #define USE_FILLVALUE 1
 
-#define GLM_VERSION  "2.0.4-CEfix"
+#define GLM_VERSION  "2.1.0"
 
 
 #define POINT         0

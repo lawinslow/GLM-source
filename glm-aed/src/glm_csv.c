@@ -177,6 +177,7 @@ void init_csv_output(const char *out_dir)
         csv_header_var (csv_lake_file, "Snow Height");
         csv_header_var (csv_lake_file, "Snow Density");
         csv_header_var (csv_lake_file, "White Ice");
+        csv_header_var (csv_lake_file, "Albedo");
         csv_header_var (csv_lake_file, "Max Temp");
         csv_header_var (csv_lake_file, "Min Temp");
         csv_header_var (csv_lake_file, "Surface Temp");

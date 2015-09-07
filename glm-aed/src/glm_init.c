@@ -201,6 +201,13 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     extern AED_REAL timezone_o;
     /*-------------------------------------------*/
 
+    /*---------------------------------------------
+     * snowice
+     *-------------------------------------------*/
+    extern CLOGICAL         sed_heat_sw;
+    extern AED_REAL        snow_albedo_factor;
+    /*-------------------------------------------*/
+
     int i, j, k;
     int namlst;
 
@@ -335,6 +342,12 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     NAMELIST debugging[] = {
           { "debugging",         TYPE_START,            NULL               },
           { "disable_evap",      TYPE_BOOL,             &no_evap           },
+          { NULL,                TYPE_END,              NULL               }
+    };
+    NAMELIST snowice[] = {
+          { "snowice",           TYPE_START,            NULL               },
+          { "sed_heat_sw",       TYPE_BOOL,             &sed_heat_sw       },
+          { "snow_albedo_factor",TYPE_DOUBLE,           &snow_albedo_factor},
           { NULL,                TYPE_END,              NULL               }
     };
 
@@ -647,6 +660,16 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
         wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
     }
+
+
+    //--------------------------------------------------------------------------
+    // snowice
+
+    sed_heat_sw          = FALSE;
+    snow_albedo_factor = 1.0;
+
+    if ( get_namelist(namlst, snowice) )
+         fprintf(stderr,"No snow and ice data, setting default values\n");
 
     get_namelist(namlst, debugging);
 

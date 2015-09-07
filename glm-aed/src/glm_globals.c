@@ -135,6 +135,14 @@ int      cloud_mode = 1;
 
 
 //------------------------------------------------------------------------------
+// SNOWICE
+//I'm not sure if values need to be declared here, or glm_init.
+// Both currently
+CLOGICAL sed_heat_sw        = FALSE;
+AED_REAL snow_albedo_factor = 1.0;
+
+
+//------------------------------------------------------------------------------
 
 AED_REAL timezone_r = 0.0, timezone_m = 0.0, timezone_i = 0.0, timezone_o = 0.0;
 
