@@ -149,17 +149,18 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 /*----------------------------------------------------------------------------*/
     const AED_REAL  K_I1 = 2.3, K_I2 = 2.0, K_W = 0.57, CSEN = 0.0014;
     const AED_REAL  L_I = 334000.0,L_S = 334000.0,TF = 0.0,TMELT = 0.0;
-    const AED_REAL  A_ONE = 0.7;        //# fraction of short wave radiation in first wavelength band
-    const AED_REAL  A_TWO = 0.3;        //# fraction of short wave radiation in second wavelength band
-    const AED_REAL  ET_ICE_ONE = 1.5;   //# attenuation coefficient of the ice in the first spectral band
-    const AED_REAL  ET_ICE_TWO = 20.;   //# attenuation coefficient of the ice in the second spectral band
-    const AED_REAL  ET_WICE_ONE = 6.0;  //# attenuation coefficient of the white ice in the first spectral band
-    const AED_REAL  ET_WICE_TWO = 20.;  //# attenuation coefficient of the white ice in the second spectral band
-    const AED_REAL  ET_SNOW_ONE = 6.0;  //# attenuation coefficient of the snow in the first spectral band
-    const AED_REAL  ET_SNOW_TWO = 20.;  //# attenuation coefficient of the snow in the second spectral band
-    const AED_REAL  DENSITY_I1 = 917.0; //# density of black ice
-    const AED_REAL  DENSITY_I2 = 890.0; //# density of white ice?
-    const AED_REAL  RHOMXSNO = 300.0,RHOMNSNO = 50.;
+    const AED_REAL  A_ONE = 0.7;             //# fraction of short wave radiation in first wavelength band
+    const AED_REAL  A_TWO = 0.3;             //# fraction of short wave radiation in second wavelength band
+    const AED_REAL  ET_ICE_ONE = 1.5;        //# attenuation coefficient of the ice in the first spectral band
+    const AED_REAL  ET_ICE_TWO = 20.;        //# attenuation coefficient of the ice in the second spectral band
+    const AED_REAL  ET_WICE_ONE = 6.0;       //# attenuation coefficient of the white ice in the first spectral band
+    const AED_REAL  ET_WICE_TWO = 20.;       //# attenuation coefficient of the white ice in the second spectral band
+    const AED_REAL  ET_SNOW_ONE = 6.0;       //# attenuation coefficient of the snow in the first spectral band
+    const AED_REAL  ET_SNOW_TWO = 20.;       //# attenuation coefficient of the snow in the second spectral band
+    const AED_REAL  DENSITY_I1 = 917.0;      //# density of black ice
+    const AED_REAL  DENSITY_I2 = 890.0;      //# density of white ice
+    const AED_REAL  RHOMXSNO = snow_rho_max; //# max density of snow in kg/m^3 
+    const AED_REAL  RHOMNSNO = snow_rho_min; //# min density of snow in kg/m^3 
     const AED_REAL  eps_water = 0.985;
 
 /*----------------------------------------------------------------------------*/
@@ -609,19 +610,18 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     }
 
 /******************************************************************************
- * Hard coded sediment "heating" factor in glm_surface.c but since it is based
- * on Mendota ends up cooling Kinneret!  In the future we will code in a
- * sediment heating function but will need to be generic and parameterised so
- * best to remove for this version.
- * LAW: Added a switch so we can experiment with this on.
+ * Default sediment "heating" factor in glm_surface.c but since it is based
+ * on Mendota ends up cooling Kinneret! Beware when using default values.
+ * LAW: Added a switch and parameterization so we can experiment with this.
  * -----------------------------------*/
 
     if(sed_heat_sw){
         // Input of heat from the sediments - based on rogers et al heat flux
         // sediment temperature measurements for lake mendota (birge et al 1927)
         // and basically invariant at 5m at deep station, LayerThickness is required
+        // LAW: Modified to use cosine so user and specify peak day coefficient
         kDays = day_of_year(jday);
-        TYEAR = 9.7+2.7*sin(((kDays-151.3)*2.*Pi)/365.);
+        TYEAR = sed_temp_mean + sed_temp_amplitude * cos(((kDays-sed_temp_peak_doy)*2.*Pi)/365.);
         ZSED = 6.;
         KSED = 1.2;
         for (i = botmLayer+1; i <= surfLayer; i++) {

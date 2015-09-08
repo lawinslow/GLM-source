@@ -204,8 +204,19 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     /*---------------------------------------------
      * snowice
      *-------------------------------------------*/
+
+    extern AED_REAL         snow_albedo_factor;
+    extern AED_REAL         snow_rho_max;
+    extern AED_REAL         snow_rho_min;
+    /*-------------------------------------------*/
+
+    /*---------------------------------------------
+     * sed_heat
+     *-------------------------------------------*/
     extern CLOGICAL         sed_heat_sw;
-    extern AED_REAL        snow_albedo_factor;
+    extern AED_REAL         sed_temp_mean;
+    extern AED_REAL         sed_temp_amplitude;
+    extern AED_REAL         sed_temp_peak_doy;
     /*-------------------------------------------*/
 
     int i, j, k;
@@ -346,11 +357,19 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     };
     NAMELIST snowice[] = {
           { "snowice",           TYPE_START,            NULL               },
-          { "sed_heat_sw",       TYPE_BOOL,             &sed_heat_sw       },
           { "snow_albedo_factor",TYPE_DOUBLE,           &snow_albedo_factor},
+          { "snow_rho_max",      TYPE_DOUBLE,           &snow_rho_max      },
+          { "snow_rho_min",      TYPE_DOUBLE,           &snow_rho_min      },
           { NULL,                TYPE_END,              NULL               }
     };
 
+    NAMELIST sed_heat[] = {
+          { "sed_heat",          TYPE_START,            NULL               },
+          { "sed_temp_mean",     TYPE_DOUBLE,           &sed_temp_mean     },
+          { "sed_temp_amplitude",TYPE_DOUBLE,           &sed_temp_amplitude},
+          { "sed_temp_peak_doy", TYPE_DOUBLE,           &sed_temp_peak_doy },
+          { NULL,                TYPE_END,              NULL               }
+    };
 /*----------------------------------------------------------------------------*/
 
     fprintf(stderr, "Reading config from %s\n",glm_nml_file);
@@ -665,11 +684,28 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     //--------------------------------------------------------------------------
     // snowice
 
-    sed_heat_sw          = FALSE;
-    snow_albedo_factor = 1.0;
 
-    if ( get_namelist(namlst, snowice) )
+    snow_albedo_factor = 1.0;
+    snow_rho_max       = 300;
+    snow_rho_min       = 50;
+
+    if ( get_namelist(namlst, snowice) ){
          fprintf(stderr,"No snow and ice data, setting default values\n");
+    }
+
+    //--------------------------------------------------------------------------
+    // sediment heat (sed_heat)
+    
+    sed_temp_mean      = 9.7;
+    sed_temp_amplitude = 2.7;
+    sed_temp_peak_doy  = 151;
+    if ( get_namelist(namlst, sed_heat) ){
+         sed_heat_sw = FALSE;
+
+         fprintf(stderr,"No sed_heat section, turning off sediment heating\n");
+    } else {
+         sed_heat_sw = TRUE;
+    }
 
     get_namelist(namlst, debugging);
 

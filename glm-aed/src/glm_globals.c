@@ -138,8 +138,16 @@ int      cloud_mode = 1;
 // SNOWICE
 //I'm not sure if values need to be declared here, or glm_init.
 // Both currently
-CLOGICAL sed_heat_sw        = FALSE;
 AED_REAL snow_albedo_factor = 1.0;
+AED_REAL snow_rho_max       = 300.;
+AED_REAL snow_rho_min       = 50.;
+
+//------------------------------------------------------------------------------
+// SED_HEAT
+CLOGICAL sed_heat_sw        = FALSE;
+AED_REAL sed_temp_mean      = 9.7;
+AED_REAL sed_temp_amplitude = 2.7;
+AED_REAL sed_temp_peak_doy  = 151.;
 
 
 //------------------------------------------------------------------------------
