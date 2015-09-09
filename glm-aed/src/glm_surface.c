@@ -149,17 +149,18 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
 /*----------------------------------------------------------------------------*/
     const AED_REAL  K_I1 = 2.3, K_I2 = 2.0, K_W = 0.57, CSEN = 0.0014;
     const AED_REAL  L_I = 334000.0,L_S = 334000.0,TF = 0.0,TMELT = 0.0;
-    const AED_REAL  A_ONE = 0.7;        //# fraction of short wave radiation in first wavelength band
-    const AED_REAL  A_TWO = 0.3;        //# fraction of short wave radiation in second wavelength band
-    const AED_REAL  ET_ICE_ONE = 1.5;   //# attenuation coefficient of the ice in the first spectral band
-    const AED_REAL  ET_ICE_TWO = 20.;   //# attenuation coefficient of the ice in the second spectral band
-    const AED_REAL  ET_WICE_ONE = 6.0;  //# attenuation coefficient of the white ice in the first spectral band
-    const AED_REAL  ET_WICE_TWO = 20.;  //# attenuation coefficient of the white ice in the second spectral band
-    const AED_REAL  ET_SNOW_ONE = 6.0;  //# attenuation coefficient of the snow in the first spectral band
-    const AED_REAL  ET_SNOW_TWO = 20.;  //# attenuation coefficient of the snow in the second spectral band
-    const AED_REAL  DENSITY_I1 = 917.0; //# density of black ice
-    const AED_REAL  DENSITY_I2 = 890.0; //# density of white ice?
-    const AED_REAL  RHOMXSNO = 300.0,RHOMNSNO = 50.;
+    const AED_REAL  A_ONE = 0.7;             //# fraction of short wave radiation in first wavelength band
+    const AED_REAL  A_TWO = 0.3;             //# fraction of short wave radiation in second wavelength band
+    const AED_REAL  ET_ICE_ONE = 1.5;        //# attenuation coefficient of the ice in the first spectral band
+    const AED_REAL  ET_ICE_TWO = 20.;        //# attenuation coefficient of the ice in the second spectral band
+    const AED_REAL  ET_WICE_ONE = 6.0;       //# attenuation coefficient of the white ice in the first spectral band
+    const AED_REAL  ET_WICE_TWO = 20.;       //# attenuation coefficient of the white ice in the second spectral band
+    const AED_REAL  ET_SNOW_ONE = 6.0;       //# attenuation coefficient of the snow in the first spectral band
+    const AED_REAL  ET_SNOW_TWO = 20.;       //# attenuation coefficient of the snow in the second spectral band
+    const AED_REAL  DENSITY_I1 = 917.0;      //# density of black ice
+    const AED_REAL  DENSITY_I2 = 890.0;      //# density of white ice
+    const AED_REAL  RHOMXSNO = snow_rho_max; //# max density of snow in kg/m^3 
+    const AED_REAL  RHOMNSNO = snow_rho_min; //# min density of snow in kg/m^3 
     const AED_REAL  eps_water = 0.985;
 
 /*----------------------------------------------------------------------------*/
@@ -191,12 +192,13 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     AED_REAL QLATENT;
 
    //# New parameters for heat flux estimate
-//  AED_REAL KSED;
-//  AED_REAL TYEAR;
-//  AED_REAL ZSED;
+    AED_REAL KSED;
+    AED_REAL TYEAR;
+    AED_REAL ZSED;
 
     int i;
     int underFlow;
+    int kDays;
 
 /*----------------------------------------------------------------------------*/
 
@@ -367,10 +369,12 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
         T01_OLD = -50.;
         T001 = 0.;
         while (1) {
+            //Saturated vapor pressure above snow and ice is different than above water
+            //From Jeong S (2009), ultimately from Mellor (1964) "Properties of Snow"
             satvap = (1+(0.00972*T001)+(0.000042*pow(T001, 2)))*saturated_vapour(T001);
             
             //I think this might be wrong, resulting value seems way too small, even for ice
-            Q_latentheat = CE * MetData.WindSpeed * (satvap - MetData.SatVapDef);
+            Q_latentheat = -3.9 * MetData.WindSpeed * (satvap - MetData.SatVapDef);
             if (Q_latentheat > 0.0) Q_latentheat = 0.0;
             Q_sensibleheat = CH * MetData.WindSpeed * (T001 - MetData.AirTemp);
             Q_lw_out = -Stefan_Boltzman * eps_water * pow((Kelvin+T001), 4.0);
@@ -606,29 +610,30 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
     }
 
 /******************************************************************************
- * Hard coded sediment "heating" factor in glm_surface.c but since it is based
- * on Mendota ends up cooling Kinneret!  In the future we will code in a
- * sediment heating function but will need to be generic and parameterised so
- * best to remove for this version.
- *            -----------------------------------
- *
- *  // Input of heat from the sediments - based on rogers et al heat flux
- *  // sediment temperature measurements for lake mendota (birge et al 1927)
- *  // and basically invariant at 5m at deep station, LayerThickness is required
- *  TYEAR = 9.7+2.7*sin(((kDays-151.3)*2.*Pi)/365.);
- *  ZSED = 6.;
- *  KSED = 1.2;
- *  for (i = botmLayer+1; i <= surfLayer; i++) {
- *      Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
- *                (Lake[i].LayerArea-Lake[i-1].LayerArea)*
- *                 LayerThickness[i]*noSecs)/(SPHEAT*Lake[i].Density*Lake[i].LayerVol);
- *  }
- *  Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
- *                             Lake[botmLayer].LayerArea*LayerThickness[botmLayer] *
- *                         noSecs)/(SPHEAT*Lake[botmLayer].Density*Lake[botmLayer].LayerVol);
- *
- ******************************************************************************/
+ * Default sediment "heating" factor in glm_surface.c but since it is based
+ * on Mendota ends up cooling Kinneret! Beware when using default values.
+ * LAW: Added a switch and parameterization so we can experiment with this.
+ * -----------------------------------*/
 
+    if(sed_heat_sw){
+        // Input of heat from the sediments - based on rogers et al heat flux
+        // sediment temperature measurements for lake mendota (birge et al 1927)
+        // and basically invariant at 5m at deep station, LayerThickness is required
+        // LAW: Modified to use cosine so user and specify peak day coefficient
+        kDays = day_of_year(jday);
+        TYEAR = sed_temp_mean + sed_temp_amplitude * cos(((kDays-sed_temp_peak_doy)*2.*Pi)/365.);
+        ZSED = 6.;
+        KSED = 1.2;
+        for (i = botmLayer+1; i <= surfLayer; i++) {
+            Lake[i].Temp += ((KSED*(TYEAR-Lake[i].Temp)/ZSED)*
+                      (Lake[i].LayerArea-Lake[i-1].LayerArea)*
+                       LayerThickness[i]*noSecs)/(SPHEAT*Lake[i].Density*Lake[i].LayerVol);
+        }
+        Lake[botmLayer].Temp += ((KSED*(TYEAR-Lake[botmLayer].Temp)/ZSED)*
+                                   Lake[botmLayer].LayerArea*LayerThickness[botmLayer] *
+                               noSecs)/(SPHEAT*Lake[botmLayer].Density*Lake[botmLayer].LayerVol);
+    }
+    
     // precipitation, evaporation in the absence of ice
     if (! ice) {
 	AED_REAL catch_runoff = 0.;
@@ -895,8 +900,10 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
             if (T001 <= -5.)                   Albedo0 = 0.6;
             else if (T001 > -5.0 && T001 < 0.) Albedo0 = 0.44 - 0.032 * T001;
             else if (T001 >= 0.)               Albedo0 = 0.44;
-        } else
+        } else{
             Albedo0 = 0.08 + 0.44 * pow((SurfData.HeightBlackIce+SurfData.HeightWhiteIce-0.05), 0.28);
+
+        }
 
         if (SurfData.HeightSnow > 0.0) {
             if (T001 <= -5.)                   Albedo1 = 0.7;
@@ -907,6 +914,13 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
                 Albedo0 = Albedo1-(((0.1-SurfData.HeightSnow)/0.1)*(Albedo1-Albedo0));
             else
                 Albedo0 = Albedo1;
+            
+            //Adjust albedo based on multiplicative factor and back down to 1 if too large
+            Albedo0 = snow_albedo_factor * Albedo0;
+            if(Albedo0 > 1.0){
+                Albedo0 = 1.0;
+            }
+
         }
 
         Albedo1 = Albedo0;
@@ -947,6 +961,9 @@ AED_REAL calculate_qsw(int kDays,     // Days since start of year for yesterday
             default : break;
         }
     }
+
+    //Add albedo tracking to help debug ice/snow duration
+    SurfData.albedo = Albedo1;
 
     if ( subdaily )
         lQSW = ShortWave * (1.0-Albedo1);

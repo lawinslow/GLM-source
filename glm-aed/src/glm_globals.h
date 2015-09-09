@@ -164,6 +164,21 @@ extern int      albedo_mode;
 extern int      cloud_mode;
 
 /*----------------------------------------------------------------------------*/
+// SNOWICE
+extern CLOGICAL sed_heat_sw;
+extern AED_REAL snow_albedo_factor;
+extern AED_REAL snow_rho_max;
+extern AED_REAL snow_rho_min;
+
+/*----------------------------------------------------------------------------*/
+// SNOWICE
+extern CLOGICAL sed_heat_sw;
+extern AED_REAL sed_temp_mean;
+extern AED_REAL sed_temp_amplitude;
+extern AED_REAL sed_temp_peak_doy;
+
+
+/*----------------------------------------------------------------------------*/
 
 extern AED_REAL timezone_r, timezone_m, timezone_i, timezone_o;
 
