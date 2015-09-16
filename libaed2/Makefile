@@ -95,11 +95,22 @@ ${objdir}/aed2_phyto_utils.o \
 ${objdir}/aed2_phytoplankton.o \
 ${objdir}/aed2_zoop_utils.o \
 ${objdir}/aed2_zooplankton.o \
+${objdir}/aed2_bivalve.o \
+${objdir}/aed2_macrophyte.o \
 ${objdir}/aed2_pathogens.o \
 ${objdir}/aed2_iron.o \
 ${objdir}/aed2_sulfur.o \
 ${objdir}/aed2_tracer.o \
 ${objdir}/aed2_totals.o \
+${objdir}/aed2_gctypes.o \
+${objdir}/aed2_gclib.o \
+${objdir}/aed2_gcsolver.o \
+${objdir}/aed2_geochemistry.o \
+${objdir}/aed2_sedvode.o \
+${objdir}/aed2_sedcandi.o \
+${objdir}/aed2_sedeqsolver.o \
+${objdir}/aed2_seddiagenesis.o \
+${objdir}/aed2_vegetation.o \
 ${objdir}/aed2_test.o \
 ${objdir}/aed2_common.o
 
@@ -125,5 +136,5 @@ distclean: clean
 	/bin/rm libaed2.a
 	/bin/rmdir obj
 
-${objdir}/%.o: ${srcdir}/%.F90 ${incdir}/aed2.h
+${objdir}/%.o: ${srcdir}/%.F90 ${srcdir}/aed2_core.F90 ${incdir}/aed2.h
 	$(F90) $(FFLAGS) -g -c $< -o $@

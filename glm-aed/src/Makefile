@@ -250,6 +250,7 @@ ifeq ($(USE_DL),true)
   FFLAGS+=-DUSE_DL_LOADER=1
   TARGETS+=$(AED2TARGETS) $(FABMTARGETS)
 else
+  OBJS+=glm_zones.o
   ifeq ($(AED2),true)
     OBJS+=glm_aed2.o
   endif

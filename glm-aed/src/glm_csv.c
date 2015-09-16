@@ -162,9 +162,9 @@ void init_csv_output(const char *out_dir)
 
         csv_header_start(csv_lake_file);
         csv_header_var (csv_lake_file, "Volume"); //, "m3");
-	csv_header_var (csv_lake_file, "Vol Snow"); //, "m3");
-	csv_header_var (csv_lake_file, "Vol Black Ice"); //, "m3");
-	csv_header_var (csv_lake_file, "Vol White Ice"); //, "m3");
+        csv_header_var (csv_lake_file, "Vol Snow"); //, "m3");
+        csv_header_var (csv_lake_file, "Vol Black Ice"); //, "m3");
+        csv_header_var (csv_lake_file, "Vol White Ice"); //, "m3");
         csv_header_var (csv_lake_file, "Tot Inflow Vol"); //, "m3");
         csv_header_var (csv_lake_file, "Tot Outflow Vol"); //, "m3");
         csv_header_var (csv_lake_file, "Overflow Vol"); //, "m3");

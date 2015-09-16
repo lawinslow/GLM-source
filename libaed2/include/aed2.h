@@ -13,7 +13,7 @@
 #ifndef _AED2_H_
 #define _AED2_H_
 
-#define AED2_VERSION  "1.0.6"
+#define AED2_VERSION  "1.1.0alpha5"
 
 #define MAX_MODELS 40
 
@@ -26,6 +26,10 @@
 !# for aed_geochemistry
 #define MAX_GC_COMPONENTS 20
 #define MAX_GC_MINERALS   20
+
+!# for aed_vegetation
+#define MAX_VEG_TYPES   256
+
 
 !#define MISVAL -9999.
 #define MISVAL misval_

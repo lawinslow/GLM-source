@@ -7,7 +7,7 @@
  *     School of Earth & Environment                                          *
  *     The University of Western Australia                                    *
  *                                                                            *
- * Copyright 2013, 2014 -  The University of Western Australia                *
+ * Copyright 2013, 2014, 2015 -  The University of Western Australia          *
  *                                                                            *
  *  This file is part of libplot - a plotting library for GLM                 *
  *                                                                            *

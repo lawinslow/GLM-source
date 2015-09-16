@@ -70,10 +70,10 @@ PURE AED_REAL FUNCTION aed_gas_piston_velocity(wshgt,wind,tem,sal,LA,schmidt_mod
 ! Atmospheric-surface water exchange piston velocity for O2, CO2 etc
 !-------------------------------------------------------------------------------
 !ARGUMENTS
-   AED_REAL,INTENT(IN)    :: wshgt,wind
+   AED_REAL,INTENT(IN) :: wshgt,wind
    AED_REAL,INTENT(in) :: tem,sal
    AED_REAL,INTENT(in),OPTIONAL :: LA
-   INTEGER,INTENT(in),OPTIONAL :: schmidt_model
+   INTEGER,INTENT(in),OPTIONAL  :: schmidt_model
 !
 !LOCALS
    ! Temporary variables

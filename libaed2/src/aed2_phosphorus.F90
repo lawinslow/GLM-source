@@ -26,6 +26,7 @@ MODULE aed2_phosphorus
 ! soluable reactive phosphorus across the air/water interface and sediment flux.
 !-------------------------------------------------------------------------------
    USE aed2_core
+   USE aed2_util, ONLY: PO4AdsorptionFraction
 
    IMPLICIT NONE
 
@@ -101,7 +102,7 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
 
    AED_REAL, parameter :: secs_pr_day = 86400.
 
-   NAMELIST /aed2_phosphorus/ frp_initial,frp_min,frp_max, Fsed_frp,Ksed_frp,theta_sed_frp, &
+   NAMELIST /aed2_phosphorus/ frp_initial,frp_min,frp_max,Fsed_frp,Ksed_frp,theta_sed_frp, &
                              phosphorus_reactant_variable,Fsed_frp_variable,   &
                              simPO4Adsorption,ads_use_external_tss,            &
                              po4sorption_target_variable, PO4AdsorptionModel,  &
@@ -195,14 +196,14 @@ SUBROUTINE aed2_equilibrate_phosphorus(data,column,layer_idx)
    AED_REAL :: frp,frpads,pH
 
    ! Temporary variables
-   AED_REAL :: SSconc, PO4dis, PO4par, PO4tot, buffer, f_pH, K, Qm
-
-   AED_REAL,PARAMETER :: one_e_neg_ten = 1e-10
+   AED_REAL :: PO4dis, PO4par, PO4tot
 
 !-------------------------------------------------------------------------------
 !BEGIN
    IF(.NOT. data%simPO4Adsorption) RETURN
 
+
+   tss = zero_
 
    ! Retrieve current environmental conditions for the cell.
    temp = _STATE_VAR_(data%id_temp) ! local temperature
@@ -217,70 +218,23 @@ SUBROUTINE aed2_equilibrate_phosphorus(data,column,layer_idx)
       tss = _STATE_VAR_(data%id_tss)      ! local total susp solids
    END IF
 
+   IF(data%ads_use_pH) THEN
+      pH = _STATE_VAR_(data%id_pH)
 
-   PO4dis   = zero_
-   PO4par   = zero_
-   buffer   = zero_
-   f_pH     = one_
-   SSconc   = tss
-
-   ! calculate the total possible PO4 for sorption, and solids
-   PO4tot  = MAX(one_e_neg_ten, frp + frpads)  ! Co in Chao (mg)
-   SSconc  = MAX(one_e_neg_ten, SSconc )       ! s in Chao  (mg = mol/L * g/mol * mg/g)
-
-
-   IF(data%PO4AdsorptionModel == 1) THEN
-     !-----------------------------------------------------
-     ! This is the model for PO4 sorption from Ji 2008:
-     !
-     ! Ji, Z-G. 2008. Hydrodynamics and Water Quality. Wiley Press.
-     !
-     PO4par = (data%Kpo4p*SSconc) / (one_+data%Kpo4p*SSconc) * PO4tot
-     PO4dis = one_ / (one_+data%Kpo4p*SSconc) * PO4tot
-   ELSEIF(data%PO4AdsorptionModel == 2) THEN
-     !-----------------------------------------------------
-     ! This is the model for PO4 sorption from Chao et al. 2010:
-     !
-     ! Chao, X. et al. 2010. Three-dimensional numerical simulation of
-     !   water quality and sediment associated processes with application
-     !   to a Mississippi delta lake. J. Environ. Manage. 91 p1456-1466.
-     !
-     IF(data%ads_use_pH) THEN
-       pH = _STATE_VAR_(data%id_pH)! pH
-
-       IF(pH > 11.) pH = 11.0
-       IF(pH < 3.)  pH = 3.0
-
-       ! -0.0094x2 + 0.0428x + 0.9574
-       ! (ursula.salmon@uwa.edu.au: fPH for PO4 sorption to Fe in Mine Lakes)
-       f_pH = -0.0094*pH*pH + 0.0428*pH + 0.9574
-
-     ELSE
-
-       f_pH = one_
-
-     END IF
-
-     ! calculate particlate fraction based on quadratic solution
-     K  = data%Kadsratio
-     Qm = data%Qmax
-
-     ! Chao Eq 16
-     buffer = SQRT(((PO4tot+(1./K)-(SSconc*Qm*f_pH)))**2. + (4.*f_pH*SSconc*Qm/K))
-     PO4par  = 0.5 * ((PO4tot+(1./K)+(SSconc*Qm*f_pH))  - buffer  )
-
-     ! Check for stupid solutions
-     IF(PO4par > PO4tot) PO4par = PO4tot
-     IF(PO4par < zero_) PO4par = zero_
-
-     ! Now set dissolved portion
-     PO4dis = PO4tot - PO4par
+    CALL PO4AdsorptionFraction(data%PO4AdsorptionModel, &  ! Dependencies
+                                 frp+frpads,            &
+                                 tss,                   &
+                                 data%Kpo4p,data%Kadsratio,data%Qmax, &
+                                 PO4dis,PO4par,         &
+                                 thepH=pH)                 ! Returning variables
 
    ELSE
-     !-----------------------------------------------------
-     ! No model is selected
-     RETURN
-   END IF
+    CALL PO4AdsorptionFraction(data%PO4AdsorptionModel, &  ! Dependecies
+                                 frp+frpads,            &
+                                 tss,                   &
+                                 data%Kpo4p,data%Kadsratio,data%Qmax, &
+                                 PO4dis,PO4par)            ! Returning variables
+   ENDIF
 
    _STATE_VAR_(data%id_frp) = PO4dis       ! Dissolved PO4
    _STATE_VAR_(data%id_frpads) = PO4par    ! Adsorped PO4
