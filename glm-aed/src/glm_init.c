@@ -108,6 +108,8 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 //  LOGICAL         repair_state;
 //  CLOGICAL        mobility_off;
 //  LOGICAL         multi_ben;
+//  int             n_zones;
+//  AED_REAL       *zone_dep = NULL;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
@@ -201,6 +203,24 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     extern AED_REAL timezone_o;
     /*-------------------------------------------*/
 
+    /*---------------------------------------------
+     * snowice
+     *-------------------------------------------*/
+
+    extern AED_REAL         snow_albedo_factor;
+    extern AED_REAL         snow_rho_max;
+    extern AED_REAL         snow_rho_min;
+    /*-------------------------------------------*/
+
+    /*---------------------------------------------
+     * sed_heat
+     *-------------------------------------------*/
+    extern CLOGICAL         sed_heat_sw;
+    extern AED_REAL         sed_temp_mean;
+    extern AED_REAL         sed_temp_amplitude;
+    extern AED_REAL         sed_temp_peak_doy;
+    /*-------------------------------------------*/
+
     int i, j, k;
     int namlst;
 
@@ -235,6 +255,8 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "repair_state",      TYPE_BOOL,             &repair_state      },
           { "mobility_off",      TYPE_BOOL,             &mobility_off      },
           { "multi_ben",         TYPE_BOOL,             &multi_ben         },
+          { "n_zones",           TYPE_INT,              &n_zones           },
+          { "zone_dep",          TYPE_DOUBLE|MASK_LIST, &zone_dep          },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST time[] = {
@@ -337,7 +359,21 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "disable_evap",      TYPE_BOOL,             &no_evap           },
           { NULL,                TYPE_END,              NULL               }
     };
+    NAMELIST snowice[] = {
+          { "snowice",           TYPE_START,            NULL               },
+          { "snow_albedo_factor",TYPE_DOUBLE,           &snow_albedo_factor},
+          { "snow_rho_max",      TYPE_DOUBLE,           &snow_rho_max      },
+          { "snow_rho_min",      TYPE_DOUBLE,           &snow_rho_min      },
+          { NULL,                TYPE_END,              NULL               }
+    };
 
+    NAMELIST sed_heat[] = {
+          { "sed_heat",          TYPE_START,            NULL               },
+          { "sed_temp_mean",     TYPE_DOUBLE,           &sed_temp_mean     },
+          { "sed_temp_amplitude",TYPE_DOUBLE,           &sed_temp_amplitude},
+          { "sed_temp_peak_doy", TYPE_DOUBLE,           &sed_temp_peak_doy },
+          { NULL,                TYPE_END,              NULL               }
+    };
 /*----------------------------------------------------------------------------*/
 
     fprintf(stderr, "Reading config from %s\n",glm_nml_file);
@@ -374,6 +410,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
+        n_zones           = 0;
     }
 
     //-------------------------------------------------
@@ -645,7 +682,42 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             WQ_VarsIdx[j-3] = wq_var_index_c(inflow_vars[j], &k);
         }
 
+        if ( multi_ben ) {
+            if ( (n_zones <= 0 || zone_dep == NULL) ) {
+                fprintf(stderr, "multi_ben mode must define sediment zones\n");
+                exit(1);
+            }
+            wq_set_glm_zones(zone_dep, &n_zones, &Num_WQ_Vars, &Num_WQ_Ben);
+        }
+
         wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
+    }
+
+
+    //--------------------------------------------------------------------------
+    // snowice
+
+
+    snow_albedo_factor = 1.0;
+    snow_rho_max       = 300;
+    snow_rho_min       = 50;
+
+    if ( get_namelist(namlst, snowice) ){
+         fprintf(stderr,"No snow and ice data, setting default values\n");
+    }
+
+    //--------------------------------------------------------------------------
+    // sediment heat (sed_heat)
+
+    sed_temp_mean      = 9.7;
+    sed_temp_amplitude = 2.7;
+    sed_temp_peak_doy  = 151;
+    if ( get_namelist(namlst, sed_heat) ){
+         sed_heat_sw = FALSE;
+
+         fprintf(stderr,"No sed_heat section, turning off sediment heating\n");
+    } else {
+         sed_heat_sw = TRUE;
     }
 
     get_namelist(namlst, debugging);
@@ -741,6 +813,9 @@ void create_lake(int namlst)
         exit(1);
     }
 
+    if ( n_zones && zone_dep != NULL )
+        zone_area = malloc(n_zones * sizeof(AED_REAL));
+
     Lake = malloc(sizeof(LakeDataType)*MaxLayers);
     memset(Lake, 0, sizeof(LakeDataType)*MaxLayers);
     for (i = 0; i < MaxLayers; i++) Lake[i].ExtcCoefSW = Kw;
@@ -761,11 +836,24 @@ void create_lake(int namlst)
         V[i] = V[i-1] + (  (A[i-1]+(A[i]-A[i-1])/2.0) * (H[i] - H[i-1]));
     }
 
+    j = 0;
     for (i = 0; i < bsn_vals; i++) {
         H[i] -= Base;
 
         if (A[i] <= 0.0 ) kar++;
         if (H[i] <= 0.0 ) ksto++;
+
+        /* Create the zone areas */
+        if (multi_ben) {
+            if ( zone_dep[j] <= H[i] ) {
+                zone_area[j] = A[i];
+                if ( i > 0 ) {
+                    zone_area[j] += A[i-1];
+                    zone_area[j] /= 2;
+                }
+                j++;
+            }
+        }
     }
     MaxArea = A[bsn_vals-1];
 

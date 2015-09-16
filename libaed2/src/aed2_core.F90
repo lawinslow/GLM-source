@@ -58,15 +58,17 @@ MODULE aed2_core
       CLASS(aed2_model_data_t),POINTER :: next => null()
       !# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       CONTAINS
-         procedure :: define            => aed2_define
-         procedure :: calculate_surface => aed2_calculate_surface
-         procedure :: calculate         => aed2_calculate
-         procedure :: calculate_benthic => aed2_calculate_benthic
-         procedure :: equilibrate       => aed2_equilibrate
-         procedure :: light_extinction  => aed2_light_extinction
-         procedure :: mobility          => aed2_mobility
-         procedure :: validate          => aed2_validate
-         procedure :: delete            => aed2_delete
+         procedure :: define             => aed2_define
+         procedure :: calculate_surface  => aed2_calculate_surface
+         procedure :: calculate          => aed2_calculate
+         procedure :: calculate_benthic  => aed2_calculate_benthic
+         procedure :: calculate_riparian => aed2_calculate_riparian
+         procedure :: calculate_dry      => aed2_calculate_dry
+         procedure :: equilibrate        => aed2_equilibrate
+         procedure :: light_extinction   => aed2_light_extinction
+         procedure :: mobility           => aed2_mobility
+         procedure :: validate           => aed2_validate
+         procedure :: delete             => aed2_delete
       !# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    END TYPE aed2_model_data_t
    !#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -586,6 +588,31 @@ SUBROUTINE aed2_calculate_benthic(data,column,layer_idx)
 !-------------------------------------------------------------------------------
 !print*,"Default aed2_calculate_benthic ", trim(data%aed2_model_name)
 END SUBROUTINE aed2_calculate_benthic
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_calculate_riparian(data,column,layer_idx, pc_wet)
+!-------------------------------------------------------------------------------
+   CLASS (aed2_model_data_t),INTENT(in) :: data
+   TYPE (aed2_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+   AED_REAL,INTENT(in) :: pc_wet
+!-------------------------------------------------------------------------------
+!print*,"Default aed2_calculate_riparian ", trim(data%aed2_model_name)
+END SUBROUTINE aed2_calculate_riparian
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_calculate_dry(data,column,layer_idx)
+!-------------------------------------------------------------------------------
+   CLASS (aed2_model_data_t),INTENT(in) :: data
+   TYPE (aed2_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+!-------------------------------------------------------------------------------
+!print*,"Default aed2_calculate_dry ", trim(data%aed2_model_name)
+END SUBROUTINE aed2_calculate_dry
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

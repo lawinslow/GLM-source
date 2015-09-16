@@ -127,11 +127,11 @@ void do_deep_mixing()
 
     //# Now calculate the turbulent diffusivities
 
-    if (deep_mixing==1) {
+    if (deep_mixing==1) { //constant diffusivity over whole water column
         for (i = 0; i < NumLayers; i++)
           Lake[i].Epsilon = coef_mix_hyp;
     }
-    else if (deep_mixing==2) {
+    else if (deep_mixing == 2) { //original routine to calculate diffusivity
         flag = TRUE;
         //# Look for any density variation
         if (iTop > botmLayer) {

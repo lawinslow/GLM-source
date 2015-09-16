@@ -38,7 +38,7 @@
 #endif
 #define USE_FILLVALUE 1
 
-#define GLM_VERSION  "2.0.3"
+#define GLM_VERSION  "2.1.6"
 
 #define POINT         0
 #define Z_SHAPE       1
@@ -63,12 +63,14 @@
 #    ifndef AED_REAL
 #    define AED_REAL real(kind=C_FLOAT)
 #    endif
+#    define CAED_REAL real(kind=C_FLOAT)
 #    define NF90_REALTYPE NF90_FLOAT
 #    define NC_FILLER NC_FILL_FLOAT
 #  else
 #    ifndef AED_REAL
 #    define AED_REAL REAL(kind=C_DOUBLE)
 #    endif
+#    define CAED_REAL REAL(kind=C_DOUBLE)
 #    define NF90_REALTYPE NF90_DOUBLE
 #    define NC_FILLER NC_FILL_DOUBLE
 #    define IFIX IDINT

@@ -89,6 +89,11 @@ extern int Num_WQ_Vars;      //* number of water quality variables
 extern int Num_WQ_Ben;       //* number of benthic water quality variables
 extern AED_REAL *WQ_Vars;    //* water quality array : nlayers, nvars
 
+extern int       n_zones;    //* number of sediment zones
+extern AED_REAL *zone_dep;   //* depths for sed_zones
+extern AED_REAL *zone_area;  //* areas for sed_zones
+
+
 extern CLOGICAL atm_stab;      // Account for non-neutral atmospheric stability
 
 /*----------------------------------------------------------------------------*/
@@ -162,6 +167,21 @@ extern AED_REAL runoff_coef;
 extern int      rad_mode;
 extern int      albedo_mode;
 extern int      cloud_mode;
+
+/*----------------------------------------------------------------------------*/
+// SNOWICE
+extern CLOGICAL sed_heat_sw;
+extern AED_REAL snow_albedo_factor;
+extern AED_REAL snow_rho_max;
+extern AED_REAL snow_rho_min;
+
+/*----------------------------------------------------------------------------*/
+// SNOWICE
+extern CLOGICAL sed_heat_sw;
+extern AED_REAL sed_temp_mean;
+extern AED_REAL sed_temp_amplitude;
+extern AED_REAL sed_temp_peak_doy;
+
 
 /*----------------------------------------------------------------------------*/
 

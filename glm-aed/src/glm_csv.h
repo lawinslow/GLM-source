@@ -45,7 +45,7 @@
         CINTEGER,INTENT(in)   :: f
         CCHARACTER,INTENT(in) :: name(*)
         CINTEGER,INTENT(in)   :: len
-        AED_REAL,INTENT(in)  :: val
+        AED_REAL,INTENT(in)   :: val
         CCHARACTER,INTENT(in) :: cval(*)
         CINTEGER,INTENT(in)   :: vlen
         CLOGICAL,INTENT(in)   :: last
@@ -55,7 +55,7 @@
         USE ISO_C_BINDING
         CCHARACTER,INTENT(in) :: name(*)
         CINTEGER,INTENT(in)   :: len
-        AED_REAL,INTENT(in)  :: val
+        AED_REAL,INTENT(in)   :: val
         CCHARACTER,INTENT(in) :: cval(*)
         CINTEGER,INTENT(in)   :: vlen
         CLOGICAL,INTENT(in)   :: last

@@ -194,6 +194,13 @@ else
 endif
 
 LIBS+=-lnetcdf
+# If variable NETCDFLIB is not empty, use it to
+# set path to the library
+ifneq ($(NETCDFLIB),)
+  LIBS+=-L$(NETCDFLIB)
+endif
+
+
 ifeq ($(WITH_PLOTS),true)
   LIBS+=-L$(PLOTDIR) -lplot -lgd -lpng -ljpeg -lm
   ifeq ($(WITH_XPLOTS),true)
@@ -243,6 +250,7 @@ ifeq ($(USE_DL),true)
   FFLAGS+=-DUSE_DL_LOADER=1
   TARGETS+=$(AED2TARGETS) $(FABMTARGETS)
 else
+  OBJS+=glm_zones.o
   ifeq ($(AED2),true)
     OBJS+=glm_aed2.o
   endif
