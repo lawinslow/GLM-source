@@ -70,6 +70,7 @@ MODULE glm_aed2
 
    USE aed2_common
    USE glm_types
+   USE glm_zones
 
    IMPLICIT NONE
 
@@ -118,7 +119,7 @@ MODULE glm_aed2
 
    !# Arrays for state and diagnostic variables
    AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc !# water quality array: nlayers, nvars
-   AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc_diag
+   AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:,:) :: cc_diag
    AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: cc_diag_hz
    AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: tss
    AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: sed_zones
@@ -130,7 +131,7 @@ MODULE glm_aed2
    AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: dz
 
    !# Arrays for environmental variables not supplied externally.
-   AED_REAL,ALLOCATABLE,DIMENSION(:),TARGET :: par,pres
+   AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: par, pres
 
    !# External variables
    AED_REAL :: dt, dt_eff   ! External and internal time steps
@@ -146,7 +147,7 @@ MODULE glm_aed2
 !  CHARACTER(len=48),ALLOCATABLE :: diagnames(:)
    AED_REAL,ALLOCATABLE,DIMENSION(:) :: min_, max_
 
-   TYPE (aed2_column_t),ALLOCATABLE,DIMENSION(:) :: column
+!  TYPE (aed2_column_t),ALLOCATABLE,DIMENSION(:) :: column
    INTEGER,ALLOCATABLE,DIMENSION(:) :: externalid
 #if PLOTS
    INTEGER,ALLOCATABLE,DIMENSION(:) :: plot_id_v, plot_id_sv, plot_id_d, plot_id_sd
@@ -373,7 +374,7 @@ SUBROUTINE aed2_init_glm(i_fname,len,MaxLayers,NumWQ_Vars,NumWQ_Ben,pKw) BIND(C,
       ENDIF
    ENDDO
 
-   ALLOCATE(column(n_aed2_vars))
+!  ALLOCATE(column(n_aed2_vars))
    ALLOCATE(externalid(n_aed2_vars))
 
    !----------------------------------------------------------------------------
@@ -457,7 +458,11 @@ CINTEGER FUNCTION aed2_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
             IF (tvar%sheet) THEN ; sv=sv+1; ELSE ; v=v+1 ; ENDIF
             IF ( TRIM(tvar%name) == vname ) THEN
                 IF (tvar%sheet) THEN
-                   aed2_is_var=-sv
+                   if (multi_ben) then
+                      aed2_is_var=sv
+                   else
+                      aed2_is_var=-sv
+                   endif
 #ifdef PLOTS
                    plot_id_sv(sv) = id;
 #endif
@@ -533,6 +538,7 @@ SUBROUTINE aed2_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
 !
 !-------------------------------------------------------------------------------
 !BEGIN
+   theLake => Lake
    !# Save pointers to external dynamic variables that we need later (in do_glm_wq)
    _LINK_POINTER_(z, Lake%Height)
    _LINK_POINTER_(temp, Lake%Temp)
@@ -542,6 +548,8 @@ SUBROUTINE aed2_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
    _LINK_POINTER_(layer_stress, Lake%LayerStress)
+
+   IF (multi_ben) zz => z
    ALLOCATE(depth(MaxLayers))
 
    precip => MetData%Rain
@@ -634,6 +642,76 @@ END SUBROUTINE check_data
 
 
 !###############################################################################
+SUBROUTINE define_sed_column(column, top, flux_pel, flux_atm, flux_ben)
+!-------------------------------------------------------------------------------
+! Set up the current column pointers
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   TYPE (aed2_column_t), INTENT(inout) :: column(:)
+   INTEGER, INTENT(in)  :: top
+   AED_REAL, TARGET, INTENT(inout) :: flux_pel(:,:) !# (n_layers, n_vars)
+   AED_REAL, TARGET, INTENT(inout) :: flux_atm(:)   !# (n_vars)
+   AED_REAL, TARGET, INTENT(inout) :: flux_ben(:)   !# (n_vars)
+!
+!LOCALS
+   INTEGER :: av !, i
+   INTEGER :: v, d, sv, sd, ev
+   TYPE(aed2_variable_t),POINTER :: tvar
+!-------------------------------------------------------------------------------
+!BEGIN
+   v = 0 ; d = 0; sv = 0; sd = 0 ; ev = 0
+   DO av=1,n_aed2_vars
+      IF ( .NOT.  aed2_get_var(av, tvar) ) STOP "Error getting variable info"
+
+      IF ( tvar%extern ) THEN !# global variable
+         ev = ev + 1
+         SELECT CASE (tvar%name)
+            CASE ( 'temperature' ) ; column(av)%cell => ztemp(:)
+            CASE ( 'salinity' )    ; column(av)%cell => zsalt(:)
+            CASE ( 'density' )     ; column(av)%cell => zrho(:)
+            CASE ( 'layer_ht' )    ; column(av)%cell => zdz(:)
+            CASE ( 'extc_coef' )   ; column(av)%cell => zextc_coef(:)
+            CASE ( 'tss' )         ; column(av)%cell => ztss(:)
+            CASE ( 'par' )         ; column(av)%cell => zpar(:)
+            CASE ( 'pressure' )    ; column(av)%cell => zpres(:)
+            CASE ( 'depth' )       ; column(av)%cell => zdepth(:)
+            CASE ( 'wind_speed' )  ; column(av)%cell_sheet => wnd
+            CASE ( 'par_sf' )      ; column(av)%cell_sheet => I_0
+            CASE ( 'taub' )        ; column(av)%cell_sheet => bottom_stress
+            CASE DEFAULT ; CALL STOPIT("ERROR: external variable "//trim(tvar%name)//" not found.")
+         END SELECT
+      ELSEIF ( tvar%diag ) THEN  !# Diagnostic variable
+         IF ( tvar%sheet ) THEN
+            sd = sd + 1
+            column(av)%cell_sheet => cc_diag_hz(sd)
+         ELSE
+            d = d + 1
+            column(av)%cell => cc_diag(:, d)
+         ENDIF
+      ELSE    !# state variable
+         IF ( tvar%sheet ) THEN
+            sv = sv + 1
+            IF ( tvar%bot ) THEN
+               column(av)%cell_sheet => cc_sed(1, n_vars+sv)
+            ELSEIF ( tvar%top ) THEN
+               column(av)%cell_sheet => cc_sed(top, n_vars+sv)
+            ENDIF
+            column(av)%flux_ben => flux_ben(n_vars+sv)
+            column(av)%flux_atm => flux_atm(n_vars+sv)
+         ELSE
+            v = v + 1
+            column(av)%cell => cc_sed(:, v)
+            column(av)%flux_atm => flux_atm(v)
+            column(av)%flux_pel => flux_pel(:, v)
+            column(av)%flux_ben => flux_ben(v)
+         ENDIF
+      ENDIF
+   ENDDO
+END SUBROUTINE define_sed_column
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
 SUBROUTINE define_column(column, top, cc, cc_diag, flux_pel, flux_atm, flux_ben)
 !-------------------------------------------------------------------------------
 ! Set up the current column pointers
@@ -707,19 +785,26 @@ END SUBROUTINE define_column
 
 
 !###############################################################################
-SUBROUTINE calculate_fluxes(column, wlev, flux_pel, flux_atm, flux_ben)
+SUBROUTINE calculate_fluxes(column, wlev, column_sed, nsed, flux_pel, flux_atm, flux_ben, flux_zon)
 !-------------------------------------------------------------------------------
 ! Checks the current values of all state variables and repairs these
 !-------------------------------------------------------------------------------
+#ifdef HAVE_IEEE_ARITH
+!USES
+   USE IEEE_ARITHMETIC
+#endif
 !ARGUMENTS
    TYPE (aed2_column_t), INTENT(inout) :: column(:)
-   INTEGER, INTENT(in) :: wlev
+   TYPE (aed2_column_t), INTENT(inout) :: column_sed(:)
+   INTEGER, INTENT(in) :: wlev, nsed
    AED_REAL, INTENT(inout) :: flux_pel(:,:) !# (wlev, n_vars)
    AED_REAL, INTENT(inout) :: flux_atm(:)   !# (n_vars)
    AED_REAL, INTENT(inout) :: flux_ben(:)   !# (n_vars)
+   AED_REAL, INTENT(inout) :: flux_zon(:,:) !# (n_zones)
 !
 !LOCALS
    INTEGER :: i
+   AED_REAL :: scale
 !-------------------------------------------------------------------------------
 !BEGIN
    flux_pel = zero_
@@ -730,37 +815,48 @@ SUBROUTINE calculate_fluxes(column, wlev, flux_pel, flux_atm, flux_ben)
    !# Includes (1) surface exchange, (2) benthic flux and (3) settling/rising
    !# as calculated by glm
 
-   !# (1) surface exchange
+   !# change the order of surface and benthic because ben may now include the surface layer is
+   !# doing multi ben.
+
+   !# (1) benthic flux
+   IF ( multi_ben ) THEN
+      DO i=1,nsed
+         CALL aed2_calculate_riparian(column_sed, i, z_pc_wet(i))
+
+         !# Calculate temporal derivatives due to benthic processes.
+         CALL aed2_calculate_benthic(column_sed, i)
+
+         !# Limit flux out of bottom layers to concentration of that layer
+         !# i.e. don't flux out more than is there
+         !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
+         !# scaled to proportion of area that is "bottom"
+         flux_pel(i, :) = max(-1.0 * cc(i, :), flux_pel(i, :)/zdz(i))
+         IF (i == 1) THEN
+            flux_zon(i, :) = flux_ben(:)
+         ELSE
+            scale = (zarea(i)-zarea(i-1))/zarea(i)
+            IF (isnan(scale)) scale = 0.
+            flux_pel(i, :) = flux_pel(i, :) * scale
+            flux_zon(i, :) = flux_ben(:) * scale
+         ENDIF
+      ENDDO
+   ELSE
+      !# Calculate temporal derivatives due to exchanges at the sediment/water interface
+      CALL aed2_calculate_benthic(column, 1)
+
+      !# Limit flux out of bottom layers to concentration of that layer
+      !# i.e. don't flux out more than is there
+      !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
+      flux_pel(1, :) = max(-1.0 * cc(1, :), flux_pel(1, :)/dz(1))
+   ENDIF
+
+   !# (2) surface exchange
    !# Calculate temporal derivatives due to air-water exchange.
    IF (.NOT. lIce) THEN !# no surface exchange under ice cover
       CALL aed2_calculate_surface(column, wlev)
 
       !# Distribute the fluxes into pelagic surface layer
       flux_pel(wlev, :) = flux_pel(wlev, :) + flux_atm(:)/dz(wlev)
-   ENDIF
-
-   !# (2) benthic flux
-   !# Calculate temporal derivatives due to exchanges at the sediment/water interface
-   CALL aed2_calculate_benthic(column, 1)
-
-   !# Limit flux out of bottom layers to concentration of that layer
-   !# i.e. don't flux out more than is there
-   !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
-   flux_pel(1, :) = max(-1.0 * cc(1, :), flux_pel(1, :)/dz(1))
-   flux_pel(1, :) = flux_pel(1, :)
-
-   IF ( multi_ben ) THEN
-      DO i=2,wlev
-         !# Calculate temporal derivatives due to benthic processes.
-         CALL aed2_calculate_benthic(column, i)
-
-         !# Limit flux out of bottom layers to concentration of that layer
-         !# i.e. don't flux out more than is there
-         !# & distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
-         !# scaled to proportion of area that is "bottom"
-         flux_pel(i, :) = max(-1.0 * cc(i, :), flux_pel(i, :)/dz(i))
-         flux_pel(i, :) = flux_pel(i, :) * (area(i)-area(i-1))/area(i)
-      ENDDO
    ENDIF
 
    !# Add pelagic sink and source terms for all depth levels.
@@ -833,8 +929,10 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    INTEGER  :: i, v, lev, split
 
    TYPE (aed2_column_t) :: column(n_aed2_vars)
+   TYPE (aed2_column_t) :: column_sed(n_aed2_vars)
    AED_REAL :: flux_ben(n_vars+n_vars_ben), flux_atm(n_vars+n_vars_ben)
-   AED_REAL :: flux (wlev, n_vars+n_vars_ben)
+   AED_REAL :: flux(wlev, n_vars+n_vars_ben)
+   AED_REAL :: flux_zone(n_zones, n_vars+n_vars_ben)
 #if !_NO_ODE_
    AED_REAL :: flux2(wlev, n_vars), flux3(wlev, n_vars), flux4(wlev, n_vars)
    AED_REAL :: cc1(wlev, n_vars)
@@ -860,6 +958,7 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    pres(1:wlev) = -z(1:wlev)
 
    CALL define_column(column, wlev, cc, cc_diag, flux, flux_atm, flux_ben)
+   IF (multi_ben) CALL define_sed_column(column_sed, n_zones, flux, flux_atm, flux_ben)
 
 ! FABM sets diagnostic vars to "missing value" which they define as -2.0e20
 ! So we do this here while debugging so it matches FABM
@@ -893,6 +992,11 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    CALL check_states(column,wlev)
 
    DO split=1,split_factor
+      IF (multi_ben) THEN
+         CALL copy_to_zone(cc, wlev)
+         CALL calc_zone_areas(area, wlev, z(wlev))
+      ENDIF
+
       !# Update local light field (self-shading may have changed through
       !# changes in biological state variables) changed to update_light to
       !# be inline with current aed2_phyoplankton that requires only
@@ -901,17 +1005,29 @@ SUBROUTINE aed2_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
 
       !# Time-integrate one biological time step
 #if _NO_ODE_
-      CALL calculate_fluxes(column, wlev, flux(:,:), flux_atm, flux_ben)
+      CALL calculate_fluxes(column, wlev, column_sed, n_zones,  &
+                                  flux(:,:), flux_atm, flux_ben, flux_zone(:,:))
       DO v = 1, n_vars
          DO lev = 1, wlev
             cc(lev, v) = cc(lev, v) + dt_eff*flux(lev, v)
          ENDDO
       ENDDO
-      DO v = n_vars+1, n_vars+n_vars_ben
-         cc(1, v) = cc(1, v) + dt_eff*flux_ben(v)
-      ENDDO
+      IF ( multi_ben ) THEN
+         DO v = n_vars+1, n_vars+n_vars_ben
+            DO lev = 1, n_zones
+               cc(lev, v) = cc(lev, v) + dt_eff*flux_zone(lev, v)
+               cc_sed(lev, v) = cc(lev, v)
+            ENDDO
+         ENDDO
+      ELSE
+         DO v = n_vars+1, n_vars+n_vars_ben
+            cc(1, v) = cc(1, v) + dt_eff*flux_ben(v)
+         ENDDO
+      ENDIF
 #endif
-      CALL check_states(column,wlev)
+      IF ( multi_ben ) CALL copy_from_zone(cc, wlev)
+
+      CALL check_states(column, wlev)
    ENDDO
 END SUBROUTINE aed2_do_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -923,7 +1039,6 @@ SUBROUTINE aed2_clean_glm() BIND(C, name=_WQ_CLEAN_GLM)
 ! Finish biogeochemical model
 !-------------------------------------------------------------------------------
 !BEGIN
-
    ! Deallocate internal arrays
    IF (ALLOCATED(cc_diag))    DEALLOCATE(cc_diag)
    IF (ALLOCATED(cc_diag_hz)) DEALLOCATE(cc_diag_hz)
@@ -933,7 +1048,6 @@ SUBROUTINE aed2_clean_glm() BIND(C, name=_WQ_CLEAN_GLM)
    IF (ALLOCATED(par))        DEALLOCATE(par)
    IF (ALLOCATED(pres))       DEALLOCATE(pres)
    IF (ALLOCATED(dz))         DEALLOCATE(dz)
-
 END SUBROUTINE aed2_clean_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1079,7 +1193,13 @@ SUBROUTINE aed2_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
                !# Store benthic biogeochemical state variables.
                CALL store_nc_scalar(ncid, externalid(i), XYT_SHAPE, scalar=cc(1, n_vars+sv))
 #ifdef PLOTS
-               IF ( do_plots .AND. plot_id_sv(sv).GE.0 ) CALL put_glm_val_s(plot_id_sv(sv), cc(1, n_vars+sv))
+               IF ( do_plots .AND. plot_id_sv(sv).GE.0 ) THEN
+                  IF (multi_ben) THEN
+                     CALL put_glm_val(plot_id_sv(sv), cc(1:n_zones, n_vars+sv))
+                  ELSE
+                     CALL put_glm_val_s(plot_id_sv(sv), cc(1, n_vars+sv))
+                  ENDIF
+               ENDIF
 #endif
             ELSE
                v = v + 1

@@ -85,6 +85,7 @@
 		<Filter Name="models">
 		<Filter Name="aed">
 		<File RelativePath="..\..\src\models\aed\aed.h"/>
+		<File RelativePath="..\..\src\models\aed\aed_bivalve.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_carbon.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_chlorophylla.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_core.F90"/>
@@ -100,6 +101,7 @@
 		<File RelativePath="..\..\src\models\aed\aed_sedflux.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_silica.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_sulfur.F90"/>
+		<File RelativePath="..\..\src\models\aed\aed_test.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_totals.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_tracer.F90"/>
 		<File RelativePath="..\..\src\models\aed\aed_util.F90"/>

@@ -32,6 +32,7 @@ MODULE aed2_util
    PUBLIC find_free_lun, qsort
    PUBLIC aed2_gas_piston_velocity, aed2_oxygen_sat, exp_integral
    PUBLIC aed2_bio_temp_function,fTemp_function
+   PUBLIC PO4AdsorptionFraction
 !
 
 
@@ -488,5 +489,96 @@ CONTAINS
 
 END SUBROUTINE qsort
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE PO4AdsorptionFraction(PO4AdsorptionModel, &
+                                 PO4tot_,            &
+                                 ParticleConc_,      &
+                                 Kpo4p,K,Qm,         &
+                                 PO4dis,PO4par,      &
+                                 thepH)
+!-------------------------------------------------------------------------------
+! Routine to compute fraction of PO4 adsorped to sediment/particulate concentration
+!-------------------------------------------------------------------------------
+    INTEGER,  INTENT(IN)  :: PO4AdsorptionModel
+    AED_REAL, INTENT(IN)  :: PO4tot_, ParticleConc_
+    AED_REAL, INTENT(IN)  :: Kpo4p,K,Qm
+    AED_REAL, INTENT(OUT) :: PO4dis, PO4par
+    AED_REAL, INTENT(IN), OPTIONAL :: thepH
+
+!-------------------------------------------------------------------------------
+!LOCALS
+    AED_REAL :: buffer, f_pH, pH
+    AED_REAL :: PO4tot, ParticleConc
+    AED_REAL,PARAMETER :: one_e_neg_ten = 1e-10
+
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   PO4dis   = zero_
+   PO4par   = zero_
+   buffer   = zero_
+   f_pH     = one_
+
+   ! calculate the total possible PO4 for sorption, and solids
+   PO4tot        = MAX(one_e_neg_ten, PO4tot_ )       ! Co in Chao (mg)
+   ParticleConc  = MAX(one_e_neg_ten, ParticleConc_ ) ! s in Chao  (mg = mol/L * g/mol * mg/g)
+
+
+   IF(PO4AdsorptionModel == 1) THEN
+     !-----------------------------------------------------
+     ! This is the model for PO4 sorption from Ji 2008:
+     !
+     ! Ji, Z-G. 2008. Hydrodynamics and Water Quality. Wiley Press.
+
+     PO4par = (Kpo4p*ParticleConc) / (one_+Kpo4p*ParticleConc) * PO4tot
+     PO4dis = one_ / (one_+Kpo4p*ParticleConc) * PO4tot
+
+
+   ELSEIF(PO4AdsorptionModel == 2) THEN
+     !-----------------------------------------------------
+     ! This is the model for PO4 sorption from Chao et al. 2010:
+     !
+     ! Chao, X. et al. 2010. Three-dimensional numerical simulation of
+     !   water quality and sediment associated processes with application
+     !   to a Mississippi delta lake. J. Environ. Manage. 91 p1456-1466.
+     IF(PRESENT(thepH)) THEN
+       pH = thepH
+       IF(thepH > 11.) pH = 11.0
+       IF(thepH < 3.)  pH = 3.0
+
+       ! -0.0094x2 + 0.0428x + 0.9574
+       ! (ursula.salmon@uwa.edu.au: fPH for PO4 sorption to Fe in Mine Lakes)
+       f_pH = -0.0094*pH*pH + 0.0428*pH + 0.9574
+     ELSE
+       f_pH = one_
+     END IF
+
+     ! calculate particulate fraction based on quadratic solution
+
+     ! Chao Eq 16
+     buffer = SQRT(((PO4tot+(1./K)-(ParticleConc*Qm*f_pH)))**2. + (4.*f_pH*ParticleConc*Qm/K))
+     PO4par  = 0.5 * ((PO4tot+(1./K)+(ParticleConc*Qm*f_pH))  - buffer  )
+
+     ! Check for stupid solutions
+     IF(PO4par > PO4tot) PO4par = PO4tot
+     IF(PO4par < zero_) PO4par = zero_
+
+     ! Now set dissolved portion
+     PO4dis = PO4tot - PO4par
+
+   ELSE
+     !-----------------------------------------------------
+     ! No model is selected
+
+     PO4dis = PO4tot
+     PO4par = zero_
+
+   END IF
+
+END SUBROUTINE PO4AdsorptionFraction
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 
 END MODULE aed2_util

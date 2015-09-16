@@ -107,6 +107,8 @@ void aed2_set_flags(int *split_factor, CLOGICAL *mobility, CLOGICAL *bioshade, C
 int aed2_is_var(int *id, const char *v, int *len);
 #endif
 
+void wq_set_glm_zones(AED_REAL *z_depths, int *numZones, int *numVars, int *numBenV);
+
 extern int ode_method;
 extern int split_factor;
 extern CLOGICAL bioshade_feedback;

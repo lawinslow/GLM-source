@@ -246,12 +246,12 @@ SUBROUTINE aed_phytoplankton_load_params(self, dbase, count, list, w_model)
        CALL self%register_diagnostic_variable(self%id_NtoP(i), TRIM(self%phytos(i)%p_name)//'_NtoP','mmol/m**3', 'INi/IPi')
 
        IF (extra_debug) THEN
-          CALL self%register_diagnostic_variable(self%id_fT(i), TRIM(self%phytos(i)%p_name)//'_fT','mmol/m**3', 'fT')
-          CALL self%register_diagnostic_variable(self%id_fI(i), TRIM(self%phytos(i)%p_name)//'_fI','mmol/m**3', 'fI')
-          CALL self%register_diagnostic_variable(self%id_fNit(i), TRIM(self%phytos(i)%p_name)//'_fNit','mmol/m**3', 'fNit')
-          CALL self%register_diagnostic_variable(self%id_fPho(i), TRIM(self%phytos(i)%p_name)//'_fPho','mmol/m**3', 'fPho')
-          CALL self%register_diagnostic_variable(self%id_fSil(i), TRIM(self%phytos(i)%p_name)//'_fSil','mmol/m**3', 'fSil')
-          CALL self%register_diagnostic_variable(self%id_fSal(i), TRIM(self%phytos(i)%p_name)//'_fSal','mmol/m**3', 'fSal')
+          CALL self%register_diagnostic_variable(self%id_fT(i), TRIM(self%phytos(i)%p_name)//'_fT', 'mmol/m**3', 'fT')
+          CALL self%register_diagnostic_variable(self%id_fI(i), TRIM(self%phytos(i)%p_name)//'_fI', 'mmol/m**3', 'fI')
+          CALL self%register_diagnostic_variable(self%id_fNit(i), TRIM(self%phytos(i)%p_name)//'_fNit', 'mmol/m**3', 'fNit')
+          CALL self%register_diagnostic_variable(self%id_fPho(i), TRIM(self%phytos(i)%p_name)//'_fPho', 'mmol/m**3', 'fPho')
+          CALL self%register_diagnostic_variable(self%id_fSil(i), TRIM(self%phytos(i)%p_name)//'_fSil', 'mmol/m**3', 'fSil')
+          CALL self%register_diagnostic_variable(self%id_fSal(i), TRIM(self%phytos(i)%p_name)//'_fSal', 'mmol/m**3', 'fSal')
        ENDIF
     ENDDO
 END SUBROUTINE aed_phytoplankton_load_params

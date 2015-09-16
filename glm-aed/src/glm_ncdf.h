@@ -89,8 +89,8 @@
 #       if defined( _WIN32 ) && USE_DL_LOADER
         !DEC$ ATTRIBUTES DLLIMPORT :: store_nc_scalar_
 #       endif
-        CINTEGER,INTENT(in)  :: ncid, id, var_shape
-        AED_REAL,INTENT(in)  :: scalar
+        CINTEGER,INTENT(in) :: ncid, id, var_shape
+        AED_REAL,INTENT(in) :: scalar
      END SUBROUTINE store_nc_scalar
 
      SUBROUTINE store_nc_array(ncid, id, var_shape, nvals, maxvals, array) BIND(C, name="store_nc_array_")

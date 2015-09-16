@@ -164,6 +164,11 @@ int noSecs;
 
 AED_REAL *WQ_Vars = NULL;  //# water quality array, nlayers, nvars
 
+int       n_zones;
+AED_REAL *zone_dep = NULL;
+AED_REAL *zone_area = NULL;
+
+
 //------------------------------------------------------------------------------
 //  These for debugging
 //------------------------------------------------------------------------------

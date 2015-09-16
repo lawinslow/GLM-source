@@ -219,23 +219,22 @@ void write_output(int jday, int iclock, int nsave, int stepnum)
 
             //# find which level csv_at is in
             if (csv_point_frombot[i]) { //Measure as height from bottom layer
-               for (n = 0; n < NumLayers; n++) {
-                   if ( Lake[n].Height >= csv_point_at[i] ) {
-                       lvl[i] = n;
-                       break;
-                   }
-               }
-               }
-            else { //Measure as depth from surface
-               for (n = NumLayers-1; n >= botmLayer; n--) {
-                   if ( (Lake[surfLayer].Height - Lake[n].Height) >= csv_point_at[i] ) {
-                       lvl[i] = n + 1;
-                       break;
-                   }
-                   //If reached bottom layer
-                   if (lvl[i] == -1) lvl[i] = botmLayer;
-               }
-               }
+                for (n = 0; n < NumLayers; n++) {
+                    if ( Lake[n].Height >= csv_point_at[i] ) {
+                        lvl[i] = n;
+                        break;
+                    }
+                }
+            } else { //Measure as depth from surface
+                for (n = NumLayers-1; n >= botmLayer; n--) {
+                    if ( (Lake[surfLayer].Height - Lake[n].Height) >= csv_point_at[i] ) {
+                        lvl[i] = n + 1;
+                        break;
+                    }
+                    //If reached bottom layer
+                    if (lvl[i] == -1) lvl[i] = botmLayer;
+                }
+            }
 
 
             write_csv_point(i, "temp", Lake[lvl[i]].Temp,     NULL, FALSE);
@@ -278,7 +277,7 @@ void write_diags(int jday, AED_REAL LakeNum)
     write_csv_lake("Volume",          sum_lake_layervol(),       NULL, FALSE);
     write_csv_lake("Vol Snow",        SurfData.HeightSnow * Lake[surfLayer].LayerArea * SurfData.RhoSnow/1000.0,     NULL, FALSE);
     //Magic numbers for ice density are from glm_surface.c
-    write_csv_lake("Vol Black Ice",   SurfData.HeightBlackIce * Lake[surfLayer].LayerArea * 917.0/1000.0, NULL, FALSE); 
+    write_csv_lake("Vol Black Ice",   SurfData.HeightBlackIce * Lake[surfLayer].LayerArea * 917.0/1000.0, NULL, FALSE);
     write_csv_lake("Vol White Ice",   SurfData.HeightWhiteIce * Lake[surfLayer].LayerArea * 890.0/1000.0, NULL, FALSE);
     write_csv_lake("Tot Inflow Vol",  SurfData.dailyInflow,      NULL, FALSE);
     write_csv_lake("Tot Outflow Vol", SurfData.dailyOutflow,     NULL, FALSE);

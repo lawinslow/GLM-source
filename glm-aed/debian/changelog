@@ -1,4 +1,16 @@
-glm (2.1.0-0) UNRELEASED; urgency=low
+glm (2.1.6-0) UNRELEASED; urgency=low
+
+  [ hydro ]
+  * new version 2.1.3
+
+  [ Casper Boon ]
+  * new version 2.1.4
+  * new version 2.1.5
+  * new version 2.1.6
+
+ -- Casper Boon <casper@eridanus>  Wed, 09 Sep 2015 09:14:20 +0800
+
+glm (2.0.4-0) UNRELEASED; urgency=low
 
   [ hydro ]
   * new version 2.0.0
@@ -7,12 +19,9 @@ glm (2.1.0-0) UNRELEASED; urgency=low
   * new version 2.0.1
   * new version 2.0.2
   * new version 2.0.3
+  * new version 2.0.4
 
-  [ Luke Winslow ]
-  * new version 2.0.4-cefix
-  * new version 2.1.0
-
- -- Luke Winslow <glm@glm>  Mon, 07 Sep 2015 21:00:45 +0000
+ -- Casper Boon <casper@eridanus>  Mon, 24 Aug 2015 15:02:16 +0800
 
 glm (1.4.0-0) UNRELEASED; urgency=low
 
@@ -47,5 +56,4 @@ glm (1.2.1-1aed0) precise; urgency=low
   * GLM 1.2.1
 
  -- Hydro Modeller <hydro@uwa>  Tue, 05 May 2013 11:27:10 +0800
-
 

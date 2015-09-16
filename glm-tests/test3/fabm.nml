@@ -11,9 +11,11 @@
             'aed_organic_matter',
             'aed_phytoplankton',
             'aed_zooplankton',
+         !  'aed_bivalve',
             'aed_pathogens',
             'aed_tracer',
-            'aed_totals'
+            'aed_totals',
+         !  'aed_test'
 /
 
 !###############################################################################

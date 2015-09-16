@@ -267,10 +267,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    data%donr_initial    = donr_initial
    data%dopr_initial    = dopr_initial
    data%cpom_initial    = cpom_initial
-   data%Rdocr_miner     = Rdocr_miner
-   data%Rdonr_miner     = Rdonr_miner
-   data%Rdopr_miner     = Rdopr_miner
-   data%Rcpom_bdown     = Rcpom_bdown
+   data%Rdocr_miner     = Rdocr_miner/secs_pr_day
+   data%Rdonr_miner     = Rdonr_miner/secs_pr_day
+   data%Rdopr_miner     = Rdopr_miner/secs_pr_day
+   data%Rcpom_bdown     = Rcpom_bdown/secs_pr_day
    data%w_cpom          = w_cpom
    data%X_cpom_n        = X_cpom_n
    data%X_cpom_p        = X_cpom_p
@@ -636,12 +636,14 @@ SUBROUTINE aed2_calculate_benthic_organic_matter(data,column,layer_idx)
    !_FLUX_VAR_B_(data%id_ben_amm) = _FLUX_VAR_B_(data%id_ben_amm) + (-amm_flux/secs_pr_day)
 
    ! Also store sediment flux as diagnostic variable.
-   _DIAG_VAR_S_(data%id_sed_pon) = -pon_flux
-   _DIAG_VAR_S_(data%id_sed_don) = -don_flux
-   _DIAG_VAR_S_(data%id_sed_pop) = -pop_flux
-   _DIAG_VAR_S_(data%id_sed_dop) = -dop_flux
-   _DIAG_VAR_S_(data%id_sed_poc) = -poc_flux
-   _DIAG_VAR_S_(data%id_sed_doc) = -doc_flux
+   IF (data%extra_diag) THEN
+      _DIAG_VAR_S_(data%id_sed_pon) = -pon_flux
+      _DIAG_VAR_S_(data%id_sed_don) = -don_flux
+      _DIAG_VAR_S_(data%id_sed_pop) = -pop_flux
+      _DIAG_VAR_S_(data%id_sed_dop) = -dop_flux
+      _DIAG_VAR_S_(data%id_sed_poc) = -poc_flux
+      _DIAG_VAR_S_(data%id_sed_doc) = -doc_flux
+   ENDIF
 
 END SUBROUTINE aed2_calculate_benthic_organic_matter
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++

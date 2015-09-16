@@ -108,6 +108,8 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 //  LOGICAL         repair_state;
 //  CLOGICAL        mobility_off;
 //  LOGICAL         multi_ben;
+//  int             n_zones;
+//  AED_REAL       *zone_dep = NULL;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
@@ -253,6 +255,8 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "repair_state",      TYPE_BOOL,             &repair_state      },
           { "mobility_off",      TYPE_BOOL,             &mobility_off      },
           { "multi_ben",         TYPE_BOOL,             &multi_ben         },
+          { "n_zones",           TYPE_INT,              &n_zones           },
+          { "zone_dep",          TYPE_DOUBLE|MASK_LIST, &zone_dep          },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST time[] = {
@@ -406,6 +410,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
+        n_zones           = 0;
     }
 
     //-------------------------------------------------
@@ -437,20 +442,9 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         strcpy(outp_fn, "output");
         *nsave = 24;
     } else {
-        //The below if statements check vars individually and 
-        // copy defaults if individual vars have not been specified
-        if ( out_dir != NULL )
-            strcpy(outp_dir, out_dir);
-        else
-            strcpy(outp_dir, ".");
-
-        if ( out_fn != NULL)
-            strcpy(outp_fn, out_fn);
-        else
-            strcpy(outp_fn, "output");
-
+        strcpy(outp_dir, out_dir);
+        strcpy(outp_fn, out_fn);
     }
-
 
     if ( csv_point_nlevs > MaxPointCSV ) { fprintf(stderr, "csv_point_nlevs must be < %d\n", MaxPointCSV); exit(1); }
     if ( csv_point_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_point_nvars must be < %d\n", MaxCSVOutVars); exit(1); }
@@ -688,6 +682,14 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             WQ_VarsIdx[j-3] = wq_var_index_c(inflow_vars[j], &k);
         }
 
+        if ( multi_ben ) {
+            if ( (n_zones <= 0 || zone_dep == NULL) ) {
+                fprintf(stderr, "multi_ben mode must define sediment zones\n");
+                exit(1);
+            }
+            wq_set_glm_zones(zone_dep, &n_zones, &Num_WQ_Vars, &Num_WQ_Ben);
+        }
+
         wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
     }
 
@@ -706,7 +708,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
     //--------------------------------------------------------------------------
     // sediment heat (sed_heat)
-    
+
     sed_temp_mean      = 9.7;
     sed_temp_amplitude = 2.7;
     sed_temp_peak_doy  = 151;
@@ -811,6 +813,9 @@ void create_lake(int namlst)
         exit(1);
     }
 
+    if ( n_zones && zone_dep != NULL )
+        zone_area = malloc(n_zones * sizeof(AED_REAL));
+
     Lake = malloc(sizeof(LakeDataType)*MaxLayers);
     memset(Lake, 0, sizeof(LakeDataType)*MaxLayers);
     for (i = 0; i < MaxLayers; i++) Lake[i].ExtcCoefSW = Kw;
@@ -831,11 +836,24 @@ void create_lake(int namlst)
         V[i] = V[i-1] + (  (A[i-1]+(A[i]-A[i-1])/2.0) * (H[i] - H[i-1]));
     }
 
+    j = 0;
     for (i = 0; i < bsn_vals; i++) {
         H[i] -= Base;
 
         if (A[i] <= 0.0 ) kar++;
         if (H[i] <= 0.0 ) ksto++;
+
+        /* Create the zone areas */
+        if (multi_ben) {
+            if ( zone_dep[j] <= H[i] ) {
+                zone_area[j] = A[i];
+                if ( i > 0 ) {
+                    zone_area[j] += A[i-1];
+                    zone_area[j] /= 2;
+                }
+                j++;
+            }
+        }
     }
     MaxArea = A[bsn_vals-1];
 
