@@ -127,6 +127,11 @@ typedef char filname[80];
    // Structured type for outflow vars
    // An outflow will be an allocated array of MaxOut of these
    typedef struct OutflowDataType {
+       int Type;                 // outflow type
+       AED_REAL Hcrit;           // outlet height when crit O2
+       int O2idx;                // O2 parameter idx in AED2/FABM
+       char O2name;              // O2 parameter name in AED2/FABM
+       AED_REAL TARGETtemp;      // Isotherm for withdrawal switch 4
        AED_REAL OLev;            // distance below surface level
        AED_REAL OLen;            // basin length at the outlet
        AED_REAL OWid;            // basin width at the outlet
@@ -186,8 +191,10 @@ typedef char filname[80];
        AED_REAL HeightWhiteIce;  // height of white ice layer
        AED_REAL HeightSnow;      // height of snow layer
        AED_REAL dHt;             // change in thickness of either the snow or ice layer
+       AED_REAL RhoSnow;          // Density of snow layer in kg/m^3
        AED_REAL dailyEvap;       // Daily Evaporation (ML/day)
        AED_REAL dailyRain;       // Daily Rain (ML/day)
+       AED_REAL dailySnow;       // Daily Snow (ML/day)
        AED_REAL dailyQsw;        // Daily Heat Flux (J/day)
        AED_REAL dailyQe;         // Daily Latent Heat(J/day)
        AED_REAL dailyQh;         // Daily Sensible Heat (J/day)
@@ -195,6 +202,7 @@ typedef char filname[80];
        AED_REAL dailyInflow;     // Total Daily Inflow (ML/day)
        AED_REAL dailyOutflow;    // Total Daily Outflow (ML/day)
        AED_REAL dailyOverflow;   // Total Daily Overflow (ML/day)
+       AED_REAL albedo;          // Daily surface albedo
    } SurfaceDataType;
 
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/

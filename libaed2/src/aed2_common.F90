@@ -39,13 +39,18 @@ MODULE aed2_common
    USE aed2_carbon
    USE aed2_nitrogen
    USE aed2_phosphorus
+   USE aed2_macrophyte
    USE aed2_organic_matter
    USE aed2_phytoplankton
    USE aed2_pathogens
    USE aed2_iron
    USE aed2_sulfur
    USE aed2_zooplankton
+   USE aed2_bivalve
    USE aed2_tracer
+   USE aed2_geochemistry
+   USE aed2_seddiagenesis
+   USE aed2_vegetation
    USE aed2_totals
    USE aed2_test
 
@@ -61,6 +66,7 @@ MODULE aed2_common
 
    PUBLIC aed2_calculate, aed2_calculate_surface, aed2_calculate_benthic
    PUBLIC aed2_light_extinction, aed2_delete, aed2_equilibrate
+   PUBLIC aed2_calculate_riparian, aed2_calculate_dry
 
    !# Re-export these from aed2_core.
    PUBLIC aed2_model_data_t, aed2_variable_t, aed2_column_t
@@ -102,10 +108,15 @@ FUNCTION aed2_new_model(modelname) RESULT(model)
       CASE ('aed2_organic_matter'); prefix = 'OGM'; ALLOCATE(aed2_organic_matter_data_t::model)
       CASE ('aed2_phytoplankton');  prefix = 'PHY'; ALLOCATE(aed2_phytoplankton_data_t::model)
       CASE ('aed2_zooplankton');    prefix = 'ZOO'; ALLOCATE(aed2_zooplankton_data_t::model)
+      CASE ('aed2_bivalve');        prefix = 'BIV'; ALLOCATE(aed2_bivalve_data_t::model)
+      CASE ('aed2_macrophyte');     prefix = 'MAC'; ALLOCATE(aed2_macrophyte_data_t::model)
       CASE ('aed2_pathogens');      prefix = 'PAT'; ALLOCATE(aed2_pathogens_data_t::model)
       CASE ('aed2_iron');           prefix = 'IRN'; ALLOCATE(aed2_iron_data_t::model)
       CASE ('aed2_sulfur');         prefix = 'SLF'; ALLOCATE(aed2_sulfur_data_t::model)
       CASE ('aed2_tracer');         prefix = 'TRC'; ALLOCATE(aed2_tracer_data_t::model)
+      CASE ('aed2_geochemistry');   prefix = 'GEO'; ALLOCATE(aed2_geochemistry_data_t::model)
+      CASE ('aed2_seddiagenesis');  prefix = 'SDD'; ALLOCATE(aed2_seddiagenesis_data_t::model)
+      CASE ('aed2_vegetation');     prefix = 'VEG'; ALLOCATE(aed2_vegetation_data_t::model)
       CASE ('aed2_totals');         prefix = 'TOT'; ALLOCATE(aed2_totals_data_t::model)
       CASE ('aed2_test');           prefix = 'TST'; ALLOCATE(aed2_test_data_t::model)
       CASE DEFAULT;                 print *,'*** Unknown module ', modelname
@@ -226,6 +237,43 @@ SUBROUTINE aed2_calculate_benthic(column, layer_idx)
       model => model%next
    ENDDO
 END SUBROUTINE aed2_calculate_benthic
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_calculate_riparian(column, layer_idx, pc_wet)
+!-------------------------------------------------------------------------------
+   TYPE (aed2_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+   AED_REAL,INTENT(in) :: pc_wet
+!
+!LOCALS
+   CLASS (aed2_model_data_t),POINTER :: model
+!-------------------------------------------------------------------------------
+   model => model_list
+   DO WHILE (ASSOCIATED(model))
+      CALL model%calculate_riparian(column, layer_idx, pc_wet)
+      model => model%next
+   ENDDO
+END SUBROUTINE aed2_calculate_riparian
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+SUBROUTINE aed2_calculate_dry(column, layer_idx)
+!-------------------------------------------------------------------------------
+   TYPE (aed2_column_t),INTENT(inout) :: column(:)
+   INTEGER,INTENT(in) :: layer_idx
+!
+!LOCALS
+   CLASS (aed2_model_data_t),POINTER :: model
+!-------------------------------------------------------------------------------
+   model => model_list
+   DO WHILE (ASSOCIATED(model))
+      CALL model%calculate_dry(column, layer_idx)
+      model => model%next
+   ENDDO
+END SUBROUTINE aed2_calculate_dry
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

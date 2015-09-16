@@ -37,7 +37,7 @@ MODULE aed2_oxygen
    TYPE,extends(aed2_model_data_t) :: aed2_oxygen_data_t
       !# Variable identifiers
       INTEGER  :: id_oxy
-      INTEGER  :: id_temp, id_salt
+      INTEGER  :: id_temp, id_salt, id_depth
       INTEGER  :: id_wind
       INTEGER  :: id_Fsed_oxy
       INTEGER  :: id_oxy_sat !, id_atm_oxy_exch3d
@@ -45,8 +45,8 @@ MODULE aed2_oxygen
       INTEGER  :: id_sed_oxy
 
       !# Model parameters
-      AED_REAL :: Fsed_oxy,Ksed_oxy,theta_sed_oxy
-      LOGICAL  :: use_sed_model
+      AED_REAL :: maxdepth,BOD_oxy,SOD_oxy,q_oxy,Fsed_oxy,Ksed_oxy,theta_sed_oxy
+      LOGICAL  :: use_LImod_oxygen_model,use_sed_model
 
      CONTAINS
          PROCEDURE :: define            => aed2_define_oxygen
@@ -80,6 +80,13 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
 !
 !LOCALS
    INTEGER  :: status
+
+   LOGICAL  :: use_LImod_oxygen_model = .FALSE.
+   AED_REAL :: maxdepth = 48.6
+   AED_REAL :: BOD_oxy = -1.0
+   AED_REAL :: SOD_oxy = -10.0
+   AED_REAL :: q_oxy = 1. !non-dimensional exponent [0.5-2]
+
    AED_REAL :: oxy_initial=300.
    AED_REAL :: oxy_min=0.
    AED_REAL :: oxy_max=nan_
@@ -89,7 +96,8 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
    CHARACTER(len=64) :: Fsed_oxy_variable=''
 
    AED_REAL,PARAMETER :: secs_pr_day = 86400.
-   NAMELIST /aed2_oxygen/ oxy_initial,oxy_min,oxy_max,Fsed_oxy,Ksed_oxy,theta_sed_oxy,  &
+   NAMELIST /aed2_oxygen/ use_LImod_oxygen_model,maxdepth,BOD_oxy, SOD_oxy,  &
+                          q_oxy,oxy_initial,oxy_min,oxy_max,Fsed_oxy,Ksed_oxy,theta_sed_oxy,  &
                          Fsed_oxy_variable
 !
 !-------------------------------------------------------------------------------
@@ -102,6 +110,11 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
    ! NB: all rates must be provided in values per day,
    ! and are converted here to values per second.
 
+   data%maxdepth = maxdepth
+   data%BOD_oxy = BOD_oxy/secs_pr_day          !mmol/m^3/s
+   data%SOD_oxy = SOD_oxy/secs_pr_day          !mmol/m^2/s
+   data%q_oxy = q_oxy
+   data%use_LImod_oxygen_model = use_LImod_oxygen_model
    data%Fsed_oxy = Fsed_oxy/secs_pr_day
    data%Ksed_oxy = Ksed_oxy
    data%theta_sed_oxy = theta_sed_oxy
@@ -118,6 +131,8 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
    ! Register diagnostic variables
    data%id_sed_oxy = aed2_define_sheet_diag_variable(       &
                      'sed_oxy', 'mmol/m**2/d', 'Oxygen sediment flux')
+   !data%id_bod_oxy = aed2_define_sheet_diag_variable(       &
+   !                  'bod_oxy', 'mmol/m**3/d', 'Oxygen volume sink')
 
    data%id_atm_oxy_exch = aed2_define_sheet_diag_variable(  &
                      'atm_oxy_exch', 'mmol/m**2/d', 'Oxygen exchange across atm/water interface')
@@ -132,6 +147,7 @@ SUBROUTINE aed2_define_oxygen(data, namlst)
    data%id_temp = aed2_locate_global('temperature') ! Temperature (degrees Celsius)
    data%id_salt = aed2_locate_global('salinity') ! Salinity (psu)
 !  data%id_pres = aed2_locate_global_sheet('pressure') ! Pressure (dbar = 10 kPa)
+   data%id_depth = aed2_locate_global('depth') ! Depth (m)
    data%id_wind = aed2_locate_global_sheet('wind_speed') ! Wind speed at 10 m above surface (m/s)
 
 END SUBROUTINE aed2_define_oxygen
@@ -209,21 +225,41 @@ SUBROUTINE aed2_calculate_oxygen(data,column,layer_idx)
    TYPE (aed2_column_t),INTENT(inout) :: column(:)
    INTEGER,INTENT(in) :: layer_idx
 !
-!LOCALS
+! State
    AED_REAL :: oxy
-   AED_REAL :: diff_oxy
+!LOCALS
+   AED_REAL :: temp, depth
+! Temporary variables
+   AED_REAL :: diff_oxy, vol_oxy, BOD_oxy, area_oxy, SOD_oxy, alpha_oxy
 !  AED_REAL,PARAMETER :: secs_pr_day = 86400.
 
 !-------------------------------------------------------------------------------
 !BEGIN
-
    ! Retrieve current (local) state variable values.
    oxy = _STATE_VAR_(data%id_oxy)! oxygen
+   ! Retrieve current environmental conditions for the bottom pelagic layer.
+   temp = _STATE_VAR_(data%id_temp)      ! local temperature
+   !Get dependent state variables from physical driver
+   depth = _STATE_VAR_(data%id_depth)    ! local depth (m)
 
    ! Set temporal derivatives
-   diff_oxy = 0.
+   IF (data%use_LImod_oxygen_model) THEN
+       ! Volume sink dependent on oxygen and temperature
+       BOD_oxy = data%BOD_oxy
+       vol_oxy = BOD_oxy
+!       print *, 'vol_oxy',vol_oxy
 
+       ! Area sink dependent on oxygen and temperature
+       SOD_oxy = data%SOD_oxy
+       alpha_oxy = data%q_oxy/(data%maxdepth-depth)
+       !alpha_oxy = data%q_oxy/(data%maxdepth-abs(data%maxdepth-depth))
+       area_oxy = SOD_oxy * alpha_oxy
+       _FLUX_VAR_(data%id_oxy) = _FLUX_VAR_(data%id_oxy) + (vol_oxy) + (area_oxy)
+!       print *, 'layer_idx area_oxy depth',layer_idx,area_oxy,depth
+   ELSE
+   diff_oxy = 0.
    _FLUX_VAR_(data%id_oxy) = _FLUX_VAR_(data%id_oxy) + (diff_oxy)
+   ENDIF
 
    ! If an externally maintained pool is present, change the pool according
 
@@ -255,7 +291,7 @@ SUBROUTINE aed2_calculate_benthic_oxygen(data,column,layer_idx)
    AED_REAL :: oxy_flux, Fsed_oxy
 
    ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
+!   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -268,13 +304,16 @@ SUBROUTINE aed2_calculate_benthic_oxygen(data,column,layer_idx)
 
    IF (data%use_sed_model) THEN
        Fsed_oxy = _STATE_VAR_S_(data%id_Fsed_oxy)
+       ! Sediment flux dependent on oxygen and temperature
+       oxy_flux = Fsed_oxy * oxy/(data%Ksed_oxy+oxy) * (data%theta_sed_oxy**(temp-20.0))
+   ELSE IF (data%use_LImod_oxygen_model) THEN
+       oxy_flux = 0
    ELSE
        Fsed_oxy = data%Fsed_oxy
-   ENDIF
-
     ! Sediment flux dependent on oxygen and temperature
    oxy_flux = Fsed_oxy * oxy/(data%Ksed_oxy+oxy) * (data%theta_sed_oxy**(temp-20.0))
-
+   ENDIF
+  !print *, 'oxy_flux',oxy_flux
    ! Set bottom fluxes for the pelagic (change per surface area per second)
    ! Transfer sediment flux value to AED2.
    _FLUX_VAR_(data%id_oxy) = _FLUX_VAR_(data%id_oxy) + (oxy_flux)

@@ -162,16 +162,22 @@ void init_csv_output(const char *out_dir)
 
         csv_header_start(csv_lake_file);
         csv_header_var (csv_lake_file, "Volume"); //, "m3");
+        csv_header_var (csv_lake_file, "Vol Snow"); //, "m3");
+        csv_header_var (csv_lake_file, "Vol Black Ice"); //, "m3");
+        csv_header_var (csv_lake_file, "Vol White Ice"); //, "m3");
         csv_header_var (csv_lake_file, "Tot Inflow Vol"); //, "m3");
         csv_header_var (csv_lake_file, "Tot Outflow Vol"); //, "m3");
         csv_header_var (csv_lake_file, "Overflow Vol"); //, "m3");
         csv_header_var (csv_lake_file, "Evaporation"); //, "m3");
         csv_header_var (csv_lake_file, "Rain"); //, "m3");
+        csv_header_var (csv_lake_file, "Snowfall"); //, "m3");
         csv_header_var (csv_lake_file, "Lake Level"); //, "m");
         csv_header_var (csv_lake_file, "Surface Area"); //, "m2");
         csv_header_var (csv_lake_file, "Black Ice");
-        csv_header_var (csv_lake_file, "Snow");
+        csv_header_var (csv_lake_file, "Snow Height");
+        csv_header_var (csv_lake_file, "Snow Density");
         csv_header_var (csv_lake_file, "White Ice");
+        csv_header_var (csv_lake_file, "Albedo");
         csv_header_var (csv_lake_file, "Max Temp");
         csv_header_var (csv_lake_file, "Min Temp");
         csv_header_var (csv_lake_file, "Surface Temp");

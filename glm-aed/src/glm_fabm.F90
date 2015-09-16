@@ -74,6 +74,7 @@ MODULE glm_fabm
    USE ode_solvers
 
    USE glm_types
+   USE glm_zones
 
    IMPLICIT NONE
 
@@ -445,15 +446,23 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%state_variables,1)
       IF ( TRIM(model%info%state_variables(i)%name) == vname ) THEN
          fabm_is_var=i
+#ifdef PLOTS
          plot_id_v(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
 
    DO i=1,ubound(model%info%state_variables_ben,1)
       IF ( TRIM(model%info%state_variables_ben(i)%name) == vname ) THEN
-         fabm_is_var=-i
+         IF (multi_ben) THEN
+            fabm_is_var=i
+         ELSE
+            fabm_is_var=-i
+         ENDIF
+#ifdef PLOTS
          plot_id_sv(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
@@ -461,7 +470,9 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%diagnostic_variables,1)
       IF ( TRIM(model%info%diagnostic_variables(i)%name) == vname ) THEN
          fabm_is_var=i
+#ifdef PLOTS
          plot_id_d(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
@@ -469,7 +480,9 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
    DO i=1,ubound(model%info%diagnostic_variables_hz,1)
       IF ( TRIM(model%info%diagnostic_variables_hz(i)%name) == vname ) THEN
          fabm_is_var=-i
+#ifdef PLOTS
          plot_id_sd(i) = id;
+#endif
          RETURN
       ENDIF
    ENDDO
@@ -530,6 +543,7 @@ SUBROUTINE fabm_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
    _LINK_POINTER_(layer_stress, Lake%LayerStress)
+   zz => z
 
    precip => MetData%Rain
    evap   => SurfData%Evap
@@ -573,7 +587,7 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    INTEGER  :: i, split
    AED_REAL, POINTER :: fdhz
    AED_REAL, DIMENSION(:),POINTER :: fdiag
-
+   INTEGER :: n_vars, n_vars_ben
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -655,6 +669,11 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
          cc_diag(1:wlev,i) = fdiag(1:wlev)    !# Simply use last value
       ENDDO
    ENDDO
+
+   IF ( multi_ben ) CALL copy_to_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
+ ! n_vars     = ubound(model%info%state_variables,1)
+ ! n_vars_ben = ubound(model%info%state_variables_ben,1)
+ ! IF ( multi_ben ) CALL copy_from_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
 END SUBROUTINE fabm_do_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1059,8 +1078,13 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
       CALL store_nc_scalar(ncid,model%info%state_variables_ben(n)%externalid, &
                                  XYT_SHAPE,scalar=cc(1, ubound(model%info%state_variables,1)+n))
 #ifdef PLOTS
-      IF ( do_plots .AND. plot_id_sv(n).GE.0 ) &
-         CALL put_glm_val_s(plot_id_sv(n), cc(1, ubound(model%info%state_variables,1)+n))
+      IF ( do_plots .AND. plot_id_sv(n).GE.0 ) THEN
+         IF ( multi_ben ) THEN
+            CALL put_glm_val(plot_id_sv(n), cc(1:wlev, ubound(model%info%state_variables,1)+n))
+         ELSE
+            CALL put_glm_val_s(plot_id_sv(n), cc(1, ubound(model%info%state_variables,1)+n))
+         ENDIF
+      ENDIF
 #endif
    ENDDO
 

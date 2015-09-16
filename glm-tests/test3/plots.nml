@@ -54,15 +54,20 @@
  !min_z =  0.0, 0.00,   0.0,  0.0,  0.0,   0.0,  0., 0.0,  0.
  !max_z = 27.0, 0.91, 400.0, 10.0, 15.0, 150.0, 60., 1.5, 32.
 
-! title = 'Temperature', 'Salinity',  'DO',    'Green',      'Diatom',    'Crypto',    'NO3',    'PO4',    'TCHLA'
-! vars  =    'temp',      'salt',   'OXY_oxy', 'PHY_green', 'PHY_diatom', 'PHY_crypto','NIT_nit','PHS_frp', 'PHY_TCHLA'
-! min_z =       0.0,        0.0,       0.0,       0.0,        0.0,           0.0,         0.0,      0.0,       0.0
-! max_z =      27.0,        0.91,    400.0,      10.0,      200.0,           6.0,        60.0,      1.5,      32.0
+! title = 'Temperature', 'Salinity',  'DO',    'Green',      'Diatom',    'Crypto',     'NO3',     'PO4',     'TCHLA'
+! vars  =    'temp',      'salt',   'OXY_oxy', 'PHY_green', 'PHY_diatom', 'PHY_crypto', 'NIT_nit', 'PHS_frp', 'PHY_TCHLA'
+! min_z =       0.0,        0.0,       0.0,       0.0,        0.0,           0.0,          0.0,       0.0,       0.0
+! max_z =      27.0,        0.91,    400.0,      10.0,      200.0,           6.0,         60.0,       1.5,      32.0
 
-  title = 'Temperature', 'Salinity',  'DO',    'Green',      'Diatom',    'Crypto',    'NO3',    'test_pel',    'test_ben'
-  vars  =    'temp',      'salt',   'OXY_oxy', 'PHY_green', 'PHY_diatom', 'PHY_crypto','NIT_nit','TST_pel', 'TST_ben'
-  min_z =       0.0,        0.0,       0.0,       0.0,        0.0,           0.0,         0.0,      0.0,       0.0
-  max_z =      27.0,        0.91,    400.0,      10.0,      200.0,           6.0,        60.0,     25.0,      20.0
+! title = 'Temperature', 'Salinity',  'DO',    'Green',      'Diatom',    'Crypto',     'NO3',     'test_pel', 'test_ben'
+! vars  =    'temp',      'salt',   'OXY_oxy', 'PHY_green', 'PHY_diatom', 'PHY_crypto', 'NIT_nit', 'TST_pel',  'TST_ben'
+! min_z =       0.0,        0.0,       0.0,       0.0,        0.0,           0.0,          0.0,       0.0,        0.0
+! max_z =      27.0,        0.91,    400.0,      10.0,      200.0,           6.0,         60.0,       25.0,       20.0
+
+  title = 'Temperature', 'Salinity',  'DO',    'Green',      'Diatom',    'Crypto',     'NO3',     'biv excr', 'zebra'
+  vars  =    'temp',      'salt',   'OXY_oxy', 'PHY_green', 'PHY_diatom', 'PHY_crypto', 'NIT_nit', 'BIV_excr', 'BIV_zebra'
+  min_z =       0.0,        0.0,       0.0,       0.0,        0.0,           0.0,          0.0,       0.0,        0.0
+  max_z =      27.0,        0.91,    400.0,      10.0,      200.0,           6.0,         60.0,       2.0E-6,       1.0E5
 /
 
 !-----------------------------------------------------------

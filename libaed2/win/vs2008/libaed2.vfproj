@@ -84,5 +84,6 @@
 		<File RelativePath="..\..\src\aed2_tracer.F90"/>
 		<File RelativePath="..\..\src\aed2_util.F90"/>
 		<File RelativePath="..\..\src\aed2_zoop_utils.F90"/>
-		<File RelativePath="..\..\src\aed2_zooplankton.F90"/></Filter></Files>
+		<File RelativePath="..\..\src\aed2_zooplankton.F90"/>
+		<File RelativePath="..\..\src\aed2_bivalve.F90"/></Filter></Files>
 	<Globals/></VisualStudioProject>

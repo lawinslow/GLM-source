@@ -1,4 +1,16 @@
-glm (2.0.3-0) UNRELEASED; urgency=low
+glm (2.1.6-0) UNRELEASED; urgency=low
+
+  [ hydro ]
+  * new version 2.1.3
+
+  [ Casper Boon ]
+  * new version 2.1.4
+  * new version 2.1.5
+  * new version 2.1.6
+
+ -- Casper Boon <casper@eridanus>  Wed, 09 Sep 2015 09:14:20 +0800
+
+glm (2.0.4-0) UNRELEASED; urgency=low
 
   [ hydro ]
   * new version 2.0.0
@@ -7,8 +19,9 @@ glm (2.0.3-0) UNRELEASED; urgency=low
   * new version 2.0.1
   * new version 2.0.2
   * new version 2.0.3
+  * new version 2.0.4
 
- -- Casper Boon <casper@eridanus>  Tue, 05 May 2015 09:39:54 +0800
+ -- Casper Boon <casper@eridanus>  Mon, 24 Aug 2015 15:02:16 +0800
 
 glm (1.4.0-0) UNRELEASED; urgency=low
 
