@@ -522,7 +522,8 @@ SUBROUTINE aed2_calculate_organic_matter(data,column,layer_idx)
      _DIAG_VAR_(data%id_bod) = poc+doc
      ! CDOM computed as a function of DOC amount, as empirically defined by
      ! Kostoglidis et al 2005 for Swan-Canning
-     _DIAG_VAR_(data%id_cdom) = 0.35*exp(0.1922*(doc+docr)*(12./1e3))
+     IF ( data%simRPools ) &
+        _DIAG_VAR_(data%id_cdom) = 0.35*exp(0.1922*(doc+docr)*(12./1e3))
    ENDIF
 
 END SUBROUTINE aed2_calculate_organic_matter
@@ -644,7 +645,6 @@ SUBROUTINE aed2_calculate_benthic_organic_matter(data,column,layer_idx)
       _DIAG_VAR_S_(data%id_sed_poc) = -poc_flux
       _DIAG_VAR_S_(data%id_sed_doc) = -doc_flux
    ENDIF
-
 END SUBROUTINE aed2_calculate_benthic_organic_matter
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

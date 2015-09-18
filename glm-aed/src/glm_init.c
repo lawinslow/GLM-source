@@ -410,6 +410,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
+        multi_ben         = FALSE;
         n_zones           = 0;
     }
 
@@ -442,8 +443,17 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         strcpy(outp_fn, "output");
         *nsave = 24;
     } else {
-        strcpy(outp_dir, out_dir);
-        strcpy(outp_fn, out_fn);
+        //The below if statements check vars individually and 
+        // copy defaults if individual vars have not been specified
+        if ( out_dir != NULL )
+            strcpy(outp_dir, out_dir);
+        else
+            strcpy(outp_dir, ".");
+
+        if ( out_fn != NULL)
+            strcpy(outp_fn, out_fn);
+        else
+            strcpy(outp_fn, "output");
     }
 
     if ( csv_point_nlevs > MaxPointCSV ) { fprintf(stderr, "csv_point_nlevs must be < %d\n", MaxPointCSV); exit(1); }

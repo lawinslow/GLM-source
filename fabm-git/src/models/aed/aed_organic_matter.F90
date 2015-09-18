@@ -279,9 +279,9 @@ SUBROUTINE aed_init_organic_matter(self,namlst)
 
    self%use_sedmtn_model = Psed_poc_variable .NE. ''
    IF (self%use_sedmtn_model) THEN
-     CALL self%register_horizontal_dependency(self%id_Psed_poc,Psed_poc_variable)
-     CALL self%register_horizontal_dependency(self%id_Psed_pon,Psed_pon_variable)
-     CALL self%register_horizontal_dependency(self%id_Psed_pop,Psed_pop_variable)
+      CALL self%register_horizontal_dependency(self%id_Psed_poc,Psed_poc_variable)
+      CALL self%register_horizontal_dependency(self%id_Psed_pon,Psed_pon_variable)
+      CALL self%register_horizontal_dependency(self%id_Psed_pop,Psed_pop_variable)
    ENDIF
 
    ! Register diagnostic variables

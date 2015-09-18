@@ -603,6 +603,9 @@ SUBROUTINE check_data
             CASE ( 'extc_coef' )   ; tvar%found = .true.
             CASE ( 'tss' )         ; tvar%found = .true.
             CASE ( 'par' )         ; tvar%found = .true.
+            CASE ( 'nir' )         ; tvar%found = .true.
+            CASE ( 'uva' )         ; tvar%found = .true.
+            CASE ( 'uvb' )         ; tvar%found = .true.
             CASE ( 'pressure' )    ; tvar%found = .true.
             CASE ( 'depth' )       ; tvar%found = .true.
             CASE ( 'sed_zone' )    ; tvar%found = .true.
@@ -673,6 +676,9 @@ SUBROUTINE define_sed_column(column, top, flux_pel, flux_atm, flux_ben)
             CASE ( 'extc_coef' )   ; column(av)%cell => zextc_coef(:)
             CASE ( 'tss' )         ; column(av)%cell => ztss(:)
             CASE ( 'par' )         ; column(av)%cell => zpar(:)
+      !     CASE ( 'nir' )         ; column(av)%cell_sheet => znir(:)
+      !     CASE ( 'uva' )         ; column(av)%cell_sheet => zuva(:)
+      !     CASE ( 'uvb' )         ; column(av)%cell_sheet => zuvb(:)
             CASE ( 'pressure' )    ; column(av)%cell => zpres(:)
             CASE ( 'depth' )       ; column(av)%cell => zdepth(:)
             CASE ( 'wind_speed' )  ; column(av)%cell_sheet => wnd
@@ -745,6 +751,9 @@ SUBROUTINE define_column(column, top, cc, cc_diag, flux_pel, flux_atm, flux_ben)
             CASE ( 'extc_coef' )   ; column(av)%cell => extc_coef(:)
             CASE ( 'tss' )         ; column(av)%cell => tss(:)
             CASE ( 'par' )         ; column(av)%cell => par(:)
+       !    CASE ( 'nir' )         ; column(av)%cell_sheet => nir(:)
+       !    CASE ( 'uva' )         ; column(av)%cell_sheet => uva(:)
+       !    CASE ( 'uvb' )         ; column(av)%cell_sheet => uvb(:)
             CASE ( 'pressure' )    ; column(av)%cell => pres(:)
             CASE ( 'depth' )       ; column(av)%cell => depth(:)
             CASE ( 'sed_zone' )    ; column(av)%cell_sheet => sed_zones(1)

@@ -33,13 +33,11 @@ MODULE aed_models
    USE aed_organic_matter
    USE aed_phytoplankton
    USE aed_pathogens
-   USE aed_bivalve
    USE aed_zooplankton
    USE aed_iron
    USE aed_sulfur
    USE aed_tracer
    USE aed_totals
-   USE aed_test
 
    IMPLICIT NONE
 
@@ -77,14 +75,12 @@ SUBROUTINE create(self,name,model)
        CASE ('aed_phosphorus');     ALLOCATE(aed_type_phosphorus::model)
        CASE ('aed_organic_matter'); ALLOCATE(aed_type_organic_matter::model)
        CASE ('aed_phytoplankton');  ALLOCATE(aed_type_phytoplankton::model)
-       CASE ('aed_bivalve');        ALLOCATE(aed_type_bivalve::model)
        CASE ('aed_zooplankton');    ALLOCATE(aed_type_zooplankton::model)
        CASE ('aed_pathogens');      ALLOCATE(aed_type_pathogens::model)
        CASE ('aed_iron');           ALLOCATE(aed_type_iron::model)
        CASE ('aed_sulfur');         ALLOCATE(aed_type_sulfur::model)
        CASE ('aed_tracer');         ALLOCATE(aed_type_tracer::model)
        CASE ('aed_totals');         ALLOCATE(aed_type_totals::model)
-       CASE ('aed_test');           ALLOCATE(aed_type_test::model)
        CASE DEFAULT ;               NULLIFY(model)
     END SELECT
 
