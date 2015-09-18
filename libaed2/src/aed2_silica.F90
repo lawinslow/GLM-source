@@ -76,8 +76,8 @@ SUBROUTINE aed2_define_silica(data, namlst)
    CHARACTER(len=64) :: Fsed_rsi_variable=''
 
    AED_REAL,PARAMETER :: secs_pr_day = 86400.
-   NAMELIST /aed2_silica/ rsi_initial,Fsed_rsi,Ksed_rsi,theta_sed_rsi,silica_reactant_variable, &
-                         Fsed_rsi_variable
+   NAMELIST /aed2_silica/ rsi_initial,rsi_min,rsi_max,Fsed_rsi,Ksed_rsi,theta_sed_rsi, &
+                         silica_reactant_variable,Fsed_rsi_variable
 !
 !-------------------------------------------------------------------------------
 !BEGIN

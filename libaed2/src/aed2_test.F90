@@ -122,7 +122,7 @@ SUBROUTINE aed2_calculate_riparian_test(data,column,layer_idx, pc_wet)
 
    lh = _STATE_VAR_(data%id_tst_lh)
    IF (lh > 0.0) THEN
-      lh = lh +100
+      lh = lh + 100
    ELSE
       lh = 0.0
    ENDIF

@@ -448,7 +448,7 @@ SUBROUTINE aed2_calculate_riparian_vegetation(data,column,layer_idx, pc_wet)
       END IF
 !     grazing = Imax * fGrazing_Limitation * f_Temp * f_dens * f_SS
 
-      ! Now dertermine available prey and limit grazing amount to availability of prey
+      ! Now determine available prey and limit grazing amount to availability of prey
       ! food is total amount of food in units of mass/unit volume/unit time
 !     food = grazing * veg
 !     IF (Ctotal_prey < data%vegdata(veg_i)%num_prey * data%vegdata(veg_i)%Cmin_grz ) THEN

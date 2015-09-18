@@ -64,14 +64,15 @@ MODULE aed2_pathogens
 
    TYPE,extends(aed2_model_data_t) :: aed2_pathogens_data_t
       !# Variable identifiers
-      INTEGER,ALLOCATABLE :: id_pf(:), id_pd(:)                     ! Column ID of pathogens (alive and dead)
-      INTEGER,ALLOCATABLE :: id_pa(:)                              ! Column ID of pathogens attached to ss
-      INTEGER,ALLOCATABLE :: id_ps(:)                              ! Column ID of pathogens in sediment
-      INTEGER,ALLOCATABLE :: id_ss(:)                              ! Column ID of ss if chosen
+      INTEGER,ALLOCATABLE :: id_pf(:), id_pd(:)            ! Column ID of pathogens (alive and dead)
+      INTEGER,ALLOCATABLE :: id_pa(:)                      ! Column ID of pathogens attached to ss
+      INTEGER,ALLOCATABLE :: id_ps(:)                      ! Column ID of pathogens in sediment
+      INTEGER,ALLOCATABLE :: id_ss(:)                      ! Column ID of ss if chosen
       INTEGER,ALLOCATABLE :: id_growth(:), id_mortality(:), id_sunlight(:), id_grazing(:), id_total(:) ! Diagnostic IDs for processes
-      INTEGER  :: id_oxy, id_pH,  id_doc, id_tss                   ! Dependency ID
-      INTEGER  :: id_par, id_tem, id_sal                           ! Environemental IDs (3D)
-      INTEGER  :: id_I_0                                           ! Environmental ID (2D)
+      INTEGER  :: id_oxy, id_pH,  id_doc, id_tss           ! Dependency ID
+      INTEGER  :: id_tem, id_sal                           ! Environemental IDs (3D)
+      INTEGER  :: id_par, id_nir, id_uva, id_uvb           ! Environemental IDs (3D)
+      INTEGER  :: id_I_0                                   ! Environmental ID (2D)
 
       !# Model parameters
       INTEGER  :: num_pathogens
@@ -172,6 +173,9 @@ SUBROUTINE aed2_define_pathogens(data, namlst)
    data%id_tem = aed2_locate_global('temperature')
    data%id_sal = aed2_locate_global('salinity')
    data%id_par = aed2_locate_global('par')
+   data%id_nir = aed2_locate_global('nir')
+   data%id_uva = aed2_locate_global('uva')
+   data%id_uvb = aed2_locate_global('uvb')
    data%id_I_0 = aed2_locate_global_sheet('par_sf')
 
 END SUBROUTINE aed2_define_pathogens
@@ -285,11 +289,11 @@ SUBROUTINE aed2_calculate_pathogens(data,column,layer_idx)
    INTEGER,INTENT(in) :: layer_idx
 !
 !LOCALS
-   AED_REAL           :: pth_f, pth_a, pth_d
-   AED_REAL           :: temp,salinity,oxy,pH,doc
-   AED_REAL           :: Io,par,uva,uvb
-   AED_REAL           :: growth,light,mortality, predation, attachment
-   AED_REAL           :: f_AOC,f_pH,f_DO,phi,lightBW,phstar,att_frac
+   AED_REAL :: pth_f, pth_a, pth_d
+   AED_REAL :: temp,salinity,oxy,pH,doc
+   AED_REAL :: Io,par,uva,uvb
+   AED_REAL :: growth,light,mortality, predation, attachment
+   AED_REAL :: f_AOC,f_pH,f_DO,phi,lightBW,phstar,att_frac
 
    INTEGER  :: pth_i
 
@@ -310,10 +314,18 @@ SUBROUTINE aed2_calculate_pathogens(data,column,layer_idx)
    phstar = 0.0                       ! abs(ph-7.)
 
    ! Get light bandwidth intensities
-   Io = _STATE_VAR_S_(data%id_I_0)     ! surface short wave radiation
-   par = _STATE_VAR_(data%id_par)      ! local photosynthetically active radiation (45% of sw)
-   uva = (par/0.45)*0.03               ! uva is 3% of sw (Kirk 1994)
-   uvb = (par/0.45)*0.003              ! uvb is 0.3% of sw
+   Io = _STATE_VAR_S_(data%id_I_0)    ! surface short wave radiation
+   par = _STATE_VAR_(data%id_par)     ! local photosynthetically active radiation (45% of sw)
+   IF ( data%id_uva > 0 ) THEN
+      uva = _STATE_VAR_(data%id_uva)
+   ELSE
+      uva = (par/0.45)*0.03           ! uva is 3% of sw (Kirk 1994)
+   ENDIF
+   IF ( data%id_uvb > 0 ) THEN
+      uvb = _STATE_VAR_(data%id_uvb)
+   ELSE
+      uvb = (par/0.45)*0.003          ! uvb is 0.3% of sw
+   ENDIF
 
    DO pth_i=1,data%num_pathogens
 
@@ -356,18 +368,18 @@ SUBROUTINE aed2_calculate_pathogens(data,column,layer_idx)
       f_pH = 1.0 !(1.0 + coef_light_cpHb_uvb*(pH_star**coef_light_delb_uvb / (coef_light_KpHb_uvb**coef_light_delb_uvb+pH_star**coef_light_delb_uvb)))
       lightBW = phi * (data%pathogens(pth_i)%coef_light_kb_uvb + data%pathogens(pth_i)%coef_light_cSb_uvb*salinity)
       lightBW = lightBW * uvb * f_pH * f_DO
-      light     = light + lightBW
+      light   = light + lightBW
 
       ! Attachment of free orgs to particles (as impacted by SS and desired attachment ratio)
       attachment = zero_
       IF (data%pathogens(pth_i)%coef_sett_fa > zero_) THEN
-          ! First check if ratio at last time step is less than desired (ie coef_sett_fa)
-          att_frac= pth_a/(pth_a+pth_f)
-          IF(att_frac<data%pathogens(pth_i)%coef_sett_fa) THEN
+         ! First check if ratio at last time step is less than desired (ie coef_sett_fa)
+         att_frac= pth_a/(pth_a+pth_f)
+         IF (att_frac<data%pathogens(pth_i)%coef_sett_fa) THEN
             ! Assume rate of attachment is slow (orgs/m3/s)
             attachment = 0.0001*pth_f  ! CAREFUL FIX ME
-          END IF
-      END IF
+         ENDIF
+      ENDIF
 
       !-----------------------------------------------------------------
       ! SET TEMPORAL DERIVATIVES FOR ODE SOLVER
@@ -377,8 +389,8 @@ SUBROUTINE aed2_calculate_pathogens(data,column,layer_idx)
       _FLUX_VAR_(data%id_pd(pth_i)) = _FLUX_VAR_(data%id_pd(pth_i)) + ( ( light + mortality + predation)*pth_f)
       ! In case a separate attached pathogen fraction
       IF (data%pathogens(pth_i)%coef_sett_fa > zero_) THEN
-        _FLUX_VAR_(data%id_pa(pth_i)) = _FLUX_VAR_(data%id_pa(pth_i)) + ( (growth - light/2. - mortality )*pth_a + attachment )
-        _FLUX_VAR_(data%id_pd(pth_i)) = _FLUX_VAR_(data%id_pd(pth_i)) + ( ( light/2. + mortality )*pth_a)
+         _FLUX_VAR_(data%id_pa(pth_i)) = _FLUX_VAR_(data%id_pa(pth_i)) + ( (growth - light/2. - mortality )*pth_a + attachment )
+         _FLUX_VAR_(data%id_pd(pth_i)) = _FLUX_VAR_(data%id_pd(pth_i)) + ( ( light/2. + mortality )*pth_a)
       ENDIF
 
 
@@ -386,9 +398,9 @@ SUBROUTINE aed2_calculate_pathogens(data,column,layer_idx)
       ! SET DIAGNOSTICS
       _DIAG_VAR_(data%id_total(pth_i)) =  pth_f + pth_a + pth_d  ! orgs/m3/s
       IF (data%extra_diag) THEN
-        _DIAG_VAR_(data%id_growth(pth_i)) =  growth*(pth_f + pth_a)  ! orgs/m3/s
-        _DIAG_VAR_(data%id_sunlight(pth_i)) =  light*pth_f + (light/2.)*pth_a  ! orgs/m3/s
-        _DIAG_VAR_(data%id_mortality(pth_i)) =  mortality*(pth_f + pth_a)  ! orgs/m3/s
+         _DIAG_VAR_(data%id_growth(pth_i)) =  growth*(pth_f + pth_a)  ! orgs/m3/s
+         _DIAG_VAR_(data%id_sunlight(pth_i)) =  light*pth_f + (light/2.)*pth_a  ! orgs/m3/s
+         _DIAG_VAR_(data%id_mortality(pth_i)) =  mortality*(pth_f + pth_a)  ! orgs/m3/s
       ENDIF
    ENDDO
 END SUBROUTINE aed2_calculate_pathogens

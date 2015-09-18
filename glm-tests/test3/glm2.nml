@@ -60,13 +60,8 @@
    split_factor = 1
    bioshade_feedback = .true.
    repair_state = .true.
-!  mobility_off = .true.
-   multi_ben = .true.
-!  multi_ben = .false.
-!  n_zones = 3
-   n_zones = 10
-!  zone_dep = 5.0, 10.0, 20.0
-   zone_dep = 2.0, 4.0, 6.0, 8.0, 10.0, 12.0, 14.0, 16.0, 18.0, 20.0
+   mobility_off = .true.
+   multi_ben = .false.
 /
 
 !-------------------------------------------------------------------------------
