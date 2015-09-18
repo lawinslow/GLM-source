@@ -410,6 +410,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
+        multi_ben         = FALSE;
         n_zones           = 0;
     }
 

@@ -18,15 +18,12 @@
    !min_layer_thick = 0.350
    max_layer_thick = 0.500
    !max_layer_thick = 0.900
-   !-- Light Parameters
    Kw = 0.2
-   !-- Mixing Parameters
    coef_mix_conv = 0.125
    coef_wind_stir = 1.23
    coef_mix_shear = 0.20
    coef_mix_turb = 0.51
    coef_mix_kh = 0.30
-   coef_mix_hyp = 0.5
 !  non_avg = .true.
 !  deep_mixing = .true.
 /
@@ -63,11 +60,8 @@
    split_factor = 1
    bioshade_feedback = .true.
    repair_state = .true.
-   mobility_off = .false.
-!  multi_ben = .true.
-   multi_ben = .false.
-   n_zones = 3
-   zone_dep = 5., 10., 20.
+   mobility_off = .true.
+   multi_ben = .true.
 /
 
 !-------------------------------------------------------------------------------
@@ -258,13 +252,9 @@
    lw_type    = 'LW_CC'
    rain_sw    = .false.
    snow_sw    = .true.
-   atm_stab   = .false.
-!  catchrain   = .false.
-!  rad_mode    = 1
-!  albedo_mode = 1
-   cloud_mode  = 4
    meteo_fl   = 'met.csv'
    subdaily   = .false.
+!  atm_stab   = .true.
    wind_factor = 1.0
 !  sw_factor = 1.0
 !  lw_factor = 1.0
@@ -274,8 +264,12 @@
 !  CD          = 0.0013
 !  CE          = 0.0013
 !  CH          = 0.0013
+!  catchrain   = .false.
 !  rain_threshold = 0.04
 !  runoff_coef = 0.3
+!  rad_mode    = 0
+!  albedo_mode = 1
+   cloud_mode  = 1
 !  time_fmt = 'YYYY-MM-DD hh:mm:ss'
 /
 

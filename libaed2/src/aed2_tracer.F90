@@ -37,6 +37,7 @@ MODULE aed2_tracer
       !# Variable identifiers
       INTEGER,ALLOCATABLE :: id_ss(:)
       INTEGER :: id_temp, id_retain, id_taub
+      INTEGER :: id_d_taub
       LOGICAL :: resuspension
 
       !# Model parameters
@@ -127,8 +128,10 @@ SUBROUTINE aed2_define_tracer(data, namlst)
 
    ! Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
-   if ( resuspension ) &
+   IF ( resuspension ) THEN
       data%id_taub = aed2_locate_global_sheet('taub')
+      data%id_d_taub = aed2_define_sheet_diag_variable('d_taub','n/m**2',  'taub diagnostic')
+   ENDIF
 
    data%resuspension = resuspension
 
@@ -188,6 +191,7 @@ SUBROUTINE aed2_calculate_benthic_tracer(data,column,layer_idx)
    IF ( data%resuspension ) THEN
       bottom_stress = _STATE_VAR_S_(data%id_taub)
       bottom_stress = MIN(bottom_stress, 100.)
+      _DIAG_VAR_S_(data%id_d_taub) = bottom_stress
    ENDIF
 
    DO i=1,ubound(data%id_ss,1)
