@@ -1,63 +1,45 @@
 !-------------------------------------------------------------------------------
-! AED bivalve database
-! AED1 - version 1.4.0
+! zoop_params
+!-------------------------------------------------------------------------------
+! zoop_name [sring]	Name of zooplankton group
+! zoop_initial [real]	Initial concentration of zooplankton (mmol/m3)
+! min_zoo [real]	Minimum concentration of zooplankton (mmol/m3)
+! Rgrz_zoo [real]   Zooplankton grazing rate (/day)
+! fassim_zoo [real]	Assimilation efficiency for zooplankton grazing (-)
+! Kgrz_zoo [real]	Half saturation constant for zooplankton grazing (mmol/m3)
+! theta_grz_zoo [real]	Temperature multiplier for zooplankton grazing (-)
+! Rresp_zoo [real]	Respiration rate coefficient (/day)
+! Rmort_zoo [real]	Mortaility rate coefficient (/day)
+! ffecal_zoo [real] Fecal Pellet fraction of respiration (-)
+! fexcr_zoo [real] 	Excretion fraction of respiration (-)
+! ffecal_sed[real] 	Fraction of fecal pellets that sink directly to sediments (hard fraction) (-)
+! theta_resp_zoo [real]	Temperature multiplier for zooplankton respiration (-)
+! Tstd_zoo [real]	Standard temperature for zooplankton respiration temperature dependence (oC)
+! Topt_zoo [real]	Optimal temperature for zooplankton temperature dependence (oC)
+! Tmax_zoo [real]	Maximum temperature for zooplankton temperature dependence (oC)
+! saltfunc_zoo [integer] Type of salinity limitation function used in mortality
+! Smin_zoo [real] 	Minimum salinity for zooplankton survival (psu)
+! Smax_zoo [real] 	Maximum salinity for zooplankton survival (psu)
+! Sint_zoo [real] 	Intercept for salinity = 0 (psu)
+! INC_zoo [real] 	Ratio of internal nitrogen to carbon (/)
+! IPC_zoo [real]	Ratio of internal phosphorus to carbon (/)
+! DOmin_zoo	[real]	Minimum concentration of oxygen for zooplankton survival (mmolO2/m3]
+! Cmin_grz_zoo [real] Minumum prey concentration for grazing by zooplankton (mmol/m3)
+! num_prey [integer]  Number of state variables for zooplankton prey
+! zoop_prey [string] State variable name for zooplankton prey
+! Pzoo_prey [real]	Preference factors for zooplankton predators grazing on prey
 !-------------------------------------------------------------------------------
 
-!--GENERAL Parameters
-! name [string] Name of bivalve group
-! initial_conc [real] Initial concentration of bivalve (mmol/m3)
-! min [real]    Minimum concentration of bivalve (mmol/m3)
-! length [real]	Length of bivalve (mm)
-! INC [real]	Ratio of internal nitrogen to carbon of bivalve (-)
-! IPC [real]	Ratio of internal phosphorus to carbon of bivalve (-)
-! num_prey [integer]	Number of state variables for bivalve prey
-! prey [string]	State variable name for bivalve prey
-! Pprey [real]	Preference factors for bivalve predators grazing on prey
-!--FILTRATION & INGESTION Parameters
-! Rgrz[real]	Maximum ingestion rate of bivalve (mmol/mmol/day) (Spillman et al. 2008) Calculated from Schneider 1992 based on 15 mm mussel
-! Ing [integer]	Type of maximum ingestion for bivalve; 0=Enter (mmol/mmol/d) or 1=Calculate based on length (mm)
-! WaI [real]	Maximum standard ingestion rate of bivalve (mmol/mmol/day) (Schneider 1992)
-! WbI [real]	Exponent for weight effect on ingestion of bivalve (-) (Schneider 1992)
-! fassim [real]	Minimum proportion of food lost as pseudofeces for bivalve (-)
-! Cmin_grz [real] Minimum prey concentration for grazing by bivalve (mmol/m3)
-! Kgrz [real]	Optimum algae+POC concentration for ingestion of bivalve (mmol/m3)
-! minT [real]	Lower temperature for no ingestion of bivalve (degC)
-! Tmin [real]	Lower temperature for optimum ingestion of bivalve (degC)
-! Tmax [real]	Upper temperature for optimum ingestion of bivalve (degC)
-! maxT [real]	Upper temperature for no ingestion of bivalve (degC)
-! Dmax [real]	Upper density for optimum ingestion of bivalve (mmol/m2)
-! maxD [real]	Upper density for no ingestion of bivalve (mmol/m2)
-! SSmax [real]	Upper suspended solids for optimum ingestion of bivalve (mg/L)
-! maxSS [real]	Upper suspended solids for no ingestion of bivalve (mg/L)
-!--EXCRETION AND EGESTION Parameters
-! Rexcr[real] 	Excretion fraction of ingestion for bivalve(-)
-! Regst[real]	Minimum proportion egested as feces for bivalve (-)
-! gegst [real]	Coefficient for food availability dependence for bivalve
----RESPIRATION Parameters
-! Rresp[real]	Respiration rate coefficient of bivalve (/day) (Calculated from Schneider 1992 based on 15 mm mussel
-! saltfunc [integer]	Type of salinity function for bivalve; 0=None or 1=Spillman et al. 2008
-! minS [real]	Lower salinity for no ingestion of bivalve (psu)
-! Smin [real]	Lower salinity for optimum ingestion of bivalve (psu)
-! Smax [real]	Upper salinity for optimum ingestion of bivalve (psu)
-! maxS [real]	Upper salinity for no ingestion of bivalve (psu)
-! fR20 [integer]	Type of maximum respiration for bivalve; 0=Enter or 1=Calculate based on length (mm)
-! War [real]	Standard respiration rate of bivalve (mmol/mmol/d) (Schneider 1992)
-! Wbr [real]	Exponent for weight effect on respiration of bivalve (-)
-! fR [integer]	Type of respiration function for bivalve; 0=Schneider 1992 or 1=Spillman et al. 2008
-! theta_resp [real]	Temperature multiplier for respiration of bivalve (-)
-! TmaxR [real]	Upper temperature for optimum respiration of bivalve (degC)
-! maxTR [real]	Upper temperature for no respiration of bivalve (degC)
-! Q [real]	Respiration curve slope estimate for bivalve (-)
-! SDA [real]	Specific dynamic action of bivalve(-)
-!--MORTALITY Parameters
-! Rmort [real]	Mortality rate coefficient for bivalve (/day)
-! Rpred [real]	Mortality rate from predation of bivalve (/day)
-! fDO [integer]	Type of dissolved oxygen function for bivalve; 0=None or 1=XXX or 2=XXX
-! K_BDO [real]	Basal respiration rate of bivalve (mmol/m3)
-! KDO[real]	Half saturation constant for metabolic response to DO for bivalve (mmol/m3)
-
-!                  name,   initial_conc, min, length, INC,    IPC,   Rgrz,   Ing, WaI,   WbI, fassim, Cmin_grz, Kgrz, minT, Tmin,  Tmax, maxT, Dmax,    maxD,  SSmax, maxSS, Rexcr, Regst, gegst, Rresp, saltfunc, minS, Smin, Smax, maxS, fR20, War,   Wbr, fR, theta_resp, TmaxR, maxTR,  Q,   SDA, Rmort, Rpred, fDO, KBDO, KDO,   num_prey, prey1, Pprey1, prey2, Pprey2, prey3, Pprey3
-&bivalve_params
-bivalve_param(1) ='zebra',    833.0,     8.3,   15,  291.67, 64.58, 115.25,   0,  53.4, -0.39, 0.34,  0.05,    187.5,  4.0, 17.0,  20.0, 32.0, 8333.3, 83333.3, 20.0, 100.0, 0.064, 0.315, 0.88,  0.02,    0,       0,   0,     0,   0,    0, 16.759, -0.25, 1, 1.08,        30.0,  43.0, 2.3, 0.285, 0,     0.1,   0,  160.0, 8,        3, PHY_green,  1, PHY_diatom,  1, PHY_crypto, 1
-bivalve_param(2) ='quagga',   833.0,     8.3,   15,  291.67, 64.58, 115.25,   0,  53.4, -0.39, 0.34,  0.05,    187.5,  4.0, 17.0,  20.0, 32.0, 8333.3, 83333.3, 20.0, 100.0, 0.064, 0.315, 0.88,  22.481,  0,       0,   0,     0,   0,    0, 16.759, -0.25, 2, 1.08,        30.0,  43.0, 2.3, 0.285, 0,     0.1,   0,  160.0, 8,        3, PHY_green,  1, PHY_diatom,  1, PHY_crypto, 1
+!	zoop_name, zoop_initial, min_zoo, Rgrz_zoo, fassim_zoo, K_grz_zoo, theta_grz_zoo, Rresp_zoo, Rmort_zoo, ffecal_zoo, fexcr_zoo, ffecal_sed, theta_resp_zoo, Tstd_zoo, Topt_zoo, Tmax_zoo, saltfunc_zoo, Smin_zoo, Smax_zoo, Sint_zoo, INC_zoo, IPC_zoo, DOmin_zoo, Cmin_grz_zoo, num_prey, zoop_prey1, Pzoo_prey1, zoop_prey2, Pzoo_prey2, zoop_prey3, Pzoo_prey3
+&bivalves_params
+bivalves_param(1) ='zoo01',	16.0,	0.1,	1.5,	0.9,	40.0,	1.08,	0.1,	0.01,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(2) ='zoo02',	40.0,	0.1,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(3) ='zoo03',	40.0,	0.1,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(4) ='zoo04',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(5) ='zoo05',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(6) ='zoo06',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(7) ='zoo07',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(8) ='zoo08',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(9) ='zoo09',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
+bivalves_param(10) ='zoo10',	40.0,	0.03,	0.5,	0.9,	1.0,	1.08,	0.3,	0.1,	0.2,	0.7,	0.15,	1.08,	20.0,	22.0,	30.0,	1,	0.0,	35.0,	10.0,	0.2,	0.01,	10.0,	0.05,	3, aed_phytoplankton_green,	0.7, aed_phytoplankton_diatom, 0.1,	aed_organic_matter_poc,	0.2
 /
