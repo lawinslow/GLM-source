@@ -34,10 +34,13 @@ MODULE aed2_test
 !
    TYPE,extends(aed2_model_data_t) :: aed2_test_data_t
       !# Variable identifiers
-      INTEGER :: id_tst_pel, id_tst_ben
+      INTEGER :: id_tst_pel, id_tst_ben, id_tst_zon
       INTEGER :: id_tst_lh, id_tst_act, id_tst_act2, id_tst_act3
+      INTEGER :: id_par, id_nir, id_uva, id_uvb
+      INTEGER :: id_tst_par, id_tst_nir, id_tst_uva, id_tst_uvb
+      INTEGER :: id_sed_zone
 
-     CONTAINS
+      CONTAINS
          PROCEDURE :: define             => aed2_define_test
          PROCEDURE :: calculate          => aed2_calculate_test
          PROCEDURE :: calculate_benthic  => aed2_calculate_benthic_test
@@ -76,6 +79,19 @@ SUBROUTINE aed2_define_test(data, namlst)
    data%id_tst_act = aed2_define_sheet_diag_variable("act",'mmol/m**2','active column')
    data%id_tst_act2 = aed2_define_sheet_diag_variable("act2",'mmol/m**2','non-zero depth column')
    data%id_tst_act3 = aed2_define_sheet_diag_variable("act3",'mmol/m**2','active XOR non-zero depth')
+
+   data%id_sed_zone = aed2_locate_global_sheet('sed_zone')
+   data%id_tst_zon = aed2_define_sheet_diag_variable("zon",'num','sed_zone')
+
+   data%id_par = aed2_locate_global('par')
+   data%id_nir = aed2_locate_global('nir')
+   data%id_uva = aed2_locate_global('uva')
+   data%id_uvb = aed2_locate_global('uvb')
+
+   data%id_tst_par = aed2_define_diag_variable('tst_par', '', 'test PAR')
+   data%id_tst_nir = aed2_define_diag_variable('tst_nir', '', 'test NIR')
+   data%id_tst_uva = aed2_define_diag_variable('tst_uva', '', 'test UVA')
+   data%id_tst_uvb = aed2_define_diag_variable('tst_uvb', '', 'test UVB')
 END SUBROUTINE aed2_define_test
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -96,6 +112,11 @@ SUBROUTINE aed2_calculate_test(data,column,layer_idx)
    pel = _STATE_VAR_(data%id_tst_pel)
    pel = 20 - pel
    _FLUX_VAR_(data%id_tst_pel) = pel / secs_per_day
+
+   _DIAG_VAR_(data%id_tst_par) = _STATE_VAR_(data%id_par)
+   _DIAG_VAR_(data%id_tst_nir) = _STATE_VAR_(data%id_nir)
+   _DIAG_VAR_(data%id_tst_uva) = _STATE_VAR_(data%id_uva)
+   _DIAG_VAR_(data%id_tst_uvb) = _STATE_VAR_(data%id_uvb)
 END SUBROUTINE aed2_calculate_test
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -158,13 +179,16 @@ SUBROUTINE aed2_calculate_benthic_test(data,column,layer_idx)
 !
 !LOCALS
    ! Temporary variables
-   AED_REAL :: ben, lh
+   AED_REAL :: ben, lh, matz
 !
 !-------------------------------------------------------------------------------
 !BEGIN
    ben = _STATE_VAR_S_(data%id_tst_ben)
    ben = 10 - ben
    _FLUX_VAR_B_(data%id_tst_ben) = ben / secs_per_day
+
+   matz = _STATE_VAR_S_(data%id_sed_zone)
+   _DIAG_VAR_S_(data%id_tst_zon) = matz
 END SUBROUTINE aed2_calculate_benthic_test
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
