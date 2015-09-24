@@ -32,8 +32,7 @@ MODULE aed2_pathogens
    PUBLIC aed2_pathogens_data_t
 !
 
-
-
+   !----------------------------------------------------------------------------
    TYPE pathogen_nml_data
       CHARACTER(64) :: p_name
       AED_REAL      :: coef_grwth_uMAX                     !-- Max growth rate at 20C
