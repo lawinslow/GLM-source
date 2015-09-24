@@ -342,7 +342,7 @@ SUBROUTINE aed2_calculate_zooplankton(data,column,layer_idx)
       ! grazing is in units of mass consumed/mass zoops/unit time
       grazing = data%zoops(zoop_i)%Rgrz_zoo * fGrazing_Limitation * f_T
 
-      ! Now dertermine available prey and limit grazing amount to
+      ! Now determine available prey and limit grazing amount to
       ! availability of prey
       ! food is total amount of food in units of mass/unit volume/unit time
       food = grazing * zoo

@@ -13,23 +13,25 @@
 #ifndef _AED2_H_
 #define _AED2_H_
 
-#define AED2_VERSION  "1.1.0alpha6"
+#define AED2_VERSION  "1.1.0alpha8"
 
 #define MAX_MODELS 40
 
-!# aed_phytoplankton constants
+!# aed2_phytoplankton constants
 #define MAX_PHYTO_TYPES 256
 #define MAX_ZOOP_TYPES  256
 #define MAX_ZOOP_PREY    10
 #define MAX_PATHO_TYPES 256
 
-!# for aed_geochemistry
+!# for aed2_geochemistry
 #define MAX_GC_COMPONENTS 20
 #define MAX_GC_MINERALS   20
 
-!# for aed_vegetation
+!# for aed2_vegetation
 #define MAX_VEG_TYPES   256
 
+!# for aed2_macrophytes
+#define MAX_ZONES       256
 
 !#define MISVAL -9999.
 #define MISVAL misval_

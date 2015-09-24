@@ -34,6 +34,7 @@ MODULE aed2_tracer
    PUBLIC aed2_tracer_data_t
 !
    TYPE,extends(aed2_model_data_t) :: aed2_tracer_data_t
+      INTEGER :: num_tracers
       !# Variable identifiers
       INTEGER,ALLOCATABLE :: id_ss(:)
       INTEGER :: id_temp, id_retain, id_taub
@@ -93,12 +94,21 @@ SUBROUTINE aed2_define_tracer(data, namlst)
 !
 !-------------------------------------------------------------------------------
 !BEGIN
+   decay = zero_
+   settling = -0.1
+   Fsed = zero_
+   epsilon = 0.02
+   tau_0 = 0.01
+   tau_r = 1.0
+   Ke_ss = 0.02
+
    ! Read the namelist
    read(namlst,nml=aed2_tracer,iostat=status)
    IF (status /= 0) STOP 'Error reading namelist aed2_tracer'
 
    ! Store parameter values in our own derived type
 
+   data%num_tracers = num_tracers
    IF ( num_tracers > 0 ) THEN
       ALLOCATE(data%id_ss(num_tracers))
       ALLOCATE(data%decay(num_tracers))    ; data%decay(1:num_tracers)    = decay(1:num_tracers)
@@ -134,7 +144,6 @@ SUBROUTINE aed2_define_tracer(data, namlst)
    ENDIF
 
    data%resuspension = resuspension
-
 END SUBROUTINE aed2_define_tracer
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -154,7 +163,6 @@ SUBROUTINE aed2_calculate_tracer(data,column,layer_idx)
    IF (data%id_retain < 1) RETURN
 
    _FLUX_VAR_(data%id_retain) = _FLUX_VAR_(data%id_retain) + 1.0
-
 END SUBROUTINE aed2_calculate_tracer
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -183,7 +191,6 @@ SUBROUTINE aed2_calculate_benthic_tracer(data,column,layer_idx)
 
 !-------------------------------------------------------------------------------
 !BEGIN
-
    IF ( .NOT. ALLOCATED(data%id_ss) ) RETURN
 
    ! Retrieve current environmental conditions for the bottom pelagic layer.
@@ -211,9 +218,7 @@ SUBROUTINE aed2_calculate_benthic_tracer(data,column,layer_idx)
 
       ! Transfer sediment flux value to model.
       _FLUX_VAR_(data%id_ss(i)) = _FLUX_VAR_(data%id_ss(i)) + ss_flux + resus_flux
-
    ENDDO
-
 END SUBROUTINE aed2_calculate_benthic_tracer
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -235,7 +240,6 @@ SUBROUTINE aed2_light_extinction_tracer(data,column,layer_idx,extinction)
 !
 !-----------------------------------------------------------------------
 !BEGIN
-
    DO ss_i=1,ubound(data%id_ss,1)
       ! Retrieve current (local) state variable values.
       ss = _STATE_VAR_(data%id_ss(ss_i))
@@ -243,7 +247,6 @@ SUBROUTINE aed2_light_extinction_tracer(data,column,layer_idx,extinction)
       ! Self-shading with explicit contribution from background tracer concentration.
       extinction = extinction + (data%Ke_ss(ss_i)*ss)
    ENDDO
-
 END SUBROUTINE aed2_light_extinction_tracer
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

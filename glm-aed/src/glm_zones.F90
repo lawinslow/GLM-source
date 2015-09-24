@@ -58,6 +58,7 @@ MODULE glm_zones
    AED_REAL,ALLOCATABLE,DIMENSION(:),TARGET :: zextc_coef, zlayer_stress, ztss
 
    AED_REAL,ALLOCATABLE,DIMENSION(:),TARGET :: zdz, zpar, zdepth, zpres
+   AED_REAL,ALLOCATABLE,DIMENSION(:),TARGET :: znir, zuva, zuvb
 
    INTEGER :: n_zones, w_zones
    AED_REAL,DIMENSION(:),POINTER :: zone_dep
@@ -70,6 +71,7 @@ MODULE glm_zones
 
    PUBLIC zrad, zsalt, ztemp, zrho, zarea, zextc_coef, zlayer_stress, ztss, zdz, zpar
    PUBLIC zdepth, zpres, z_pc_wet
+   PUBLIC znir, zuva, zuvb
 
 CONTAINS
 
@@ -101,6 +103,9 @@ SUBROUTINE wq_set_glm_zones(z_dep, numZones, numVars, numBenV) BIND(C, name="wq_
    ALLOCATE(ztss(n_zones))
    ALLOCATE(zdz(n_zones))
    ALLOCATE(zpar(n_zones))
+   ALLOCATE(znir(n_zones))
+   ALLOCATE(zuva(n_zones))
+   ALLOCATE(zuvb(n_zones))
    ALLOCATE(zpres(n_zones))
    ALLOCATE(zdepth(n_zones))
    ALLOCATE(z_pc_wet(n_zones))
@@ -182,6 +187,7 @@ SUBROUTINE copy_to_zone(x_cc, wlev)
    i = 1 ; cc_sed = 0.
    zrad = 0. ; zsalt = 0. ; ztemp = 0. ; zrho = 0.
    zextc_coef = 0. ; zlayer_stress = 0. ; ztss = 0. ; zpar = 0.
+   znir = 0. ; zuva = 0. ; zuvb = 0.
 
    DO lev=1, wlev
       IF ( zz(lev) > zone_dep(i) ) THEN
