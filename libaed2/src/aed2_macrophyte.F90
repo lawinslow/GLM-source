@@ -38,7 +38,9 @@ MODULE aed2_macrophyte
       !# Variable identifiers
       INTEGER,ALLOCATABLE :: id_mphy(:)
       INTEGER :: id_par, id_tem, id_sal, id_dz, id_extc, id_I_0
-      INTEGER :: id_diag_par, id_gpp, id_p2r
+      INTEGER :: id_diag_par, id_gpp, id_p2r, id_sed_zone
+      INTEGER :: n_zones
+      AED_REAL,ALLOCATABLE :: active_zones(:)
 
       !# Model parameters
       INTEGER  :: num_mphy
@@ -76,7 +78,6 @@ SUBROUTINE aed2_macrophyte_load_params(data, dbase, count, list)
    INTEGER  :: i,tfil
    AED_REAL :: minNut
 
-   AED_REAL, parameter :: secs_pr_day = 86400.
    TYPE(phyto_nml_data) :: pd(MAX_PHYTO_TYPES)
    NAMELIST /phyto_data/ pd
 !-------------------------------------------------------------------------------
@@ -97,9 +98,9 @@ SUBROUTINE aed2_macrophyte_load_params(data, dbase, count, list)
        ! Assign parameters from database to simulated groups
        data%mphydata(i)%p_name       = pd(list(i))%p_name
        data%mphydata(i)%p0           = pd(list(i))%p0
-     ! data%mphydata(i)%w_p          = pd(list(i))%w_p/secs_pr_day
+     ! data%mphydata(i)%w_p          = pd(list(i))%w_p/secs_per_day
        data%mphydata(i)%Xcc          = pd(list(i))%Xcc
-       data%mphydata(i)%R_growth     = pd(list(i))%R_growth/secs_pr_day
+       data%mphydata(i)%R_growth     = pd(list(i))%R_growth/secs_per_day
        data%mphydata(i)%fT_Method    = pd(list(i))%fT_Method
        data%mphydata(i)%theta_growth = pd(list(i))%theta_growth
        data%mphydata(i)%T_std        = pd(list(i))%T_std
@@ -110,7 +111,7 @@ SUBROUTINE aed2_macrophyte_load_params(data, dbase, count, list)
        data%mphydata(i)%I_S          = pd(list(i))%I_S
        data%mphydata(i)%KePHY        = pd(list(i))%KePHY
        data%mphydata(i)%f_pr         = pd(list(i))%f_pr
-       data%mphydata(i)%R_resp       = pd(list(i))%R_resp/secs_pr_day
+       data%mphydata(i)%R_resp       = pd(list(i))%R_resp/secs_per_day
        data%mphydata(i)%theta_resp   = pd(list(i))%theta_resp
      ! data%mphydata(i)%k_fres       = pd(list(i))%k_fres
      ! data%mphydata(i)%k_fdom       = pd(list(i))%k_fdom
@@ -127,9 +128,9 @@ SUBROUTINE aed2_macrophyte_load_params(data, dbase, count, list)
      ! data%mphydata(i)%X_ncon       = pd(list(i))%X_ncon
      ! data%mphydata(i)%X_nmin       = pd(list(i))%X_nmin
      ! data%mphydata(i)%X_nmax       = pd(list(i))%X_nmax
-     ! data%mphydata(i)%R_nuptake    = pd(list(i))%R_nuptake/secs_pr_day
+     ! data%mphydata(i)%R_nuptake    = pd(list(i))%R_nuptake/secs_per_day
      ! data%mphydata(i)%k_nfix       = pd(list(i))%k_nfix
-     ! data%mphydata(i)%R_nfix       = pd(list(i))%R_nfix/secs_pr_day
+     ! data%mphydata(i)%R_nfix       = pd(list(i))%R_nfix/secs_per_day
      ! data%mphydata(i)%simDIPUptake = pd(list(i))%simDIPUptake
      ! data%mphydata(i)%simIPDynamics= pd(list(i))%simIPDynamics
      ! data%mphydata(i)%P_0          = pd(list(i))%P_0
@@ -137,7 +138,7 @@ SUBROUTINE aed2_macrophyte_load_params(data, dbase, count, list)
      ! data%mphydata(i)%X_pcon       = pd(list(i))%X_pcon
      ! data%mphydata(i)%X_pmin       = pd(list(i))%X_pmin
      ! data%mphydata(i)%X_pmax       = pd(list(i))%X_pmax
-     ! data%mphydata(i)%R_puptake    = pd(list(i))%R_puptake/secs_pr_day
+     ! data%mphydata(i)%R_puptake    = pd(list(i))%R_puptake/secs_per_day
      ! data%mphydata(i)%simSiUptake  = pd(list(i))%simSiUptake
      ! data%mphydata(i)%Si_0         = pd(list(i))%Si_0
      ! data%mphydata(i)%K_Si         = pd(list(i))%K_Si
@@ -173,10 +174,10 @@ SUBROUTINE aed2_define_macrophyte(data, namlst)
    INTEGER  :: num_mphy
    INTEGER  :: the_mphy(MAX_PHYTO_TYPES)
    CHARACTER(len=128) :: dbase='aed2_macrophyte_pars.nml'
+   INTEGER  :: n_zones = 0, active_zones(MAX_ZONES), i
 
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
-   NAMELIST /aed2_macrophyte/ num_mphy, the_mphy, dbase
+   NAMELIST /aed2_macrophyte/ num_mphy, the_mphy, dbase, n_zones, active_zones
 
 !-----------------------------------------------------------------------
 !BEGIN
@@ -184,6 +185,14 @@ SUBROUTINE aed2_define_macrophyte(data, namlst)
    ! Read the namelist
    read(namlst,nml=aed2_macrophyte,iostat=status)
    IF (status /= 0) STOP 'Error reading namelist aed2_macrophyte'
+
+   data%n_zones = n_zones
+   IF (n_zones > 0) THEN
+      ALLOCATE(data%active_zones(n_zones))
+      DO i=1,n_zones
+         data%active_zones(i) = active_zones(i)
+      ENDDO
+   ENDIF
 
    ! Store parameter values in our own derived type
    ! NB: all rates must be provided in values per day,
@@ -214,14 +223,36 @@ SUBROUTINE aed2_define_macrophyte(data, namlst)
    data%id_I_0 = aed2_locate_global_sheet('par_sf')
    data%id_dz = aed2_locate_global('layer_ht')
    data%id_extc = aed2_locate_global('extc_coef')
+   data%id_sed_zone = aed2_locate_global_sheet('sed_zone')
 
 END SUBROUTINE aed2_define_macrophyte
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
+!###############################################################################
+LOGICAL FUNCTION in_zone_set(matz, active_zones)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   AED_REAL,INTENT(in) :: matz
+   AED_REAL,INTENT(in) :: active_zones(:)
+!
+!LOCALS
+   INTEGER :: i, l
+   LOGICAL :: res
+!BEGIN
+!-------------------------------------------------------------------------------
+   res = .FALSE.
+   l = size(active_zones)
+   do i=1,l
+      if ( active_zones(i) == matz ) then
+         res = .TRUE.
+         exit
+      endif
+   enddo
 
-
-
+   in_zone_set = res
+END FUNCTION in_zone_set
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 !###############################################################################
@@ -243,12 +274,12 @@ SUBROUTINE aed2_calculate_benthic_macrophyte(data,column,layer_idx)
    AED_REAL :: extc, dz, par, Io, temp, salinity
    AED_REAL :: primprod(data%num_mphy)
    AED_REAL :: respiration(data%num_mphy)
-
-   ! Parameters
-!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
+   AED_REAL :: matz
 !
 !-------------------------------------------------------------------------------
 !BEGIN
+   matz = _STATE_VAR_S_(data%id_sed_zone)
+   if ( .NOT. in_zone_set(matz, data%active_zones) ) return
 
    ! Retrieve current environmental conditions.
    temp = _STATE_VAR_(data%id_tem)      ! local temperature
@@ -284,8 +315,6 @@ SUBROUTINE aed2_calculate_benthic_macrophyte(data,column,layer_idx)
    _DIAG_VAR_S_(data%id_gpp  ) = SUM(primprod)
    _DIAG_VAR_S_(data%id_diag_par )  = par
    _DIAG_VAR_S_(data%id_p2r )  = SUM(primprod(:)) / SUM(respiration(:))
-
-
 END SUBROUTINE aed2_calculate_benthic_macrophyte
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

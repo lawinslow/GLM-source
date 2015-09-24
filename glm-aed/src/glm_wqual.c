@@ -68,6 +68,7 @@ wq_is_var_t          p_wq_is_var          = NULL;
 int ode_method = 1, split_factor = 1;
 CLOGICAL bioshade_feedback = TRUE, repair_state = TRUE, multi_ben = TRUE;
 CLOGICAL mobility_off = FALSE;     //  !# flag to turn mobility off
+CLOGICAL no_zones = FALSE;         // flag to turn of zones (makes multi_ben use old behaviour)
 
 
 #if USE_DL_LOADER
@@ -178,7 +179,7 @@ int prime_glm_wq(const char *which)
                     split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
 
     (*p_wq_set_flags)(&split_factor, &mobility_off, &bioshade_feedback,
-                                     &repair_state, &ode_method, &multi_ben, &do_plots);
+                                     &repair_state, &ode_method, &multi_ben, &no_zones, &do_plots);
 
     return 0;
 }

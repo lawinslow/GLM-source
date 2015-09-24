@@ -470,7 +470,7 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
       END IF
       grazing = Imax * fGrazing_Limitation * f_Temp * f_dens * f_SS
 
-      ! Now dertermine available prey and limit grazing amount to availability of prey
+      ! Now determine available prey and limit grazing amount to availability of prey
       ! food is total amount of food in units of mass/unit volume/unit time
       food = grazing * biv
       IF (Ctotal_prey < data%bivalves(biv_i)%num_prey * data%bivalves(biv_i)%Cmin_grz ) THEN

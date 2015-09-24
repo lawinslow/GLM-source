@@ -65,7 +65,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.7"
+				Version="2.1.8"
 				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP/;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;MSVCRT;libmmt"
@@ -139,7 +139,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.7"
+				Version="2.1.8"
 				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP/;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;MSVCRT;libmmt"
@@ -212,7 +212,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.7"
+				Version="2.1.8"
 				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP/;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;libmmt"
@@ -286,7 +286,7 @@
 			<Tool
 				Name="VCLinkerTool"
 				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.7"
+				Version="2.1.8"
 				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP/;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64"
 				IgnoreAllDefaultLibraries="false"
 				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;libmmt"

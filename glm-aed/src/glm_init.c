@@ -411,7 +411,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
         multi_ben         = FALSE;
+        no_zones          = TRUE;
         n_zones           = 0;
+    } else {
+        if ( multi_ben )
+            if ((n_zones == 0 || zone_dep == NULL) ) no_zones = TRUE;
     }
 
     //-------------------------------------------------
@@ -694,10 +698,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
         if ( multi_ben ) {
             if ( (n_zones <= 0 || zone_dep == NULL) ) {
-                fprintf(stderr, "multi_ben mode must define sediment zones\n");
-                exit(1);
-            }
-            wq_set_glm_zones(zone_dep, &n_zones, &Num_WQ_Vars, &Num_WQ_Ben);
+                // fprintf(stderr, "multi_ben mode must define sediment zones\n");
+                // exit(1);
+                no_zones = TRUE;
+            } else
+                wq_set_glm_zones(zone_dep, &n_zones, &Num_WQ_Vars, &Num_WQ_Ben);
         }
 
         wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
@@ -854,7 +859,7 @@ void create_lake(int namlst)
         if (H[i] <= 0.0 ) ksto++;
 
         /* Create the zone areas */
-        if (multi_ben) {
+        if (multi_ben && !no_zones) {
             if ( zone_dep[j] <= H[i] ) {
                 zone_area[j] = A[i];
                 if ( i > 0 ) {

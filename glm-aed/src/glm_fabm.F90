@@ -120,6 +120,7 @@ MODULE glm_fabm
    LOGICAL :: bioshade_feedback = .TRUE., repair_state = .TRUE., multi_ben = .FALSE.
    LOGICAL :: mobility_off = .FALSE.  !# flag to turn mobility off
    LOGICAL :: do_plots = .TRUE.
+   LOGICAL :: do_zones = .FALSE.
 
    !# Model
    TYPE (type_model),POINTER :: model
@@ -128,6 +129,7 @@ MODULE glm_fabm
    AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc !# water quality array: nlayers, nvars
    AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: cc_diag
    AED_REAL,ALLOCATABLE,DIMENSION(:)   :: cc_diag_hz
+   AED_REAL,ALLOCATABLE,TARGET,DIMENSION(:) :: sed_zones
 
    !# Arrays for work, vertical movement, and cross-boundary fluxes
    AED_REAL,ALLOCATABLE,DIMENSION(:,:) :: rhs_flux
@@ -197,10 +199,10 @@ END FUNCTION f_get_lun
 
 !###############################################################################
 SUBROUTINE fabm_set_flags(c_split_factor, c_mobility, c_bioshade,              &
-                  c_repair_state, c_ode, c_multi_ben, c_do_plots) BIND(C, name=_WQ_SET_FLAGS)
+                  c_repair_state, c_ode, c_multi_ben, c_no_zones, c_do_plots) BIND(C, name=_WQ_SET_FLAGS)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
-   CLOGICAL,INTENT(in) :: c_mobility, c_bioshade, c_repair_state, c_multi_ben, c_do_plots
+   CLOGICAL,INTENT(in) :: c_mobility, c_bioshade, c_repair_state, c_multi_ben, c_no_zones, c_do_plots
    CINTEGER,INTENT(in) :: c_split_factor, c_ode
 !
 !-------------------------------------------------------------------------------
@@ -210,7 +212,8 @@ SUBROUTINE fabm_set_flags(c_split_factor, c_mobility, c_bioshade,              &
    bioshade_feedback = c_bioshade
    ode_method = c_ode
    repair_state = c_repair_state
-   multi_ben = c_multi_ben
+   multi_ben = c_multi_ben .AND. c_no_zones
+   do_zones = c_multi_ben .AND. .NOT. c_no_zones
    do_plots = c_do_plots
 END SUBROUTINE fabm_set_flags
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -225,7 +228,7 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumWQVars,NumWQBen,pKw) BIND(C, n
    CCHARACTER,INTENT(in) :: i_fname(*)
    CINTEGER,INTENT(in)   :: len
    CINTEGER,INTENT(in)   :: MaxLayers
-   CINTEGER,INTENT(out)  :: NumWQVars,NumWQBen
+   CINTEGER,INTENT(out)  :: NumWQVars, NumWQBen
    AED_REAL,INTENT(in)   :: pKw
 !
 !LOCALS
@@ -235,7 +238,6 @@ SUBROUTINE fabm_init_glm(i_fname,len,MaxLayers,NumWQVars,NumWQBen,pKw) BIND(C, n
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-
    CALL make_string(fname, i_fname, len)
 
    lKw = pKw
@@ -543,7 +545,8 @@ SUBROUTINE fabm_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(rad, Lake%Light)
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
    _LINK_POINTER_(layer_stress, Lake%LayerStress)
-   zz => z
+
+   if (do_zones) zz => z
 
    precip => MetData%Rain
    evap   => SurfData%Evap
@@ -587,7 +590,7 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    INTEGER  :: i, split
    AED_REAL, POINTER :: fdhz
    AED_REAL, DIMENSION(:),POINTER :: fdiag
-   INTEGER :: n_vars, n_vars_ben
+ ! INTEGER :: n_vars, n_vars_ben
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -638,6 +641,11 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    CALL do_repair_state(wlev,'glm_fabm::do_glm_fabm, after advection/diffusion')
 
    DO split=1,split_factor
+      IF (do_zones) THEN
+         CALL copy_to_zone(cc, wlev)
+         CALL calc_zone_areas(area, wlev, z(wlev))
+      ENDIF
+
       !# Update local light field (self-shading may have changed through changes
       !# in biological state variables) changed to update_light to be inline
       !# with current aed_phyoplankton that requires only surface par then integrates over
@@ -670,10 +678,10 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
       ENDDO
    ENDDO
 
-   IF ( multi_ben ) CALL copy_to_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
+   IF ( do_zones ) CALL copy_from_zone(cc, wlev)
  ! n_vars     = ubound(model%info%state_variables,1)
  ! n_vars_ben = ubound(model%info%state_variables_ben,1)
- ! IF ( multi_ben ) CALL copy_from_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
+ ! IF ( do_zones ) CALL copy_from_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
 END SUBROUTINE fabm_do_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -1079,7 +1087,7 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
                                  XYT_SHAPE,scalar=cc(1, ubound(model%info%state_variables,1)+n))
 #ifdef PLOTS
       IF ( do_plots .AND. plot_id_sv(n).GE.0 ) THEN
-         IF ( multi_ben ) THEN
+         IF ( do_zones ) THEN
             CALL put_glm_val(plot_id_sv(n), cc(1:wlev, ubound(model%info%state_variables,1)+n))
          ELSE
             CALL put_glm_val_s(plot_id_sv(n), cc(1, ubound(model%info%state_variables,1)+n))
