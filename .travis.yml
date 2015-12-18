@@ -3,6 +3,7 @@ sudo: required
 dist: trusty
 
 before_install:
+  - sudo apt-get update
   - sudo apt-get install gfortran
   - sudo apt-get install libnetcdf-dev libgd2-xpm-dev build-essential libnetcdf6 libgd2-xpm netcdf-doc netcdf-bin
 
