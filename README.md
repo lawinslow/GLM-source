@@ -1,7 +1,7 @@
 GLM-source
 ==========
 
-Development code for General Lake Model (GLM). Private repository for current version of GLM.
+Development code for General Lake Model (GLM).
 
 ==============
 Instructions for getting linux dev environment for GLM.
