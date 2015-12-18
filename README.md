@@ -3,7 +3,7 @@ GLM-source
 Development code for General Lake Model (GLM).
 
 ##Model Access
-==========
+
 The primary source of GLM-AED for most users is the (University of Western Australia 
 GLM website)[http://aed.see.uwa.edu.au/research/models/GLM/]. The code and versions
 available here represent unstable development releases that should be avoided
@@ -11,7 +11,7 @@ by non-expert users.
 
 
 ##Dev Environment Setup
-==============
+
 Instructions for getting linux dev environment for GLM.
 need 64bit ubuntu VM. These are not guaranteed to work.
 
