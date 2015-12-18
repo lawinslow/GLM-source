@@ -4,8 +4,8 @@ dist: trusty
 
 before_install:
   - sudo apt-get update
-  - sudo apt-get install gfortran
-  - sudo apt-get install libnetcdf-dev libgd2-xpm-dev build-essential libnetcdf6 libgd2-xpm netcdf-doc netcdf-bin
+  - sudo apt-get -y install -y gfortran
+  - sudo apt-get -y install libnetcdf-dev libgd2-xpm-dev build-essential libnetcdf6 libgd2-xpm netcdf-doc netcdf-bin
 
 script:
   - ./build_glm.sh
