@@ -1,5 +1,7 @@
 GLM-source
 ==========
+[![Build Status](https://travis-ci.org/GLEON/GLM-source.svg)](https://travis-ci.org/GLEON/GLM-source)
+
 Development code for General Lake Model (GLM).
 
 ##Model Access
