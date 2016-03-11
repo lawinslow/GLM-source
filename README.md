@@ -11,7 +11,6 @@ GLM website](http://aed.see.uwa.edu.au/research/models/GLM/). The code and versi
 available here represent unstable development releases that should be avoided
 by non-expert users.
 
-
 ##Dev Environment Setup
 
 Instructions for getting linux dev environment for GLM.
