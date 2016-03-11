@@ -88,6 +88,8 @@ void do_model_non_avg(int jstart, int nsave);
 int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL SWnew);
 void end_model(void);
 
+//int n_steps_done = 0;
+//#define END_STEPS 30
 
 /******************************************************************************
  *                                                                            *
@@ -141,6 +143,8 @@ void init_model(int *jstart, int *nsave)
     psubday = timestep * (*nsave) / 86400.;
     plotstep = 0;
 #endif
+
+    if ( bubbler_on ) init_bubbler();
 
     //# Create the output files.
     init_output(*jstart, out_dir, out_fn, MaxLayers, Longitude, Latitude);
@@ -203,8 +207,8 @@ static AED_REAL calc_benthic_light()
  ******************************************************************************/
 void do_model(int jstart, int nsave)
 {
-    AED_REAL FlowNew[MaxInf], DrawNew[MaxOut];
-    AED_REAL FlowOld[MaxInf], DrawOld[MaxOut];
+    AED_REAL FlowNew[MaxInf], DrawNew[MaxOut], WithdrTempNew;
+    AED_REAL FlowOld[MaxInf], DrawOld[MaxOut], WithdrTempOld;
 
     MetDataType MetOld, MetNew;
     AED_REAL    SWold, SWnew;
@@ -236,6 +240,7 @@ void do_model(int jstart, int nsave)
 
     read_daily_inflow(jstart, NumInf, FlowOld, TempOld, SaltOld, WQOld);
     read_daily_outflow(jstart, NumOut, DrawOld);
+    read_daily_withdraw_temp(jstart, &WithdrTempOld);
     read_daily_met(jstart, &MetOld);
     SWold = MetOld.ShortWave;
 
@@ -271,6 +276,9 @@ void do_model(int jstart, int nsave)
         for (i = 0; i < NumOut; i++)
             Outflows[i].Draw = (DrawOld[i] + DrawNew[i]) / 2.0 * SecsPerDay;
 
+        read_daily_withdraw_temp(jday, &WithdrTempNew);
+        WithdrawalTemp = (WithdrTempOld + WithdrTempNew) / 2.0;
+
         read_daily_met(jday, &MetNew);
         if ( !subdaily ) {
             MetData.Rain =        (MetOld.Rain + MetNew.Rain) / 2.0;
@@ -293,6 +301,7 @@ void do_model(int jstart, int nsave)
         fprintf(stderr, "------- next day - do_model -------\n");
 #endif
         stepnum = do_subdaily_loop(stepnum, jday, nsave, SWold, SWnew);
+//if ( n_steps_done > END_STEPS ) return;
 
         //# End of forcing-mixing-diffusion loop
 
@@ -317,6 +326,7 @@ void do_model(int jstart, int nsave)
                 WQ_INF_(WQOld, i, j) = WQ_INF_(WQNew, i, j);
         }
         for (i = 0; i < MaxOut; i++) DrawOld[i] = DrawNew[i];
+        WithdrTempOld = WithdrTempNew;
         MetOld = MetNew;
         SWold = SWnew;
 
@@ -339,8 +349,8 @@ void do_model(int jstart, int nsave)
  ******************************************************************************/
 void do_model_non_avg(int jstart, int nsave)
 {
-    AED_REAL FlowNew[MaxInf], DrawNew[MaxOut];
-
+    AED_REAL FlowNew[MaxInf], DrawNew[MaxOut], WithdrTempNew;
+    //static AED_REAL WithdrawalTemp;
     AED_REAL    SWold, SWnew;
 
    /***************************************************************************
@@ -395,6 +405,9 @@ void do_model_non_avg(int jstart, int nsave)
         for (i = 0; i < NumOut; i++)
             Outflows[i].Draw = DrawNew[i] * SecsPerDay;
 
+        read_daily_withdraw_temp(jday, &WithdrTempNew);
+        WithdrawalTemp = WithdrTempNew;
+
         read_daily_met(jday, &MetData);
         SWnew = MetData.ShortWave;
 
@@ -402,6 +415,7 @@ void do_model_non_avg(int jstart, int nsave)
         fprintf(stderr, "------- next day - do_model_non_avg -------\n");
 #endif
         stepnum = do_subdaily_loop(stepnum, jday, nsave, SWold, SWnew);
+//if ( n_steps_done > END_STEPS ) return;
 
         //# End of forcing-mixing-diffusion loop
 
@@ -467,6 +481,8 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
     AED_REAL Light_Surface; //# Light at the surface of the lake after do_surface
 
 //  calc_mass_temp("Beg Day");
+
+    if ( bubbler_on ) read_bubbler(jday);
 
     noSecs = timestep;
     coef_wind_drag = CD;
@@ -542,6 +558,7 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
 #endif
             write_output(jday, iclock, nsave, stepnum);
 #if PLOTS
+//if (++n_steps_done > END_STEPS) { int i; for (i = 0; i < NumLayers; i++) show_l_line(2, Lake[i].Height); flush_all_plots(); }
             plotstep++;
             today = -1;
 #endif
@@ -552,6 +569,8 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
         //#If sub-daily re-set SWold
         if ( subdaily ) SWold = SWnew;
 
+        if ( bubbler_on ) do_bubbler(jday, iclock);
+
         iclock += noSecs;
     }   //# do while (iclock < 86400)
     /**************************************************************************
@@ -561,6 +580,8 @@ int do_subdaily_loop(int stepnum, int jday, int nsave, AED_REAL SWold, AED_REAL 
 #if PLOTS
     plotstep = 0;
 #endif
+
+    if ( bubbler_on ) write_bubbler(jday);
 
     return stepnum;
 }
@@ -574,11 +595,16 @@ void end_model()
 {
     fputc('\n', stdout);
 
+    if ( bubbler_on ) print_bubbler();
+
     close_met_files();
     close_inflow_files();
     close_outflow_files();
+    close_withdrtemp_files();
 
     if (wq_calc) wq_clean_glm();    //# deallocataes wq stuff
+
+    if ( bubbler_on ) done_bubbler();
 
     close_output();
 }

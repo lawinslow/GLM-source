@@ -15,6 +15,8 @@ fetch_it () {
    if [ -d $dst ] ; then
       cd $dst
       git pull # origin master
+      git fetch --all --prune
+      git branch -a
       cd ..
    else
       git  clone git@${GITHOST}:$src $dst

@@ -33,27 +33,64 @@
 #import <Cocoa/Cocoa.h>
 #include <ui_basic.h>
 
+int Alert(const char *message, const char *but1, const char*but2);
+
+/******************************************************************************/
+#define CTL_ITEM    1
+#define PIC_ITEM    2
+#define TXT_ITEM    3
+#define EDT_ITEM    4
+#define WIN_MENU    5
+#define MNU_ITEM    6
+
+/******************************************************************************/
+typedef struct _pic_item {
+    CGContextRef      context;
+    unsigned char    *img;
+    NSImage          *ns_img;
+    NSImageView      *ns_imgv;
+    int               true_colour;
+    int               left;
+    int               top;
+    int               width;
+    int               height;
+} PictureItem;
+
+/******************************************************************************/
+typedef struct _win_item {
+    struct _win_item *next;
+    int               id;
+    int               type;
+    void             *data;
+} WindowItem;
+
+
 static int stopit = 0;
 
 /******************************************************************************/
 
 @interface Controller : NSObject
 {
+    id menubar;
     id appName;
     id window;
-    NSModalSession session;
 }
-- (void)runModalUI;
+- (id)init;
+- (void)runUIEvents;
 - (void)cleanUp;
-- (void)startSession;
+- (void)addMenus;
 - (int)addWindow:(int) x ypos:(int) y width:(int) w height:(int) h;
 - (id)addButton:(int) x ypos:(int) y width:(int) w height:(int) h title:(NSString*)title;
-- (IBAction) buttonPressed:(id)sender;
+- (id)addPicture:(PictureItem*) pic;
+- (BOOL)validateMenuItem:(NSMenuItem *)item;
+- (IBAction)endProgram:(id)sender;
+- (IBAction)buttonPressed:(id)sender;
+- (IBAction)menuHit:(id)sender;
 @end
 
 /******************************************************************************/
-static int idhint = 1;
 static Controller *sharedController;
+static id my_window;
 
 /*============================================================================*/
 @implementation Controller
@@ -71,25 +108,81 @@ static Controller *sharedController;
 }
 
 /*----------------------------------------------------------------------------*/
-- (void) startSession
+- (IBAction) endProgram:(id)sender
 {
-    session = [NSApp beginModalSessionForWindow:window];
+    NSLog(@"%@ %s", self, __func__);
+    stopit = -2;
+//  [NSApp terminate];
+}
+
+/*----------------------------------------------------------------------------*/
+- (IBAction) menuHit:(id)sender
+{
+    stopit = ((NSMenuItem*)sender).tag;
+//  NSLog(@ "Menu Hit %d\n", stopit);
 }
 
 /*----------------------------------------------------------------------------*/
 - (void) addMenus
 {
-    id menubar = [[NSMenu new] autorelease];
+    id menuItem;
     id appMenuItem = [[NSMenuItem new] autorelease];
-    [menubar addItem:appMenuItem];
+
+    menubar = [[NSMenu new] autorelease];
+
     [NSApp setMainMenu:menubar];
+    [menubar addItem:appMenuItem];
 
     id appMenu = [[NSMenu new] autorelease];
-    id quitTitle = [@"Quit " stringByAppendingString:appName];
-    id quitMenuItem = [[[NSMenuItem alloc] initWithTitle:quitTitle
-        action:@selector(terminate:) keyEquivalent:@"q"] autorelease];
-    [appMenu addItem:quitMenuItem];
+
+    menuItem = [[[NSMenuItem alloc] initWithTitle:[@"About " stringByAppendingString:appName]
+                                           action:@selector(orderFrontStandardAboutPanel:)
+                                    keyEquivalent:@""] autorelease];
+    [appMenu addItem:menuItem];
+
+    [appMenu addItem:[NSMenuItem separatorItem]];
+
+    menuItem = [[[NSMenuItem alloc] initWithTitle:[NSString stringWithFormat:@"Preferences%C", (unichar)0x2026]
+                                           action:@selector(myPrefs:)
+                                    keyEquivalent:@","] autorelease];
+    [appMenu addItem:menuItem];
+
+    menuItem = [[[NSMenuItem alloc] initWithTitle:[@"Hide " stringByAppendingString:appName]
+                                           action:@selector(hide:)
+                                    keyEquivalent:@"h"] autorelease]; //Hide app
+    [appMenu addItem:menuItem];
+
+    menuItem = [[[NSMenuItem alloc] initWithTitle:@"Hide Others"
+                                           action:@selector(hideOtherApplications:)
+                                    keyEquivalent:@"h"] autorelease]; // Hide Others
+    [menuItem setKeyEquivalentModifierMask:(NSAlternateKeyMask|NSCommandKeyMask)];
+    [appMenu addItem:menuItem];
+
+    menuItem = [[[NSMenuItem alloc] initWithTitle:@"Show All"
+                                           action:@selector(unhideAllApplications:)
+                                    keyEquivalent:@""] autorelease]; // Show All
+    [appMenu addItem:menuItem];
+
+    [appMenu addItem:[NSMenuItem separatorItem]];
+
+    menuItem = [[[NSMenuItem alloc] initWithTitle:[@"Quit " stringByAppendingString:appName]
+//                                         action:@selector(menuHit:)
+                                           action:@selector(endProgram:)
+                                    keyEquivalent:@"q"] autorelease];
+    [appMenu addItem:menuItem];
+
     [appMenuItem setSubmenu:appMenu];
+}
+
+/*----------------------------------------------------------------------------*/
+- (BOOL)validateMenuItem:(NSMenuItem *)item
+{
+//  NSLog(@"%@ %s %@", self, __func__, item);
+
+//  if ( [item action] == @selector(endProgram:) )
+//      return YES;
+
+    return YES;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -105,8 +198,9 @@ static Controller *sharedController;
 
     [window cascadeTopLeftFromPoint:NSMakePoint(20,20)];
     [window setTitle:appName];
-    [window makeKeyAndOrderFront:nil];
+    [window makeKeyAndOrderFront:self];
     [window retain];
+    my_window = window;
 
     [NSApp updateWindows];
     return 0;
@@ -126,10 +220,36 @@ static Controller *sharedController;
 }
 
 /*----------------------------------------------------------------------------*/
-- (void) runModalUI
+- (id) addPicture:(PictureItem*) pic
 {
-    if ([NSApp runModalSession:session] != NSModalResponseContinue)
-        stopit = 1;
+    id img = [[NSImage alloc] initWithCGImage:CGBitmapContextCreateImage(pic->context)
+                                              size:NSZeroSize];
+    NSImageView *imgv = [[[NSImageView alloc] initWithFrame:NSMakeRect(pic->left-1, pic->top-1, pic->width+2, pic->height+2)] retain];
+    [imgv setImage:img];
+    [imgv setImageFrameStyle:NSImageFramePhoto];
+
+    [[window contentView] addSubview:imgv];
+
+    pic->ns_img = img;
+    pic->ns_imgv = imgv;
+
+    return img;
+}
+
+/*----------------------------------------------------------------------------*/
+- (void) runUIEvents
+{
+    NSEvent *event = NULL;
+    do  {
+        event=[ NSApp nextEventMatchingMask:NSAnyEventMask
+                                  untilDate:[NSDate distantPast]
+                                     inMode:NSDefaultRunLoopMode
+                                    dequeue:YES ];
+        if ( event != NULL ) {
+            [NSApp sendEvent:event];
+//          stopit = (1 << 16);
+        }
+    } while (event != NULL);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -142,8 +262,6 @@ static Controller *sharedController;
 /*----------------------------------------------------------------------------*/
 - (void) cleanUp
 {
-    [NSApp endModalSession:session];
-
     [window release];
 }
 
@@ -151,35 +269,8 @@ static Controller *sharedController;
 /******************************************************************************/
 
 
-/******************************************************************************/
-#define CTL_ITEM    1
-#define PIC_ITEM    2
-#define TXT_ITEM    3
-#define EDT_ITEM    4
-#define WIN_MENU    5
-#define MNU_ITEM    6
-
-/******************************************************************************/
-typedef struct _pic_item {
-    CGContextRef      context;
-    unsigned char    *img;
-    int               true_colour;
-    int               left;
-    int               top;
-    int               width;
-    int               height;
-} PictureItem;
-
-
-/******************************************************************************/
-typedef struct _win_item {
-    struct _win_item *next;
-    int               id;
-    int               type;
-    void             *data;
-} WindowItem;
-
-static WindowItem  *itm_lst = NULL;
+static WindowItem *itm_lst = NULL;
+static int idhint = 1;
 
 /******************************************************************************/
 static int _add_item(int type, void *data,
@@ -193,12 +284,11 @@ static int _add_item(int type, void *data,
     item->next = NULL;
     if ( ti == NULL )
         itm_lst = item;
-    else
-        {
+    else {
         while ( ti->next )
             ti = ti->next;
         ti->next = item;
-        }
+    }
 
     item->type = type;
     item->data = data;
@@ -245,44 +335,12 @@ static WindowItem *_find_item(int itm_id)
     return NULL;
 }
 
-/******************************************************************************/
-int _draw_cycle = 0;
-
-void _draw_picture(PictureItem *pic)
-{
-    if ( _draw_cycle ) return;
-    // unfortunately, this makes it run very slowly
-    // there must be a better way to do this....
-
-    // I have tried adding the bitMapImage part to the Picture structure
-    // and just flushing that with the DrawImage, but the image doesnt update
-    // and it runs just as slowly.
-
-    CGContextRef cg = pic->context;
-    int x = pic->left, y = pic->top;
-    int w = pic->width, h = pic->height;
-
-/* for debugging, print out the transform matrix
- * scaling is one thing that supposedly slows things down
- * but unfortunately this does not seem to be scaled, so it's not that
-
-    CGAffineTransform cga = CGContextGetCTM ( cg );
-    fprintf(stderr, "CGA : a = %f b = %f c = %f d = %f tx = %f ty = %f\n",
-               cga.a, cga.b, cga.c, cga.d, cga.tx, cga.ty);
-*/
-
-    CGImageRef bitMapImage = CGBitmapContextCreateImage(cg);
-    CGContextDrawImage([[NSGraphicsContext currentContext] CGContext],
-                        NSMakeRect(x, y, w, h), bitMapImage);
-    CGImageRelease(bitMapImage);
-}
-
 
 /******************************************************************************/
 #define DEPTH 4
-#define R_OFS 2
+#define R_OFS 0
 #define G_OFS 1
-#define B_OFS 0
+#define B_OFS 2
 /*----------------------------------------------------------------------------*/
 static void _copy_img(gdImagePtr im, PictureItem *pic)
 {
@@ -321,9 +379,8 @@ int InitUI(int *width, int * height)
     fprintf(stderr, "InitUI\n");
 
     CGDirectDisplayID display = CGMainDisplayID();
-    size_t sheight = CGDisplayPixelsHigh (display);
-    size_t swidth  = CGDisplayPixelsWide (display);
-
+    size_t sheight = CGDisplayPixelsHigh(display);
+    size_t swidth  = CGDisplayPixelsWide(display);
     Controller *controller;
 
     [NSApplication sharedApplication];
@@ -334,13 +391,14 @@ int InitUI(int *width, int * height)
     if ( swidth < *width ) *width = swidth;
     wHeight = *height;
 
+    // create our gui "Controller" instance
     if (!(controller = [[Controller alloc] init]))
         return -1;
+    [NSApp setDelegate: (id)controller];   // tell NSApp to use this one
 
     [controller retain];
     [controller addMenus];
     [controller addWindow:0 ypos:0 width:(*width) height:(*height)];
-    [controller startSession];
 
     [NSApp finishLaunching];
     return 0;
@@ -348,21 +406,18 @@ int InitUI(int *width, int * height)
 
 
 /******************************************************************************/
-void FlushUI(void)
-{
-    [sharedController runModalUI];
-
-    CGContextFlush([[NSGraphicsContext currentContext] CGContext]);
-    // in order to overcome the worst of the slowness from _draw_picture
-    // we do the drawing only every week
-    if ( _draw_cycle++ > 7 ) _draw_cycle = 0;
-}
-
-
-/******************************************************************************/
+static int doing_ui = 0;
 int CheckUI(void)
 {
-    [sharedController runModalUI];
+    [sharedController runUIEvents];
+    if ( !doing_ui ) {
+        if ( stopit < 0 ) {
+            if ( Alert("Are you sure you want to quit?", "OK", "Cancel") )
+                exit(1);
+            else
+                stopit = 0;
+        }
+    }
     return stopit;
 }
 
@@ -370,8 +425,9 @@ int CheckUI(void)
 /******************************************************************************/
 int DoUI(void)
 {
-    _draw_cycle = 0;
+    doing_ui = 1;
     while (!CheckUI()) ;
+    doing_ui = 0;
     return stopit;
 }
 
@@ -430,7 +486,6 @@ int NewPicture(gdImagePtr im, int true_colour,
     _copy_img(im, pic);
 
     colorSpace = CGColorSpaceCreateWithName(kCGColorSpaceGenericRGB);
-//  colorSpace = CGColorSpaceCreateDeviceRGB();
 
     context = CGBitmapContextCreate(pic->img,
                                     width,
@@ -446,9 +501,7 @@ int NewPicture(gdImagePtr im, int true_colour,
     pic->context = context;
     CGColorSpaceRelease(colorSpace);
 
-    // Much beter to do the frame here just the once (seems to be a high cost to this)
-    NSFrameRect(NSMakeRect(pic->left-1, pic->top-1, pic->width+2, pic->height+2));
-    _draw_picture(pic);
+    [sharedController addPicture: pic];
 
     [localPool release];
     return _add_item(PIC_ITEM, pic, left, top, width, height);
@@ -459,8 +512,16 @@ void FlushPicture(gdImagePtr im, int itm_id)
 {
     WindowItem *itm = _find_item(itm_id);
     PictureItem *pic = itm->data;
+
     _copy_img(im, pic);
-    _draw_picture(pic); // unfortunately, this makes it run very slowly
+
+    [pic->ns_img release];
+
+    pic->ns_img = [[NSImage alloc] initWithCGImage:CGBitmapContextCreateImage(pic->context)
+                                              size:NSZeroSize];
+
+    [pic->ns_imgv setImage:pic->ns_img];
+    [pic->ns_imgv setNeedsDisplayInRect:NSMakeRect(pic->top, pic->left, pic->width, pic->height)];
 }
 
 /******************************************************************************/
@@ -481,4 +542,28 @@ void DisableControl(int itm_id)
     id myButton = itm->data;
     [myButton setEnabled: NO];
     [localPool release];
+}
+
+/******************************************************************************/
+int Alert(const char *message, const char *but1, const char*but2)
+{
+    int ret = 0;
+    NSAlert *alert = [[NSAlert alloc] init];
+    if ( but1 == NULL ) [alert addButtonWithTitle:@"OK"];
+    else                [alert addButtonWithTitle:[NSString stringWithUTF8String:but1]];
+    if ( but2 != NULL ) [alert addButtonWithTitle:[NSString stringWithUTF8String:but2]];
+
+    [alert setMessageText:[NSString stringWithUTF8String:message]];
+
+
+    if ( but2 != 0 ) [alert setAlertStyle:NSWarningAlertStyle];
+    else             [alert setAlertStyle:NSInformationalAlertStyle];
+                       // or .. NSCriticalAlertStyle
+
+    if ([alert runModal] == NSAlertFirstButtonReturn) {
+        // OK clicked, delete the record
+        ret = 1;
+    }
+    [alert release];
+    return ret;
 }

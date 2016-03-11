@@ -34,11 +34,12 @@ MODULE aed2_test
 !
    TYPE,extends(aed2_model_data_t) :: aed2_test_data_t
       !# Variable identifiers
-      INTEGER :: id_tst_pel, id_tst_ben, id_tst_zon
+      INTEGER :: id_tst_pel, id_tst_ben, id_tst_zon_ben, id_tst_zon_pel
+      INTEGER :: id_tst_flux_pel, id_tst_zon_temp, id_tst_zon_rad
       INTEGER :: id_tst_lh, id_tst_act, id_tst_act2, id_tst_act3
-      INTEGER :: id_par, id_nir, id_uva, id_uvb
+      INTEGER :: id_par, id_nir, id_uva, id_uvb, id_tem
       INTEGER :: id_tst_par, id_tst_nir, id_tst_uva, id_tst_uvb
-      INTEGER :: id_sed_zone
+      INTEGER :: id_sed_zone !, id_zone_temp, id_zone_rad
 
       CONTAINS
          PROCEDURE :: define             => aed2_define_test
@@ -46,6 +47,7 @@ MODULE aed2_test
          PROCEDURE :: calculate_benthic  => aed2_calculate_benthic_test
          PROCEDURE :: calculate_riparian => aed2_calculate_riparian_test
          PROCEDURE :: calculate_dry      => aed2_calculate_dry_test
+!        PROCEDURE :: equilibrate        => aed2_equilibrate_test
 !        PROCEDURE :: mobility           => aed2_mobility_test
 !        PROCEDURE :: light_extinction   => aed2_light_extinction_test
 !        PROCEDURE :: delete             => aed2_delete_test
@@ -75,18 +77,23 @@ SUBROUTINE aed2_define_test(data, namlst)
 !BEGIN
    data%id_tst_lh = aed2_locate_global('layer_ht')
    data%id_tst_pel = aed2_define_variable("pel",'mmol/m**3','test_pel', zero_)
+   data%id_tst_flux_pel = aed2_define_variable("pel_bflux",'mmol/m**3','pelagic variable getting fluxed to from a zone', 0.0001)
    data%id_tst_ben = aed2_define_sheet_variable("ben",'mmol/m**2','test_ben', zero_)
    data%id_tst_act = aed2_define_sheet_diag_variable("act",'mmol/m**2','active column')
    data%id_tst_act2 = aed2_define_sheet_diag_variable("act2",'mmol/m**2','non-zero depth column')
    data%id_tst_act3 = aed2_define_sheet_diag_variable("act3",'mmol/m**2','active XOR non-zero depth')
 
    data%id_sed_zone = aed2_locate_global_sheet('sed_zone')
-   data%id_tst_zon = aed2_define_sheet_diag_variable("zon",'num','sed_zone')
+   data%id_tst_zon_ben = aed2_define_sheet_diag_variable("zonID",'num','sed_zone ID of this unit')
+   data%id_tst_zon_pel = aed2_define_diag_variable("zonLY",'num','sed_zone impacting this water layer')
+   data%id_tst_zon_temp = aed2_define_diag_variable("ztemp",'-','avg temp of this sedzone region')
+   data%id_tst_zon_rad = aed2_define_diag_variable("zrad",'-','avg rad of this sedzone region')
 
    data%id_par = aed2_locate_global('par')
    data%id_nir = aed2_locate_global('nir')
    data%id_uva = aed2_locate_global('uva')
    data%id_uvb = aed2_locate_global('uvb')
+   data%id_tem = aed2_locate_global('temperature')
 
    data%id_tst_par = aed2_define_diag_variable('tst_par', '', 'test PAR')
    data%id_tst_nir = aed2_define_diag_variable('tst_nir', '', 'test NIR')
@@ -188,7 +195,12 @@ SUBROUTINE aed2_calculate_benthic_test(data,column,layer_idx)
    _FLUX_VAR_B_(data%id_tst_ben) = ben / secs_per_day
 
    matz = _STATE_VAR_S_(data%id_sed_zone)
-   _DIAG_VAR_S_(data%id_tst_zon) = matz
+   _DIAG_VAR_S_(data%id_tst_zon_ben) = matz
+   _DIAG_VAR_(data%id_tst_zon_pel) = matz
+   _DIAG_VAR_(data%id_tst_zon_temp) = _STATE_VAR_(data%id_tem)
+   _DIAG_VAR_(data%id_tst_zon_rad) = _STATE_VAR_(data%id_par)
+   !## TEST FLUX VAR TO DIAGNOSE flux_pel beign disaggregated onto non-benthic variables, from sediment zones
+   _FLUX_VAR_(data%id_tst_flux_pel) = 0.01*matz / secs_per_day
 END SUBROUTINE aed2_calculate_benthic_test
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

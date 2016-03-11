@@ -90,8 +90,6 @@ MODULE aed2_pathogens
 
    END TYPE
 
-   AED_REAL, parameter :: secs_pr_day = 86400.
-
 !===============================================================================
 CONTAINS
 

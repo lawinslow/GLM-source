@@ -9,7 +9,7 @@
  *     School of Earth & Environment                                          *
  *     The University of Western Australia                                    *
  *                                                                            *
- * Copyright 2013, 2014 -  The University of Western Australia                *
+ * Copyright 2013, 2014, 2015 -  The University of Western Australia          *
  *                                                                            *
  *  This file is part of libplot - a plotting library for GLM                 *
  *                                                                            *
@@ -40,6 +40,13 @@
 #include <stdio.h>
 
 #include <ui_basic.h>
+
+#define APP_MENU              200
+#define APP_ICON              300
+
+#define APP_ABOUT             0x100
+#define APP_EXIT              0x101
+
 
 #define PLOT_CLASS  L"Plot Window"
 
@@ -125,7 +132,6 @@ typedef struct _pic_item {
 } PictureItem;
 
 /******************************************************************************/
-#if INCLUDE_MENUS
 
 #define MENU_ITEM_HEIGHT 20
 #define MENU_BAR_HEIGHT 20
@@ -146,11 +152,11 @@ typedef struct _bar_item {
     Menu *menus;
 } MenuBar;
 
-#endif
 
 /******************************************************************************/
 static Window _new_window(int left, int top,
                                           int width, int height, int transient);
+static int Alert(const char *message, const char *but1, const char*but2);
 static int _check_event(void);
 
 static void _add_window(Window win);
@@ -171,10 +177,8 @@ static void _draw_picture(PictureItem *pic);
 
 static void _draw_window_items(void);
 
-#if INCLUDE_MENUS
 static void _draw_mbar(MenuBar *mbar);
 static void _draw_menu(Menu *menu);
-#endif
 
 typedef int Font;
 typedef int XArc;
@@ -213,15 +217,9 @@ HINSTANCE GetMyInstance(void)
 
 
 #define DEPTH 3
-#if _MAC_PPC_
-#define R_OFS 1
-#define G_OFS 2
-#define B_OFS 3
-#else
 #define R_OFS 2
 #define G_OFS 1
 #define B_OFS 0
-#endif
 
 #define IMG_TOP 6
 #define IMG_LFT 6
@@ -254,14 +252,12 @@ static int _add_item(int type, void *data,
     item->right = left+width;
     item->bottom = top+height;
     item->id = idhint++;
-#if INCLUDE_MENUS
     if ( wptr->mbarItm != -1 ) {
         item->top += MENU_BAR_HEIGHT;
         item->bottom += MENU_BAR_HEIGHT;
         if ( type == CTL_ITEM ) ((Control*)(data))->top += MENU_BAR_HEIGHT;
         if ( type == PIC_ITEM ) ((PictureItem*)(data))->top += MENU_BAR_HEIGHT;
     }
-#endif
 
     return item->id;
 }
@@ -330,7 +326,7 @@ int InitUI(int *width, int *height) {
     WndClass.cbWndExtra = 0;
     WndClass.hbrBackground = (HBRUSH)GetStockObject (WHITE_BRUSH);
     WndClass.hCursor = LoadCursor (NULL, IDC_ARROW);
-    WndClass.hIcon = LoadIcon (NULL, IDI_APPLICATION);
+    WndClass.hIcon = LoadIcon (NULL, MAKEINTRESOURCE( APP_ICON ));
     WndClass.hInstance = hInstance;
     WndClass.lpfnWndProc = (WNDPROC) WndProc;
     WndClass.lpszClassName = PLOT_CLASS;
@@ -344,7 +340,7 @@ int InitUI(int *width, int *height) {
 
     hWnd = CreateWindow(PLOT_CLASS, L"Plot Window",
                   WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-                    10, 10, *width+10, *height+20,
+                    10, 10, *width+10, *height+20+MENU_BAR_HEIGHT,
                         NULL, NULL, hInstance, NULL);
 
     _add_window(hWnd);
@@ -383,40 +379,58 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage,
                          WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps;
-    WindowItem *itm;
 
+//fprintf(stderr, "WndProc(%u, %d, %ld)\n", iMessage, wParam, lParam);
     switch (iMessage) {
+        case WM_CREATE : {
+            HMENU hMenu, hSubMenu;
+
+            hMenu = CreateMenu();
+
+            hSubMenu = CreatePopupMenu();
+//          AppendMenu(hSubMenu, MF_STRING, APP_ABOUT, L"A&bout");
+//          AppendMenu(hSubMenu, MF_SEPARATOR, 0, L"-");
+            AppendMenu(hSubMenu, MF_STRING, APP_EXIT, L"E&xit");
+            AppendMenu(hMenu, MF_STRING | MF_POPUP, (UINT)hSubMenu, L"&File");
+
+            SetMenu(hWnd, hMenu);
+            }
+            break;
+
         case WM_COMMAND :
             // fprintf(stderr, "Button hit - id %ld\n", lParam);
-            itm = _find_ctl_item((void*)lParam);
-            if ( itm != NULL )
-                PostMessage(_window,iMessage,wParam,lParam);
-            return 0;
-            break;
+            if ( _find_ctl_item((void*)lParam) != NULL )
+                PostMessage(_window, iMessage, wParam, lParam);
 /*
-        case WM_CREATE :
-            SetTimer (hWnd, 1, 10, NULL);
-            break;
+            switch ( LOWORD(wParam) ) {
+                case APP_ABOUT:
+                    fprintf(stderr, "About GLM ?\n");
+                //  GoModalDialogBoxParam( GETHINST( hWnd ),
+                //                         MAKEINTRESOURCE( ABOUTDLGBOX ),
+                //                         hWnd,
+                //                         (DLGPROC) AboutDlgProc, 0L ) ;
+                    break;
+                case APP_EXIT:
+                    PostMessage( hWnd, WM_CLOSE, 0, 0L ) ;
+                    break ;
+            }
 */
+            break;
+
         case WM_PAINT :
             hdc = BeginPaint(hWnd, &ps);
             _draw_window_items();
             EndPaint (hWnd, &ps);
-            return 0;
             break;
-/*
-        case WM_TIMER :
-            if ((wParam == 1) && g_bUserTimer) {
-            }
+
+        case WM_CLOSE:
+            DestroyWindow(hWnd);
             break;
-        case WM_SIZE :
-            break;
-*/
+
         case WM_DESTROY :
-            // KillTimer (hWnd, 1);
             PostQuitMessage(0);
-            return 0;
             break;
+
         case WM_MOUSEMOVE:
             cur_x=(short)LOWORD(lParam);
             cur_y=(short)HIWORD(lParam);
@@ -426,8 +440,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT iMessage,
             // rightButtonDown=wParam & MK_RBUTTON;
             break;
 
+        default:
+            return DefWindowProc(hWnd, iMessage, wParam, lParam);
     }
-    return DefWindowProc(hWnd, iMessage, wParam, lParam);
+    return 0;
 }
 
 /******************************************************************************/
@@ -450,6 +466,7 @@ static int _check_event()
 
     Message.wParam = 0;
     if (PeekMessage (&Message, NULL, 0, 0, PM_REMOVE)) {
+//fprintf(stderr, "PeekMessage(%u, %d, %ld)\n", Message.message, Message.wParam, Message.lParam);
         switch (Message.message) {
             case WM_QUIT :
                 return -1;
@@ -460,8 +477,32 @@ static int _check_event()
                     itm = _find_ctl_item((void*)Message.lParam);
                     if ( itm != NULL )
                         return itm->id;
+                    break;
+                }
+
+                switch ( LOWORD(Message.wParam) ) {
+                    case APP_ABOUT:
+                        fprintf(stderr, "About GLM ?\n");
+                //      GoModalDialogBoxParam( GETHINST( hWnd ),
+                //                             MAKEINTRESOURCE( ABOUTDLGBOX ),
+                //                             hWnd,
+                //                             (DLGPROC) AboutDlgProc, 0L ) ;
+                        break;
+                    case APP_EXIT:
+                        //PostMessage( hWnd, WM_CLOSE, 0, 0L ) ;
+                        return -1;
+                        break ;
                 }
                 break;
+
+             case WM_CLOSE:
+                DestroyWindow(hWnd);
+                break;
+
+            case WM_DESTROY :
+                PostQuitMessage(0);
+                break;
+
             default :
                 TranslateMessage (&Message);
                 DispatchMessage (&Message);
@@ -471,21 +512,20 @@ static int _check_event()
     return 0;
 }
 
-/******************************************************************************
- * The FlushUI was added for Mac, butmay be a good idea for win if properly   *
- * implemented - for now this is a simple fudge                               *
- ******************************************************************************/
-void FlushUI(void)
-{
-    if ( _window == 0L ) return;
-    _check_event();
-}
 
 /******************************************************************************/
 int CheckUI(void)
 {
+    int ret;
     if ( _window == 0L ) return -1;
-    return _check_event();
+    ret = _check_event();
+    if ( ret < 0 ) {
+        if ( Alert("Are you sure you want to quit?", "OK", "Cancel") )
+            exit(1); // PostMessage( hWnd, WM_CLOSE, 0, 0L ) ;
+        else
+            ret = 0;
+    }
+    return ret;
 }
 
 /******************************************************************************/
@@ -502,10 +542,6 @@ void GetMouse(int *x, int *y)
 {
     *x = cur_x; *y = cur_y;
 }
-
-#if INCLUDE_SAVED
-char *DoSaveDialog(char *fname);
-#endif
 
 #include <wchar.h>
 /******************************************************************************/
@@ -587,8 +623,7 @@ static void _copy_img(gdImagePtr im, PictureItem *pic)
                 *tt++ = gdImageTrueColorPixel(im, x, y);
             }
         }
-    }
-    else {
+    } else {
         unsigned char *tt = pic->img;
 
         for (y = 0; y < gdImageSY(im); y++) {
@@ -658,10 +693,8 @@ static void _draw_window_items()
                     FrameRect(hdc, &r, (HBRUSH)GetStockObject (BLACK_BRUSH));
                 }
                 break;
-#if INCLUDE_MENUS
             case WIN_MENU: _draw_mbar(item->data); break;
             case MNU_ITEM: _draw_menu(item->data); break;
-#endif
             default:
                 break;
         }
@@ -777,7 +810,6 @@ static WindowPtr _find_window(Window win)
 }
 
 /******************************************************************************/
-#if INCLUDE_MENUS
 static void _draw_mbar(MenuBar *mbar)
 {
 }
@@ -786,4 +818,76 @@ static void _draw_menu(Menu *menu)
 {
 }
 
+/*============================================================================*
+ *                                                                            *
+ * This is probably not quite what I want, but it works for now.              *
+ *                                                                            *
+ *============================================================================*/
+int Alert(const char *message, const char *but1, const char*but2)
+{
+    HINSTANCE hInstance = NULL;
+    MSGBOXPARAMS params;
+    int ret = 0;
+
+    memset(&params, 0, sizeof(params));
+    params.cbSize = sizeof(MSGBOXPARAMS);
+    params.hwndOwner = _window;
+    params.hInstance = hInstance;
+    params.lpszText = (LPCTSTR)convstr(message);
+    params.lpszCaption = (LPCTSTR)convstr("");
+
+#if 0
+         MB_ABORTRETRYIGNORE    The message box contains three push buttons:
+                                     Abort, Retry, and Ignore.
+         MB_CANCELTRYCONTINUE   The message box contains three push buttons:
+                                     Cancel, Try Again, Continue.
+                                  Use this message box type instead of MB_ABORTRETRYIGNORE.
+         MB_HELP                Adds a Help button to the message box.
+                                When the user clicks the Help button or presses F1,
+                                 the system sends a WM_HELP message to the owner.
+         MB_OK                  The message box contains one push button:
+                                  OK. This is the default.
+         MB_OKCANCEL            The message box contains two push buttons:
+                                  OK and Cancel.
+         MB_RETRYCANCEL         The message box contains two push buttons:
+                                  Retry and Cancel.
+         MB_YESNO               The message box contains two push buttons:
+                                  Yes and No.
+         MB_YESNOCANCEL         The message box contains three push buttons:
+                                  Yes, No, and Cancel.
 #endif
+
+    if (but2 != NULL) params.dwStyle = MB_ICONQUESTION    | MB_OKCANCEL;
+    else              params.dwStyle = MB_ICONEXCLAMATION | MB_OK;
+
+//  params.dwLanguageId = MAKELANGID(LANG_NEUTRAL,SUBLANG_NEUTRAL);
+//  params.lpszIcon = MAKEINTRESOURCE(IDI_ICON1);
+
+    switch ( MessageBoxIndirect(&params) ) {
+//      case IDABORT:     //  3 The Abort button was selected.
+//          break;
+        case IDCANCEL:    //  2 The Cancel button was selected.
+            ret = 0;
+            break;
+//      case IDCONTINUE:  //  11 The Continue button was selected.
+//          break;
+//      case IDIGNORE:    //  5 The Ignore button was selected.
+//          break;
+//      case IDNO:        //  7 The No button was selected.
+//          break;
+        case IDOK:        //  1 The OK button was selected.
+            ret = 1;
+            break;
+//      case IDRETRY:     //  4 The Retry button was selected.
+//          break;
+//      case IDTRYAGAIN:  //  10 The Try Again button was selected.
+//          break;
+//      case IDYES:       //  6 The Yes button was selected.
+//          break;
+    }
+
+    free(params.lpszText);
+    free(params.lpszCaption);
+
+    return ret;
+}

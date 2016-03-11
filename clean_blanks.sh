@@ -25,7 +25,7 @@ strip_file () {
     fi
 }
 
-for k in fabm-git/src/models/aed fabm-git/src/drivers/glm glm-aed glm-tests glm-egs libplot libutil libaed2 aed2_from_fabm; do
+for k in fabm-git/src/models/aed fabm-git/src/drivers/glm glm-aed glm-tests glm-egs libplot libutil libaed2 ; do
    if [ -d $k ] ; then
       cd $k
       for j in 'F90' 'c' 'h' 'm' 'sln' 'vfproj' 'vcproj' 'vcxproj' 'icproj' 'vcxproj.filters' 'nml' 'csv' 'sed' 'dat' 'sh' 'csh' 'def' 'plist' ; do
