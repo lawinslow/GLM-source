@@ -9,7 +9,7 @@
  *                                                                            *
  *     http://aed.see.uwa.edu.au/                                             *
  *                                                                            *
- * Copyright 2013, 2014 -  The University of Western Australia                *
+ * Copyright 2013, 2014, 2015 -  The University of Western Australia          *
  *                                                                            *
  *  This file is part of GLM (General Lake Model)                             *
  *                                                                            *
@@ -38,13 +38,14 @@
 #endif
 #define USE_FILLVALUE 1
 
-#define GLM_VERSION  "2.1.8"
+#define GLM_VERSION  "2.2.0beta9"
 
 #define POINT         0
 #define Z_SHAPE       1
 #define T_SHAPE       2
 #define XYT_SHAPE     4
 #define XYZT_SHAPE    5
+#define XYNT_SHAPE    6
 
 #define PATH_MAX  1024
 

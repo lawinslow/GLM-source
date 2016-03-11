@@ -157,8 +157,6 @@ SUBROUTINE aed2_define_geochemistry(data, namlst)
 
    INTEGER  :: nDissTransportables, nPartTransportables
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
-
    NAMELIST /aed2_geochemistry/ speciation_dt, geochem_file,                    &
                      num_components, dis_components, component_link, Fsed_gch, &
                      num_minerals, the_minerals, mineral_link, w_gch, speciesOutput
@@ -314,7 +312,6 @@ SUBROUTINE aed2_calculate_geochemistry(data,column,layer_idx)
 !
 !LOCALS
 !  AED_REAL           :: dic,diff_dic
-!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
 
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -362,9 +359,6 @@ SUBROUTINE aed2_calculate_benthic_geochemistry(data,column,layer_idx)
    ! Temporary variables
 !  AED_REAL :: dic_flux,nit_flux
 
-   ! Parameters
-!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
-
 !-------------------------------------------------------------------------------
 !BEGIN
 
@@ -389,13 +383,13 @@ SUBROUTINE aed2_calculate_benthic_geochemistry(data,column,layer_idx)
 
    ! Set bottom fluxes for the pelagic (change per surface area per second)
    ! Transfer sediment flux value to AED2.
-   !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_pr_day)
+   !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_per_day)
    !_SET_SED_FLUX_(data%id_dic,dic_flux)
 !  _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (dic_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_dic) = _FLUX_VAR_B_(data%id_ben_dic) + (-dic_flux/secs_pr_day)
+   !_FLUX_VAR_B_(data%id_ben_dic) = _FLUX_VAR_B_(data%id_ben_dic) + (-dic_flux/secs_per_day)
 
    ! Also store sediment flux as diagnostic variable.
 !  _DIAG_VAR_S_(data%id_sed_dic) = dic_flux

@@ -45,6 +45,7 @@
 #include "glm_wqual.h"
 #include "glm_lnum.h"
 #include "glm_bird.h"
+#include "glm_ncdf.h"
 
 #include <aed_time.h>
 #include <namelist.h>
@@ -62,7 +63,7 @@ extern LOGICAL    seepage;
 extern AED_REAL   seepage_rate;
 
 char glm_nml_file[256] = "glm2.nml";
-char *wq_lib = "aed2";
+char wq_lib[256] = "aed2";
 
 static void create_lake(int namlst);
 static void initialise_lake(int namlst);
@@ -100,16 +101,16 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     /*---------------------------------------------
      * wq setup
      *-------------------------------------------*/
-//  char           *wq_lib = "aed2";
+    char           *twq_lib = NULL;
     char           *wq_nml_file = "aed2.nml";
 //  int             ode_method;
 //  int             split_factor;
 //  LOGICAL         bioshade_feedback;
 //  LOGICAL         repair_state;
 //  CLOGICAL        mobility_off;
-//  LOGICAL         multi_ben;
+//  int             benthic_mode;
 //  int             n_zones;
-//  AED_REAL       *zone_dep = NULL;
+//  AED_REAL       *zone_heights = NULL;
     /*-------------------------------------------*/
 
     /*---------------------------------------------
@@ -194,11 +195,21 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
      *-------------------------------------------*/
     int             num_outlet;
     LOGICAL        *flt_off_sw   = NULL;
+    int            *outlet_type    = NULL;
+    int             crit_O2        = -1;
+    int             crit_O2_dep    = -1;
+    int             crit_O2_days   = -1;
+    AED_REAL       *outlet_crit    = NULL;
+    char          **O2name         = NULL;
+    int             O2idx          = 0;
+    AED_REAL       *target_temp    = NULL;
+    LOGICAL        mix_withdraw;
     AED_REAL       *outl_elvs    = NULL;
     AED_REAL       *bsn_len_outl = NULL;
     AED_REAL       *bsn_wid_outl = NULL;
     char          **outflow_fl   = NULL;
-    AED_REAL       *outflow_factor=NULL;
+    char           *withdrTemp_fl  = NULL;
+    AED_REAL       *outflow_factor = NULL;
     char           *timefmt_o    = NULL;
     extern AED_REAL timezone_o;
     /*-------------------------------------------*/
@@ -221,9 +232,27 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     extern AED_REAL         sed_temp_peak_doy;
     /*-------------------------------------------*/
 
+    /*---------------------------------------------
+     * bubbler
+     *-------------------------------------------*/
+    extern LOGICAL         bubbler_on;
+    extern char           *bubbler_data_file;
+    extern AED_REAL        bubbler_aflow;
+    extern int             bubbler_nports;
+    extern AED_REAL        bubbler_bublen;
+    extern AED_REAL        bubbler_bdepth;
+    extern LOGICAL         bubbler_opopt;
+    extern AED_REAL        bubbler_ton;
+    extern AED_REAL        bubbler_toff;
+    extern LOGICAL         bubbler_intopt;
+    extern char           *bubbler_start;
+    extern char           *bubbler_stop;
+    extern LOGICAL         bubbler_eff;
+    extern char           *bubbler_eff_file;
+    /*-------------------------------------------*/
+
     int i, j, k;
     int namlst;
-
 
     //==========================================================================
     NAMELIST glm_setup[] = {
@@ -247,16 +276,16 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     };
     NAMELIST wq_setup[] = {
           { "wq_setup",          TYPE_START,            NULL               },
-          { "wq_lib",            TYPE_STR,              &wq_lib            },
+          { "wq_lib",            TYPE_STR,              &twq_lib           },
           { "wq_nml_file",       TYPE_STR,              &wq_nml_file       },
           { "ode_method",        TYPE_INT,              &ode_method        },
           { "split_factor",      TYPE_INT,              &split_factor      },
           { "bioshade_feedback", TYPE_BOOL,             &bioshade_feedback },
           { "repair_state",      TYPE_BOOL,             &repair_state      },
           { "mobility_off",      TYPE_BOOL,             &mobility_off      },
-          { "multi_ben",         TYPE_BOOL,             &multi_ben         },
+          { "benthic_mode",      TYPE_INT,              &benthic_mode      },
           { "n_zones",           TYPE_INT,              &n_zones           },
-          { "zone_dep",          TYPE_DOUBLE|MASK_LIST, &zone_dep          },
+          { "zone_heights",      TYPE_DOUBLE|MASK_LIST, &zone_heights      },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST time[] = {
@@ -293,7 +322,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "met_sw",            TYPE_BOOL,             &met_sw            },
           { "lw_type",           TYPE_STR,              &lw_type           },
           { "rain_sw",           TYPE_BOOL,             &rain_sw           },
-          { "snow_sw",           TYPE_BOOL,             &snow_sw           },
+     //   { "snow_sw",           TYPE_BOOL,             &snow_sw           },
           { "meteo_fl",          TYPE_STR,              &meteo_fl          },
           { "subdaily",          TYPE_BOOL,             &subdaily          },
           { "atm_stab",          TYPE_BOOL,             &atm_stab          },
@@ -336,11 +365,21 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     NAMELIST outflow[] = {
           { "outflow",           TYPE_START,            NULL               },
           { "num_outlet",        TYPE_INT,              &num_outlet        },
+          { "outlet_type",       TYPE_INT|MASK_LIST,    &outlet_type       },
+          { "crit_O2",           TYPE_INT,              &crit_O2           },
+          { "crit_O2_dep",       TYPE_INT,              &crit_O2_dep       },
+          { "crit_O2_days",      TYPE_INT,              &crit_O2_days      },
+          { "outlet_crit",       TYPE_DOUBLE|MASK_LIST, &outlet_crit       },
+          { "O2name",            TYPE_STR|MASK_LIST,    &O2name            },
+          { "O2idx",             TYPE_INT,              &O2idx             },
+          { "target_temp",       TYPE_DOUBLE|MASK_LIST, &target_temp       },
+          { "mix_withdraw",      TYPE_BOOL,             &mix_withdraw      },
           { "flt_off_sw",        TYPE_BOOL|MASK_LIST,   &flt_off_sw        },
           { "outl_elvs",         TYPE_DOUBLE|MASK_LIST, &outl_elvs         },
           { "bsn_len_outl",      TYPE_DOUBLE|MASK_LIST, &bsn_len_outl      },
           { "bsn_wid_outl",      TYPE_DOUBLE|MASK_LIST, &bsn_wid_outl      },
           { "outflow_fl",        TYPE_STR|MASK_LIST,    &outflow_fl        },
+          { "withdrTemp_fl",     TYPE_STR,              &withdrTemp_fl     },
           { "outflow_factor",    TYPE_DOUBLE|MASK_LIST, &outflow_factor    },
           { "seepage",           TYPE_BOOL,             &seepage           },
           { "seepage_rate",      TYPE_DOUBLE,           &seepage_rate      },
@@ -352,6 +391,24 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "diffuser",          TYPE_START,            NULL               },
           { "NumDif",            TYPE_INT,              &NumDif            },
           { "diff",              TYPE_DOUBLE|MASK_LIST, &mol_diffusivity   },
+          { NULL,                TYPE_END,              NULL               }
+    };
+    NAMELIST bubbler[] = {
+          { "bubbler",           TYPE_START,            NULL               },
+          { "on",                TYPE_BOOL,             &bubbler_on        },
+          { "data_file",         TYPE_STR,              &bubbler_data_file },
+          { "aflow",             TYPE_DOUBLE,           &bubbler_aflow     },
+          { "nports",            TYPE_INT,              &bubbler_nports    },
+          { "bublen",            TYPE_DOUBLE,           &bubbler_bublen    },
+          { "bdepth",            TYPE_DOUBLE,           &bubbler_bdepth    },
+          { "opopt",             TYPE_BOOL,             &bubbler_opopt     },
+          { "ton",               TYPE_DOUBLE,           &bubbler_ton       },
+          { "toff",              TYPE_DOUBLE,           &bubbler_toff      },
+          { "intopt",            TYPE_BOOL,             &bubbler_intopt    },
+          { "start",             TYPE_STR,              &bubbler_start     },
+          { "stop",              TYPE_STR,              &bubbler_stop      },
+          { "eff",               TYPE_BOOL,             &bubbler_eff       },
+          { "eff_file",          TYPE_STR,              &bubbler_eff_file  },
           { NULL,                TYPE_END,              NULL               }
     };
     NAMELIST debugging[] = {
@@ -404,19 +461,15 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 
     if ( get_namelist(namlst, wq_setup) ) {
         fprintf(stderr, "No WQ config\n");
-        wq_lib            = "aed2";
+        twq_lib           = "aed2";
         wq_calc           = FALSE;
         ode_method        = 1;
         split_factor      = 1;
         bioshade_feedback = TRUE;
         repair_state      = FALSE;
-        multi_ben         = FALSE;
-        no_zones          = TRUE;
         n_zones           = 0;
-    } else {
-        if ( multi_ben )
-            if ((n_zones == 0 || zone_dep == NULL) ) no_zones = TRUE;
     }
+    if ( twq_lib != NULL ) strncpy(wq_lib, twq_lib, 128);
 
     //-------------------------------------------------
     if ( get_namelist(namlst, time) ) {
@@ -465,6 +518,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     if ( csv_outlet_nvars > MaxCSVOutVars ) { fprintf(stderr, "csv_outlet_nvars must be < %d\n", MaxCSVOutVars); exit(1); }
 
     if ( csv_point_frombot == NULL ) {
+        // CAB this is a potential source of a memory leak.
         csv_point_frombot = malloc(sizeof(LOGICAL)*csv_point_nlevs);
         for (i = 0; i < csv_point_nlevs; i++) csv_point_frombot[i] = TRUE;
     }
@@ -501,7 +555,8 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     }
     configure_outfl_csv(csv_outlet_allinone, csv_outlet_fname, csv_outlet_nvars, csv_ovrflw_fname);
 
-    //-------------------------------------------------
+    //--------------------------------------------------------------------------
+    // met
     wind_factor = 1.0;
     sw_factor = 1.0;
     lw_factor = 1.0;
@@ -527,6 +582,30 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         exit(1);
     }
     coef_wind_drag = CD;
+
+    //--------------------------------------------------------------------------
+    // snowice
+    snow_albedo_factor = 1.0;
+    snow_rho_max       = 300.0;
+    snow_rho_min       = 50.0;
+
+    if ( get_namelist(namlst, snowice) ) {
+         snow_sw = FALSE;
+         fprintf(stderr,"No snow and ice section, setting default parameters and assuming no snowfall\n");
+    } else
+         snow_sw = TRUE;
+
+    //--------------------------------------------------------------------------
+    // sediment heat (sed_heat)
+
+    sed_temp_mean      = 9.7;
+    sed_temp_amplitude = 2.7;
+    sed_temp_peak_doy  = 151;
+    if ( get_namelist(namlst, sed_heat) ) {
+         sed_heat_sw = FALSE;
+         fprintf(stderr,"No sed_heat section, turning off sediment heating\n");
+    } else
+         sed_heat_sw = TRUE;
 
     open_met_file(meteo_fl, snow_sw, rain_sw, timefmt_m);
     config_bird(namlst);
@@ -601,11 +680,20 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
         }
         NumOut = num_outlet;
         if ( flt_off_sw == NULL ) {
+            // CAB This is a potential memory leak
             flt_off_sw = malloc(sizeof(LOGICAL)*num_outlet);
             for (i = 0; i < NumOut; i++) flt_off_sw[i] = FALSE;
         }
-
         for (i = 0; i < NumOut; i++) {
+            // Outlet_type
+            if ( outlet_type != NULL ) {
+                if ( (outlet_type[i] > 0) && (outlet_type[i] <= 5) ) {
+                    Outflows[i].Type = outlet_type[i];
+                } else {
+                    fprintf(stderr, "Wrong outlet type\n");
+                    exit(1);
+                }
+            }
             if ( (Outflows[i].FloatOff = flt_off_sw[i]) ) {
                 if ( (outl_elvs[i] > (crest_elev-base_elev)) || (outl_elvs[i] < 0.0) ) {
                     fprintf(stderr,
@@ -626,10 +714,27 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
 //          Outflows[i].OLen = bsn_len_outl[i];
 //          Outflows[i].OWid = bsn_wid_outl[i];
             Outflows[i].Factor = outflow_factor[i];
+            if ( outlet_crit != NULL )
+                Outflows[i].Hcrit  = outlet_crit[i];
+            if ( target_temp != NULL )
+                Outflows[i].TARGETtemp  = target_temp[i]; // if more than 1 withdrawals with their depth should work with a target temperature (like "isotherm)
 
             if (outflow_fl[i] != NULL) open_outflow_file(i, outflow_fl[i], timefmt_o);
+
         }
     }
+    if ( outlet_crit != NULL ) { // only relevant if we have defined it.
+        if ((crit_O2 < 0) || (crit_O2_dep < base_elev) || (crit_O2_days < 1)) {
+            fprintf(stderr, "crit_O2 < 0 or crit_O2_dep < base elevation or crit_O2_days < 1\n");
+            exit(1);
+        }
+    }
+    O2crit = crit_O2;
+    O2critdep = crit_O2_dep;
+    O2critdays = crit_O2_days;
+	MIXwithdraw = mix_withdraw;
+
+    if (withdrTemp_fl != NULL) open_withdrtemp_file(withdrTemp_fl, timefmt_o);
 
     //-------------------------------------------------
     for (i = 1; i < MaxDif; i++) mol_diffusivity[i] = 1.25E-09;
@@ -653,11 +758,25 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             fprintf(stderr, "Stop date is required for timefmt == 2\n"); exit(1);
         }
     }
+/*
+ *  The realloc was a problem for namelist reader because realloc
+ *  may free the memory originally allocated if there was not enough to fill
+ *  the request for extended memory. So instead we copy the original to
+ *  a newly allocated memory block and free that ourselves when done.
+
     if ( stop == NULL ) { stop = malloc(40); *stop = 0; }
     else if ( strlen(stop) < 39 ) stop = realloc(stop, 40);
+*/
+    {   char *t = malloc(40);
+        *t = 0;
+        if ( stop != NULL ) strncpy(t, stop, 40);
+        stop = t;
+    }
+
     if ( timefmt != 2 ) *stop = 0;
 
     julianday = init_time(start, stop, timefmt, &nDays);
+    free(stop);
     calendar_date(julianday, &jyear, &jmonth, &jday);
     //# Days since start of the year, jyear
     jday = julianday - julian_day(jyear, 1, 1) + 1;
@@ -696,44 +815,36 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
             WQ_VarsIdx[j-3] = wq_var_index_c(inflow_vars[j], &k);
         }
 
-        if ( multi_ben ) {
-            if ( (n_zones <= 0 || zone_dep == NULL) ) {
-                // fprintf(stderr, "multi_ben mode must define sediment zones\n");
-                // exit(1);
-                no_zones = TRUE;
+        if ( benthic_mode > 1 ) {
+            if ( (n_zones <= 0 || zone_heights == NULL) ) {
+                fprintf(stderr, "benthic mode %d must define zones\n", benthic_mode);
+                exit(1);
             } else
-                wq_set_glm_zones(zone_dep, &n_zones, &Num_WQ_Vars, &Num_WQ_Ben);
+                wq_set_glm_zones(zone_heights, &n_zones, &Num_WQ_Vars, &Num_WQ_Ben);
+        }
+
+        for (j = 0; j < NumOut; j++) {
+            if ( O2name != NULL ) {
+                int tl = strlen(O2name[j]);
+                O2idx = wq_var_index_c(O2name[j],&tl);
+                if (O2idx < 0) {
+                    fprintf(stderr, "Wrong oxygen name for outlet %3d ?\n",j+1); // How does it exit???
+                } else  {
+                    Outflows[j].O2idx = O2idx;
+                }
+            }
         }
 
         wq_set_glm_data(Lake, &MaxLayers, &MetData, &SurfData, &dt);
     }
 
 
-    //--------------------------------------------------------------------------
-    // snowice
+    // -- bubbler
 
-
-    snow_albedo_factor = 1.0;
-    snow_rho_max       = 300;
-    snow_rho_min       = 50;
-
-    if ( get_namelist(namlst, snowice) ){
-         fprintf(stderr,"No snow and ice data, setting default values\n");
-    }
-
-    //--------------------------------------------------------------------------
-    // sediment heat (sed_heat)
-
-    sed_temp_mean      = 9.7;
-    sed_temp_amplitude = 2.7;
-    sed_temp_peak_doy  = 151;
-    if ( get_namelist(namlst, sed_heat) ){
-         sed_heat_sw = FALSE;
-
-         fprintf(stderr,"No sed_heat section, turning off sediment heating\n");
-    } else {
-         sed_heat_sw = TRUE;
-    }
+    if ( get_namelist(namlst, bubbler) )
+        bubbler_on = FALSE;
+    if ( bubbler_on && (bubbler_data_file != NULL) )
+         open_bubbler_file(bubbler_data_file, NULL);
 
     get_namelist(namlst, debugging);
 
@@ -816,7 +927,8 @@ void create_lake(int namlst)
     }
     if ( V != NULL ) {
         fprintf(stderr, "values for V are no longer used\n");
-        free(V); V = NULL;
+      //free(V);
+        V = NULL;
     }
 
     base_elev = H[0]; crest_elev = H[bsn_vals-1];
@@ -828,7 +940,7 @@ void create_lake(int namlst)
         exit(1);
     }
 
-    if ( n_zones && zone_dep != NULL )
+    if ( n_zones && zone_heights != NULL )
         zone_area = malloc(n_zones * sizeof(AED_REAL));
 
     Lake = malloc(sizeof(LakeDataType)*MaxLayers);
@@ -859,8 +971,8 @@ void create_lake(int namlst)
         if (H[i] <= 0.0 ) ksto++;
 
         /* Create the zone areas */
-        if (multi_ben && !no_zones) {
-            if ( zone_dep[j] <= H[i] ) {
+        if (benthic_mode > 1) {
+            if ( zone_heights[j] <= H[i] ) {
                 zone_area[j] = A[i];
                 if ( i > 0 ) {
                     zone_area[j] += A[i-1];
@@ -928,7 +1040,7 @@ void create_lake(int namlst)
     for (i = 0; i < Nmorph; i++) {
     	h_z = (i+1.0)/10.0;
 
-        while (j != (bsn_vals-1)) {
+        while (j != (bsn_vals-2)) {
             j++;
             if (h_z < H[j+1]) break;
         }
@@ -985,8 +1097,8 @@ void create_lake(int namlst)
     memcpy(MphLevelVoldash, MphLevelVol, sizeof(AED_REAL) * Nmorph);    // MphLevelVoldash = MphLevelVol;
     memcpy(dMphLevelVolda, dMphLevelVol, sizeof(AED_REAL) * Nmorph);    // dMphLevelVolda = dMphLevelVol;
     if ( V != NULL ) free(V);
-    if ( A != NULL ) free(A);
-    if ( H != NULL ) free(H);
+//  if ( A != NULL ) free(A);
+//  if ( H != NULL ) free(H);
 
 #ifdef _VISUAL_C_
     free(alpha_b); free(beta_b);
@@ -1069,7 +1181,7 @@ void initialise_lake(int namlst)
             exit(1);
         }
         for (i = 0, j = num_depths-1; i < num_depths; i++, j--) {
-            Lake[i].Height = lake_depth - the_depths[j];
+            Lake[i].Height = lake_depth - (the_depths[j] - the_depths[0]);
             Lake[i].Temp = the_temps[j];
             Lake[i].Salinity = the_sals[j];
         }

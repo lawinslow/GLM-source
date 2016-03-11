@@ -46,6 +46,9 @@
 
 #define _WQ_VarsTmp(i,j,k)  WQ_VarsTmp[_IDX_3d(Num_WQ_Vars,NumInf,MaxPar,i,j,k)]
 
+FILE *myfile = NULL;
+FILE *myfile2 = NULL;
+
 typedef AED_REAL wq_vars_t[MaxVars];
 typedef wq_vars_t wq_partic_t[MaxPar];
 
@@ -62,6 +65,8 @@ static AED_REAL *WQ_VarsS = NULL;
 static wq_partic_t *WQ_VarsTmp = NULL;
 
 static AED_REAL *Delta_V = NULL; //# The delta V from each layer taken by outflow
+
+static int checkjday = -1;
 
 LOGICAL seepage = FALSE;
 AED_REAL seepage_rate = 0.0;
@@ -104,6 +109,11 @@ void do_single_outflow(AED_REAL HeightOfOutflow, AED_REAL flow, OutflowDataType 
 
 /*----------------------------------------------------------------------------*/
 //BEGIN
+    if (HeightOfOutflow < 0 && outf->Type != 0 ) {
+        fprintf(stderr, "HeightOfOutflow < 0 Outflow type is %d\n", outf->Type);
+        exit(1);
+    }
+
     //# Find number of layer (Outflow_LayerNum) opposite offtake
     for (i = botmLayer; i <= surfLayer; i++)
         if (Lake[i].Height >=  HeightOfOutflow) break;
@@ -345,12 +355,16 @@ void do_single_outflow(AED_REAL HeightOfOutflow, AED_REAL flow, OutflowDataType 
  ******************************************************************************/
 AED_REAL do_outflows(int jday)
 {
-    int i;
-    AED_REAL DrawHeight; //# Height of withdraw [m]
+    int i, j, k;
+    AED_REAL DrawHeight = -1; //# Height of withdraw [m]
+    AED_REAL maxtemp = -1, mintemp = 100, mindifftemp = 100;
+    static AED_REAL *laketemp = NULL;
+    int targetlyr = 0; //# layer where modelled temperature is similar to the target temperature (isotherm)
     AED_REAL VolSum = Lake[surfLayer].Vol1; //# Lake volume prior to outflows [Ml]
     AED_REAL SeepDraw = 0.0; //# Seepage volume [Ml]
 
     if ( Delta_V == NULL ) Delta_V = malloc(sizeof(AED_REAL) * MaxLayers);
+    if ( laketemp == NULL ) laketemp = malloc(sizeof(AED_REAL) * MaxLayers);
 
     /**************************************************************************
      * Do withdrawal for each offtake                                         *
@@ -364,18 +378,613 @@ AED_REAL do_outflows(int jday)
          * Floating offtake.                                                  *
          * OLev(i) is distance below surface level for the offtake            *
          **********************************************************************/
-        if (Outflows[i].FloatOff) {
+        if ( Outflows[i].FloatOff || Outflows[i].Type == 2 ) {
             DrawHeight = Lake[surfLayer].Height - Outflows[i].OLev;
             //# Let it sit on the bottom if the lake has drained
             if (DrawHeight < 0.) DrawHeight = 0.;
-        } else
+        /**********************************************************************
+         * Outlet type     .                                                  *
+         * Type 1 is fixed outlet heights                                     *
+         * Type 2 is floating offtake                                         *
+         * Type 3 is fixed outlet heights + check for crit. hypol. oxygen     *
+         * Type 4 is variable outlet heights for ISOTHERM                     *
+         * Type 5 is variable outlet heights for TEMPERATURE TIME SERIES      *
+         **********************************************************************/
+
+
+        /**********************************************************************
+         * Outlet type     .                                                  *
+         * Type 1 is fixed outlet heights                                     *
+         **********************************************************************/
+        } else if (Outflows[i].Type == 1) {
             DrawHeight = Outflows[i].OLev; //# Fixed height offtake
+        /**********************************************************************
+         * Type 3 is fixed outlet heights + check for crit. hypol. oxygen     *
+         **********************************************************************/
+        } else if (Outflows[i].Type == 3) {
+            int idx_dep = -1;
+            if (myfile == NULL) {
+                myfile = fopen("outlet_values_type_3.txt","w");
+                fprintf(myfile,"JDay,OutletType,CritOXY,DrawHeight,ActOXY\n");
+            }
+            idx_dep = -1;
+            for (k = 0; k < NumLayers; k++) {
+                if (Lake[k].Height >=  (O2critdep-Base)) {
+                    if (idx_dep < 0) {
+                        idx_dep = k;
+                    }
+                }
+            }
+            if (jday < checkjday) {
+               DrawHeight = Outflows[i].Hcrit-Base;               //# withdraw at another fixed height (e.g. bottom outlet)
+                if (DrawHeight > Lake[NumLayers-1].Height)   //get TargetLayerTemp
+                    DrawHeight = Lake[NumLayers-1].Height;
+                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+            } else {
+                checkjday = -1;
+                if (_WQ_Vars(Outflows[i].O2idx,idx_dep) <= O2crit) {  //get modelled O2 conc. via _WQ_Vars(var,lyr)
+                    if (checkjday < 0)
+                        checkjday = jday+O2critdays;
+                    DrawHeight = Outflows[i].Hcrit-Base;               //# withdraw at another fixed height (e.g. bottom outlet)
+                    if (DrawHeight > Lake[NumLayers-1].Height)
+                        DrawHeight = Lake[NumLayers-1].Height;
+                    else if (Outflows[i].Hcrit < Base) {
+                        DrawHeight = 1; //1 m above bottom
+                        fprintf(stderr,"outlet_crit %12.4lf < base_elev %12.4lf - set to %12.4lf\n",Outflows[i].Hcrit,Base,Base+1);
+                    }
+                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                } else {
+                    DrawHeight = Outflows[i].OLev;            //# Fixed height offtake
+                    if (DrawHeight > Lake[NumLayers-1].Height)   //get TargetLayerTemp
+                        DrawHeight = Lake[NumLayers-1].Height;
+                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                }
+            }
+        /**********************************************************************
+         * Type 4 is variable outlet heights for ISOTHERM                     *
+         **********************************************************************/
+        } else if (Outflows[i].Type == 4) {
+            int idx_dep = -1;
+            int idx_lay = -1;
+            AED_REAL TARGETtemp = -1, MASSdepvarwith = 0, MASSbotout = 0, TEMPbotout = 0, TEMPdepvarwith = 0;
+            if (myfile == NULL) {
+                myfile = fopen("outlet_values_type_4.txt","w");
+                fprintf(myfile,"JDay,OutletType,CritOXY,TargetTemp,LakeMAXTemp,LakeMINTemp,within_temp_range,within_facility_range,upper_bound,lower_bound,DrawHeight,ActOXY,mix_withdraw,DISdepvarwith,DISbotout,Tmix\n");
+            }
+            idx_dep = -1;
+            for (k = 0; k < NumLayers; k++) {
+                if (Lake[k].Height >=  (O2critdep-Base)) {
+                    if (idx_dep < 0) {
+                        idx_dep = k;
+                    }
+                }
+            }
+            if (jday < checkjday) {
+                //AED_REAL outtemp = -1;
+                //int idx = -1;
+                DrawHeight = Outflows[i].Hcrit-Base;               //# withdraw at another fixed height (e.g. bottom outlet)
+                if (DrawHeight > Lake[NumLayers-1].Height)   //get TargetLayerTemp
+                    DrawHeight = Lake[NumLayers-1].Height;
+                fprintf(myfile,"%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,1,999,999,999,999,999,999,999,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+            }
+            else {
+                checkjday = -1;
+                if (_WQ_Vars(Outflows[i].O2idx,idx_dep) <= O2crit) {  //get modelled O2 conc. via _WQ_Vars(var,lyr)
+                    if (checkjday < 0)
+                        checkjday = jday+O2critdays;
+                    DrawHeight = Outflows[i].Hcrit-Base;               //# withdraw at another fixed height (e.g. bottom outlet)
+                    if (DrawHeight > Lake[NumLayers-1].Height)
+                        DrawHeight = Lake[NumLayers-1].Height;
+                    else if (Outflows[i].Hcrit < Base) {
+                        DrawHeight = 1; //1 m above bottom
+                        fprintf(stderr,"outlet_crit %12.4lf < base_elev %12.4lf - set to %12.4lf\n",Outflows[i].Hcrit,Base,Base+1);
+                    }
+                    fprintf(myfile,"%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,1,999,999,999,999,999,999,999,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                } else {
+                    //find maximum of Lake.Temp
+                    for (j = 0; j < NumLayers; j++) {
+                        if (maxtemp < Lake[j].Temp) {
+                            //idxmax = j;
+                            maxtemp = Lake[j].Temp;
+                        }
+                    }
+                    //find minimum of Lake.Temp
+                    for (j = 0; j < NumLayers; j++) {
+                        if (mintemp > Lake[j].Temp) {
+                            //idxmin = j;
+                            mintemp = Lake[j].Temp;
+                        }
+                    }
+                    //restriction: maximum 800 l/s for depth-variable withdrawal
+                    if (MIXwithdraw && i != NumOut && (Outflows[i+1].Draw * Outflows[i+1].Factor) > 0) {
+                        AED_REAL TEMPdepvarwith_real = -1;
+                        AED_REAL Tmix = -1;
+                        //if (myfile2 == NULL) {
+                        //  myfile2 = fopen("outlet_values_type_4_mix_withdraw.txt","w");
+                        //  fprintf(myfile2,"JDay,OutletType,CritOXY,TargetTemp_from_file_or_isotherm,MASSdepvarwith,DISdepvarwith,MASSbotout,DISbotout,idx_lay,TEMPbotout,TEMPdepvarwith\n");
+                        //}
+                        //Mixing withdrawals: due to constructional limitation of depth-variable withdrawal a maximum discharge of X l/s can be
+                        // withdrawn from it - rest of water for downstream river should be withdrawn from bottom outlet
+                        //BUT: this means that the water is mixed and the target temperature for the downstream river is not the same like the water from the
+                        // depth-variable withdrawal anymore
+                        //THEREFORE: calculating water temperature for the depth-variable withdrawal on basis of a mixing temperature == target temperature!
+                        //RESTRICTION: the outflowX.csv file with the discharges for the depth-variable withdrawal must be the last but one outflow (NumOut-1)
+
+                        MASSdepvarwith = (Outflows[i].Draw * Outflows[i].Factor); //mass of water for depth-variable withdrawal
+                        MASSbotout = (Outflows[i+1].Draw * Outflows[i+1].Factor); //mass of water for bottom outlet
+                        //if (MASSbotout > 0) {//mix only if more than 800 l/s must be withdrawn to downstream river
+                        //find the layer where bottom outlet lies
+                        idx_lay = -1;
+                        for (k = 0; k < NumLayers; k++) {
+                            if (Lake[k].Height >=  Outflows[i+1].OLev) {
+                                if (idx_lay < 0) {
+                                    idx_lay = k;
+                                }
+                            }
+                        }
+                        TEMPbotout = Lake[idx_lay].Temp; //temperature of bottom outlet layer
+                        TEMPdepvarwith = (Outflows[i].TARGETtemp*(MASSdepvarwith+MASSbotout)-(MASSbotout*TEMPbotout)) / MASSdepvarwith; //calculate temperature for depth-variable withdrawal from mixing temperature
+                        TARGETtemp = TEMPdepvarwith;
+                        //fprintf(myfile2,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,MASSdepvarwith,MASSbotout,MASSdepvarwith/86400,MASSbotout/86400,idx_lay,TEMPbotout,TEMPdepvarwith);
+                        if (TARGETtemp > maxtemp) {// check if lake temperature is lower than target temperature
+                            DrawHeight = (167.1-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            idx_lay = -1;
+                            for (k = 0; k < NumLayers; k++) {
+                                if (Lake[k].Height >=  DrawHeight) {
+                                    if (idx_lay < 0) {
+                                        idx_lay = k;
+                                    }
+                                }
+                            }
+                            TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                            Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                            //fprintf(stderr,"TARGETtemp > maxtemp\n");
+                            //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,0,999,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                        } else if (TARGETtemp < mintemp) {// check if lake temperature is higher than target temperature
+                            DrawHeight = (150.9-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            idx_lay = -1;
+                            for (k = 0; k < NumLayers; k++) {
+                                if (Lake[k].Height >=  DrawHeight) {
+                                    if (idx_lay < 0) {
+                                        idx_lay = k;
+                                    }
+                                }
+                            }
+                            TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                            Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                            //fprintf(stderr,"TARGETtemp < maxtemp\n");
+                            //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,0,999,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                        } else {
+                            AED_REAL TEMPdepvarwith_real = -1;
+                            AED_REAL Tmix = -1;
+                            //search for layer where target temperature (isotherm temperature) can be found
+                            for (j = 0; j < NumLayers; j++)
+                                laketemp[j] = fabs(Lake[j].Temp-TARGETtemp);
+                            //find minimum of laketemp
+                            mindifftemp = 100;
+                            for (j = 0; j < NumLayers; j++) {
+                                if (mindifftemp > laketemp[j]) {
+                                    //targetlyr = j;
+                                    mindifftemp = laketemp[j];
+                                }
+                            }
+                            for (j = 0; j < NumLayers; j++) {
+                                if (laketemp[j] == mindifftemp)
+                                    targetlyr = j;
+                            }
+                            // check if layer is in range of facility!
+                            // old way: if (Lake[i].Height(targetlyr) > 167.1)
+                            if (Lake[targetlyr].Height >= (167.1-Base)) {
+                                DrawHeight = (167.1-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                idx_lay = -1;
+                                for (k = 0; k < NumLayers; k++) {
+                                    if (Lake[k].Height >=  DrawHeight) {
+                                        if (idx_lay < 0) {
+                                            idx_lay = k;
+                                        }
+                                    }
+                                }
+                                TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                //fprintf(stderr,"TARGETlayer > 167.1\n");
+                                //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,0,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                            } else if (Lake[targetlyr].Height <= (150.9-Base)) {
+                                DrawHeight = (150.9-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                idx_lay = -1;
+                                for (k = 0; k < NumLayers; k++) {
+                                    if (Lake[k].Height >=  DrawHeight) {
+                                        if (idx_lay < 0) {
+                                        idx_lay = k;
+                                        }
+                                    }
+                                }
+                                TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                //fprintf(stderr,"TARGETlayer < 150.9\n");
+                                //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                            } else {
+                                DrawHeight = Lake[targetlyr].MeanHeight; // combine layer index with mean height
+                                if (DrawHeight <= (150.9-Base)) {
+                                    DrawHeight = (150.9-Base);
+                                    if (DrawHeight > Lake[NumLayers-1].Height)
+                                        DrawHeight = Lake[NumLayers-1].Height;
+                                    idx_lay = -1;
+                                    for (k = 0; k < NumLayers; k++) {
+                                        if (Lake[k].Height >=  DrawHeight) {
+                                            if (idx_lay < 0) {
+                                            idx_lay = k;
+                                            }
+                                        }
+                                    }
+                                    TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                    Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                    //fprintf(stderr,"TARGETlayer > 150.9 & < 167.1 but lower limit\n");
+                                    //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                                } else {
+                                    idx_lay = -1;
+                                    for (k = 0; k < NumLayers; k++) {
+                                        if (Lake[k].Height >=  DrawHeight) {
+                                            if (idx_lay < 0) {
+                                            idx_lay = k;
+                                            }
+                                        }
+                                    }
+                                    TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                    Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                    //fprintf(stderr,"TARGETlayer in range\n");
+                                    //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,1,0,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                                }
+                            }
+                        }
+                    } else {
+                        TARGETtemp = Outflows[i].TARGETtemp;
+
+                        if (TARGETtemp > maxtemp) {// check if lake temperature is lower than target temperature
+                            DrawHeight = (167.1-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,0,999,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                        } else if (TARGETtemp < mintemp) {// check if lake temperature is higher than target temperature
+                            DrawHeight = (150.9-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,0,999,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                        } else {
+                            //search for layer where target temperature (isotherm temperature) can be found
+                            for (j = 0; j < NumLayers; j++)
+                                laketemp[j] = fabs(Lake[j].Temp-TARGETtemp);
+
+                            //find minimum of laketemp
+                            mindifftemp = 100;
+                            for (j = 0; j < NumLayers; j++) {
+                                if (mindifftemp > laketemp[j]) {
+                                    //targetlyr = j;
+                                    mindifftemp = laketemp[j];
+                                }
+                            }
+                            for (j = 0; j < NumLayers; j++) {
+                                if (laketemp[j] == mindifftemp)
+                                    targetlyr = j;
+                            }
+                            // check if layer is in range of facility!
+                            // old way: if (Lake[i].Height(targetlyr) > 167.1)
+                            if (Lake[targetlyr].Height >= (167.1-Base)) {
+                                DrawHeight = (167.1-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,0,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                            } else if (Lake[targetlyr].Height <= (150.9-Base)) {
+                                DrawHeight = (150.9-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                            } else {
+                                DrawHeight = Lake[targetlyr].MeanHeight; // combine layer index with mean height
+                                if (DrawHeight <= (150.9-Base)) {
+                                    DrawHeight = (150.9-Base);
+                                    if (DrawHeight > Lake[NumLayers-1].Height)
+                                        DrawHeight = Lake[NumLayers-1].Height;
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                                } else
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,maxtemp,mintemp,1,1,0,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                            }
+                        }
+                    }
+                }
+            }
+        /**********************************************************************
+         * Type 5 is variable outlet heights for TEMPERATURE TIME SERIES      *
+         **********************************************************************/
+        } else if (Outflows[i].Type == 5) {
+            int idx_dep = -1;
+            int idx_lay = -1;
+            AED_REAL TARGETtemp = -1, MASSdepvarwith = 0, MASSbotout = 0, TEMPbotout = 0, TEMPdepvarwith = 0;
+            //fprintf(stderr,"WithdrawalTemp %12.4lf at day %8d\n",WithdrawalTemp,jday);
+            if (myfile == NULL) {
+                    myfile = fopen("outlet_values_type_5.txt","w");
+                    //fprintf(myfile,"JDay,OutletType,CritOXY,TargetTemp,LakeMAXTemp,LakeMINTemp,within_temp_range,within_facility_range,upper_bound,lower_bound,DrawHeight,ActOXY\n");
+                    fprintf(myfile,"JDay,OutletType,CritOXY,TargetTemp,LakeMAXTemp,LakeMINTemp,within_temp_range,within_facility_range,upper_bound,lower_bound,DrawHeight,ActOXY,mix_withdraw,DISdepvarwith,DISbotout,Tmix\n");
+            }
+            idx_dep = -1;
+            for (k = 0; k < NumLayers; k++) {
+                if (Lake[k].Height >=  (O2critdep-Base)) {
+                    if (idx_dep < 0) {
+                        idx_dep = k;
+                    }
+                }
+            }
+            if (jday < checkjday) {
+                DrawHeight = Outflows[i].Hcrit-Base;               //# withdraw at another fixed height (e.g. bottom outlet)
+                if (DrawHeight > Lake[NumLayers-1].Height)   //get TargetLayerTemp
+                    DrawHeight = Lake[NumLayers-1].Height;
+                //fprintf(myfile,"%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,1,999,999,999,999,999,999,999,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                fprintf(myfile,"%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,1,999,999,999,999,999,999,999,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+            } else {
+                checkjday = -1;
+                if (_WQ_Vars(Outflows[i].O2idx,idx_dep) <= O2crit) {  //get modelled O2 conc. via _WQ_Vars(var,lyr)
+                    if (checkjday < 0)
+                        checkjday = jday+O2critdays;
+                    DrawHeight = Outflows[i].Hcrit-Base;               //# withdraw at another fixed height (e.g. bottom outlet)
+                    if (DrawHeight > Lake[NumLayers-1].Height)
+                        DrawHeight = Lake[NumLayers-1].Height;
+                    else if (Outflows[i].Hcrit < Base) {
+                        DrawHeight = 1; //1 m above bottom
+                        fprintf(stderr,"outlet_crit %12.4lf < base_elev %12.4lf - set to %12.4lf\n",Outflows[i].Hcrit,Base,Base+1);
+                    }
+                    //fprintf(myfile,"%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,1,999,999,999,999,999,999,999,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                    fprintf(myfile,"%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,1,999,999,999,999,999,999,999,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                } else {
+                    //find maximum of Lake.Temp
+                    for (j = 0; j < NumLayers; j++) {
+                        if (maxtemp < Lake[j].Temp) {
+                            maxtemp = Lake[j].Temp;
+                        }
+                    }
+                    //find minimum of Lake.Temp
+                    for (j = 0; j < NumLayers; j++) {
+                        if (mintemp > Lake[j].Temp) {
+                            mintemp = Lake[j].Temp;
+                        }
+                    }
+
+
+                    //restriction: maximum 800 l/s for depth-variable withdrawal
+                    if (MIXwithdraw && i != NumOut && (Outflows[i+1].Draw * Outflows[i+1].Factor) > 0) {
+                        AED_REAL TEMPdepvarwith_real = -1;
+                        AED_REAL Tmix = -1;
+                        //if (myfile2 == NULL) {
+                        //  myfile2 = fopen("outlet_values_type_4_mix_withdraw.txt","w");
+                        //  fprintf(myfile2,"JDay,OutletType,CritOXY,TargetTemp_from_file_or_isotherm,MASSdepvarwith,DISdepvarwith,MASSbotout,DISbotout,idx_lay,TEMPbotout,TEMPdepvarwith\n");
+                        //}
+                        //Mixing withdrawals: due to constructional limitation of depth-variable withdrawal a maximum discharge of X l/s can be
+                        // withdrawn from it - rest of water for downstream river should be withdrawn from bottom outlet
+                        //BUT: this means that the water is mixed and the target temperature for the downstream river is not the same like the water from the
+                        // depth-variable withdrawal anymore
+                        //THEREFORE: calculating water temperature for the depth-variable withdrawal on basis of a mixing temperature == target temperature!
+                        //RESTRICTION: the outflowX.csv file with the discharges for the depth-variable withdrawal must be the last but one outflow (NumOut-1)
+
+                        MASSdepvarwith = (Outflows[i].Draw * Outflows[i].Factor); //mass of water for depth-variable withdrawal
+                        MASSbotout = (Outflows[i+1].Draw * Outflows[i+1].Factor); //mass of water for bottom outlet
+                        //if (MASSbotout > 0) {//mix only if more than 800 l/s must be withdrawn to downstream river
+                        //find the layer where bottom outlet lies
+                        idx_lay = -1;
+                        for (k = 0; k < NumLayers; k++) {
+                            if (Lake[k].Height >=  Outflows[i+1].OLev) {
+                                if (idx_lay < 0) {
+                                    idx_lay = k;
+                                }
+                            }
+                        }
+                        TEMPbotout = Lake[idx_lay].Temp; //temperature of bottom outlet layer
+                        TEMPdepvarwith = (WithdrawalTemp*(MASSdepvarwith+MASSbotout)-(MASSbotout*TEMPbotout)) / MASSdepvarwith; //calculate temperature for depth-variable withdrawal from mixing temperature
+                        TARGETtemp = TEMPdepvarwith;
+                        //fprintf(myfile2,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,Outflows[i].TARGETtemp,MASSdepvarwith,MASSbotout,MASSdepvarwith/86400,MASSbotout/86400,idx_lay,TEMPbotout,TEMPdepvarwith);
+                        if (TARGETtemp > maxtemp) {// check if lake temperature is lower than target temperature
+                            DrawHeight = (167.1-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            idx_lay = -1;
+                            for (k = 0; k < NumLayers; k++) {
+                                if (Lake[k].Height >=  DrawHeight) {
+                                    if (idx_lay < 0) {
+                                        idx_lay = k;
+                                    }
+                                }
+                            }
+                            TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                            Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                            //fprintf(stderr,"TARGETtemp > maxtemp\n");
+                            //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,0,999,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                        } else if (TARGETtemp < mintemp) {// check if lake temperature is higher than target temperature
+                            DrawHeight = (150.9-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            idx_lay = -1;
+                            for (k = 0; k < NumLayers; k++) {
+                                if (Lake[k].Height >=  DrawHeight) {
+                                    if (idx_lay < 0) {
+                                        idx_lay = k;
+                                    }
+                                }
+                            }
+                            TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                            Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                            //fprintf(stderr,"TARGETtemp < maxtemp\n");
+                            //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,0,999,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                        } else {
+                            AED_REAL TEMPdepvarwith_real = -1;
+                            AED_REAL Tmix = -1;
+                            //search for layer where target temperature (isotherm temperature) can be found
+                            for (j = 0; j < NumLayers; j++)
+                                laketemp[j] = fabs(Lake[j].Temp-TARGETtemp);
+                            //find minimum of laketemp
+                            mindifftemp = 100;
+                            for (j = 0; j < NumLayers; j++) {
+                                if (mindifftemp > laketemp[j]) {
+                                    //targetlyr = j;
+                                    mindifftemp = laketemp[j];
+                                }
+                            }
+                            for (j = 0; j < NumLayers; j++) {
+                                if (laketemp[j] == mindifftemp)
+                                    targetlyr = j;
+                            }
+                            // check if layer is in range of facility!
+                            // old way: if (Lake[i].Height(targetlyr) > 167.1)
+                            if (Lake[targetlyr].Height >= (167.1-Base)) {
+                                DrawHeight = (167.1-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                idx_lay = -1;
+                                for (k = 0; k < NumLayers; k++) {
+                                    if (Lake[k].Height >=  DrawHeight) {
+                                        if (idx_lay < 0) {
+                                            idx_lay = k;
+                                        }
+                                    }
+                                }
+                                TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                //fprintf(stderr,"TARGETlayer > 167.1\n");
+                                //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                            } else if (Lake[targetlyr].Height <= (150.9-Base)) {
+                                DrawHeight = (150.9-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                idx_lay = -1;
+                                for (k = 0; k < NumLayers; k++) {
+                                    if (Lake[k].Height >=  DrawHeight) {
+                                        if (idx_lay < 0) {
+                                        idx_lay = k;
+                                        }
+                                    }
+                                }
+                                TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                //fprintf(stderr,"TARGETlayer < 150.9\n");
+                                //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                            } else {
+                                DrawHeight = Lake[targetlyr].MeanHeight; // combine layer index with mean height
+                                if (DrawHeight <= (150.9-Base)) {
+                                    DrawHeight = (150.9-Base);
+                                    if (DrawHeight > Lake[NumLayers-1].Height)
+                                        DrawHeight = Lake[NumLayers-1].Height;
+                                    idx_lay = -1;
+                                    for (k = 0; k < NumLayers; k++) {
+                                        if (Lake[k].Height >=  DrawHeight) {
+                                            if (idx_lay < 0) {
+                                            idx_lay = k;
+                                            }
+                                        }
+                                    }
+                                    TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                    Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                    //fprintf(stderr,"TARGETlayer > 150.9 & < 167.1 but lower limit\n");
+                                    //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                                } else {
+                                    idx_lay = -1;
+                                    for (k = 0; k < NumLayers; k++) {
+                                        if (Lake[k].Height >=  DrawHeight) {
+                                            if (idx_lay < 0) {
+                                            idx_lay = k;
+                                            }
+                                        }
+                                    }
+                                    TEMPdepvarwith_real = Lake[idx_lay].Temp;
+                                    Tmix = ((TEMPdepvarwith_real*MASSdepvarwith)+(TEMPbotout*MASSbotout))/(MASSdepvarwith+MASSbotout);
+                                    //fprintf(stderr,"TARGETlayer in range\n");
+                                    //fprintf(stderr,"%12.4lf,%12.4lf\n",TEMPdepvarwith_real,Tmix);
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%12.4lf,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,1,0,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),1,(Outflows[i].Draw * Outflows[i].Factor),(Outflows[i+1].Draw * Outflows[i+1].Factor),Tmix);
+                                }
+                            }
+                        }
+                    } else {
+                        TARGETtemp = WithdrawalTemp;
+
+                        if (TARGETtemp > maxtemp) {// check if lake temperature is lower than target temperature
+                            DrawHeight = (167.1-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            //fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,0,999,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,0,999,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                        } else if (TARGETtemp < mintemp) {// check if lake temperature is higher than target temperature
+                            DrawHeight = (150.9-Base);
+                            if (DrawHeight > Lake[NumLayers-1].Height)
+                                DrawHeight = Lake[NumLayers-1].Height;
+                            //fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,0,999,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                            fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,0,999,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                        } else {
+                            //search for layer where target temperature (isotherm temperature) can be found
+                            for (j = 0; j < NumLayers; j++)
+                                laketemp[j] = fabs(Lake[j].Temp-TARGETtemp);
+
+                            //find minimum of laketemp
+                            mindifftemp = 100;
+                            for (j = 0; j < NumLayers; j++) {
+                                if (mindifftemp > laketemp[j]) {
+                                    mindifftemp = laketemp[j];
+                                }
+                            }
+                            for (j = 0; j < NumLayers; j++) {
+                                if (laketemp[j] == mindifftemp)
+                                    targetlyr = j;
+                            }
+                            // check if layer is in range of facility!
+                            // old way: if (Lake[i].Height(targetlyr) > 167.1)
+                            if (Lake[targetlyr].Height >= (167.1-Base)) {
+                                DrawHeight = (167.1-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                //fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,1,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                            } else if (Lake[targetlyr].Height <= (150.9-Base)) {
+                                DrawHeight = (150.9-Base);
+                                if (DrawHeight > Lake[NumLayers-1].Height)
+                                    DrawHeight = Lake[NumLayers-1].Height;
+                                //fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                                fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                            } else {
+                                DrawHeight = Lake[targetlyr].MeanHeight; // combine layer index with mean height
+                                if (DrawHeight <= (150.9-Base)) {
+                                    DrawHeight = (150.9-Base);
+                                    if (DrawHeight > Lake[NumLayers-1].Height)
+                                        DrawHeight = Lake[NumLayers-1].Height;
+                                    //fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,0,0,1,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                                } else
+                                    //fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,1,0,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep));
+                                    fprintf(myfile,"%8d,%8d,%8d,%12.4lf,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d,%12.4lf,%12.4lf,%8d,%8d,%8d,%8d\n",jday,Outflows[i].Type,0,WithdrawalTemp,maxtemp,mintemp,1,1,0,0,DrawHeight,_WQ_Vars(Outflows[i].O2idx,idx_dep),999,999,999,999);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         Outflows[i].Draw *= Outflows[i].Factor;
 
         do_single_outflow(DrawHeight, Outflows[i].Draw, &Outflows[i]);
 
-        write_outflow(i, jday, tVolSum - Lake[surfLayer].Vol1);
+        write_outflow(i, jday, DrawHeight, tVolSum - Lake[surfLayer].Vol1);
     }
     if (seepage) {
         SeepDraw = (seepage_rate / Lake[botmLayer].Height) * Lake[botmLayer].LayerVol;
@@ -396,11 +1005,12 @@ AED_REAL do_outflows(int jday)
 AED_REAL do_overflow(int jday)
 {
     AED_REAL VolSum = Lake[surfLayer].Vol1;
+    AED_REAL DrawHeight = 0.;
 
     if (VolSum > VolAtCrest)
         do_single_outflow(CrestLevel, (VolSum - VolAtCrest), NULL);
 
-    write_outflow(MaxOut, jday, VolSum - Lake[surfLayer].Vol1);
+    write_outflow(MaxOut, jday, DrawHeight, VolSum - Lake[surfLayer].Vol1);
 
     return VolSum - Lake[surfLayer].Vol1;
 }

@@ -1,3 +1,20 @@
+GLM v2.2.0beta Release Notes
+
+There have been many changes since 2.0.x many bug fixes and additions.
+
+There are new models in the aed2 water quality set - but some are currently not functional, and some are untested
+
+  sulfur, iron and sed-diagenesis are non-functional
+  geochemistry, vegetation and bivalves are not tested
+
+Sediment zones have been added
+
+Variable offtake outflows have been added (Thanks Michael Weber)
+
+A bubbler has been added (currently completely untested ....)
+
+         -------------------------------
+
 GLM v2.0.0 Release Notes
 
 The following major changes have been made that require the user to change

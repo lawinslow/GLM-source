@@ -94,7 +94,7 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
@@ -104,7 +104,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>glm-aed2.lib;libaed2.lib;glm-fabm.lib;fabm-glm.lib;libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.1.8</Version>
+      <Version>2.2.0beta9</Version>
       <AdditionalLibraryDirectories>$(Platform)-$(Configuration)_DP\;..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\fabm-git\compilers\vs2010\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32;C:\Program Files (x86)\Intel\Composer XE 2011 SP1\compiler\lib\ia32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>LIBCMTD;LIBCMT;MSVCRT;libmmt;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -116,7 +116,7 @@
     </Midl>
     <ClCompile>
       <Optimization>Disabled</Optimization>
-      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
@@ -126,7 +126,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>glm-aed2.lib;libaed2.lib;glm-fabm.lib;fabm-glm.lib;libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.1.8</Version>
+      <Version>2.2.0beta9</Version>
       <AdditionalLibraryDirectories>$(Platform)-$(Configuration)_DP\;..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\fabm-git\compilers\vs2010\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64;C:\Program Files (x86)\Intel\Composer XE 2011 SP1\compiler\lib\intel64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>LIBCMTD;LIBCMT;MSVCRT;libmmt;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -134,7 +134,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
@@ -145,7 +145,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>glm-aed2.lib;libaed2.lib;glm-fabm.lib;fabm-glm.lib;libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.1.8</Version>
+      <Version>2.2.0beta9</Version>
       <AdditionalLibraryDirectories>$(Platform)-$(Configuration)_DP\;..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\fabm-git\compilers\vs2010\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32;C:\Program Files (x86)\Intel\Composer XE 2011 SP1\compiler\lib\ia32;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>LIBCMTD;LIBCMT;libmmt;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -156,7 +156,7 @@
       <TargetEnvironment>X64</TargetEnvironment>
     </Midl>
     <ClCompile>
-      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <WarningLevel>Level3</WarningLevel>
@@ -166,7 +166,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>glm-aed2.lib;libaed2.lib;glm-fabm.lib;fabm-glm.lib;libutil.lib;libplot.lib;libpng.lib;libgd.lib;freetype2.lib;zlib.lib;netcdf.lib;netcdff90.lib;hdf5.lib;hdf5_hl.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <Version>2.1.8</Version>
+      <Version>2.2.0beta9</Version>
       <AdditionalLibraryDirectories>$(Platform)-$(Configuration)_DP\;..\..\..\..\WinLibs\NetCDF4_dll_$(Platform)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(Platform)\lib\;..\..\..\fabm-git\compilers\vs2010\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\additions\lib_$(Platform)\;$(Platform)-$(Configuration);C:\Program Files (x86)\Intel\Composer XE 2011 SP1\compiler\lib\intel64;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
       <IgnoreSpecificDefaultLibraries>LIBCMTD;LIBCMT;libmmt;%(IgnoreSpecificDefaultLibraries)</IgnoreSpecificDefaultLibraries>
@@ -174,6 +174,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\src\glm_bird.c" />
+    <ClCompile Include="..\..\src\glm_bubbler.c" />
     <ClCompile Include="..\..\src\glm_const.c" />
     <ClCompile Include="..\..\src\glm_csv.c" />
     <ClCompile Include="..\..\src\glm_deep.c" />
@@ -199,6 +200,7 @@
   <ItemGroup>
     <ClInclude Include="..\..\src\glm.h" />
     <ClInclude Include="..\..\src\glm_bird.h" />
+    <ClInclude Include="..\..\src\glm_bubbler.h" />
     <ClInclude Include="..\..\src\glm_const.h" />
     <ClInclude Include="..\..\src\glm_csv.h" />
     <ClInclude Include="..\..\src\glm_deep.h" />
@@ -225,6 +227,12 @@
       <Project>{8ef4b62a-1caf-4c2a-af8f-fbaf3350ea84}</Project>
       <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\glm.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\glm.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

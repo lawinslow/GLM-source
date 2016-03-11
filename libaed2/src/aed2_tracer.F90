@@ -89,7 +89,6 @@ SUBROUTINE aed2_define_tracer(data, namlst)
    LOGICAL  :: resuspension = .FALSE.
    CHARACTER(4) :: trac_name
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    NAMELIST /aed2_tracer/ num_tracers,decay,settling,Fsed,resuspension,epsilon,tau_0,tau_r,Ke_ss,retention_time
 !
 !-------------------------------------------------------------------------------
@@ -124,9 +123,9 @@ SUBROUTINE aed2_define_tracer(data, namlst)
       ! Register state variables
       DO i=1,num_tracers
          trac_name(3:3) = CHAR(ICHAR('0') + i)
-                                             ! divide settling by secs_pr_day to convert m/d to m/s
+                                             ! divide settling by secs_per_day to convert m/d to m/s
          data%id_ss(i) = aed2_define_variable(TRIM(trac_name),'mmol/m**3','tracer', &
-                                                  trace_initial,minimum=zero_,mobility=(settling(i)/secs_pr_day))
+                                                  trace_initial,minimum=zero_,mobility=(settling(i)/secs_per_day))
       ENDDO
    ENDIF
    IF (retention_time) THEN
@@ -140,7 +139,7 @@ SUBROUTINE aed2_define_tracer(data, namlst)
    data%id_temp = aed2_locate_global('temperature')
    IF ( resuspension ) THEN
       data%id_taub = aed2_locate_global_sheet('taub')
-      data%id_d_taub = aed2_define_sheet_diag_variable('d_taub','n/m**2',  'taub diagnostic')
+      data%id_d_taub = aed2_define_sheet_diag_variable('d_taub','N/m**2',  'taub diagnostic')
    ENDIF
 
    data%resuspension = resuspension

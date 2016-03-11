@@ -122,7 +122,6 @@ SUBROUTINE aed2_vegetation_load_params(data, dbase, count, list)
    INTEGER  :: i,j,tfil,sort_i(MAX_ZOOP_PREY)
    AED_REAL :: Pveg_prey(MAX_ZOOP_PREY)
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    TYPE(type_vegetation_params)  :: vegetation_param(MAX_ZOOP_TYPES)
    NAMELIST /vegetation_params/ vegetation_param
 !-------------------------------------------------------------------------------
@@ -145,7 +144,7 @@ SUBROUTINE aed2_vegetation_load_params(data, dbase, count, list)
        data%vegdata(i)%INC           = vegetation_param(list(i))%INC
        data%vegdata(i)%IPC           = vegetation_param(list(i))%IPC
        ! Filtration & Ingestion
-       data%vegdata(i)%Rgrz          = vegetation_param(list(i))%Rgrz/secs_pr_day
+       data%vegdata(i)%Rgrz          = vegetation_param(list(i))%Rgrz/secs_per_day
        data%vegdata(i)%Ing           = vegetation_param(list(i))%Ing
        data%vegdata(i)%WaI           = vegetation_param(list(i))%WaI
        data%vegdata(i)%WbI           = vegetation_param(list(i))%WbI
@@ -161,11 +160,11 @@ SUBROUTINE aed2_vegetation_load_params(data, dbase, count, list)
        data%vegdata(i)%SSmax         = vegetation_param(list(i))%SSmax
        data%vegdata(i)%maxSS         = vegetation_param(list(i))%maxSS
        ! Excretion & Egestion
-       data%vegdata(i)%Rexcr         = vegetation_param(list(i))%Rexcr/secs_pr_day
-       data%vegdata(i)%Regst         = vegetation_param(list(i))%Regst/secs_pr_day
+       data%vegdata(i)%Rexcr         = vegetation_param(list(i))%Rexcr/secs_per_day
+       data%vegdata(i)%Regst         = vegetation_param(list(i))%Regst/secs_per_day
        data%vegdata(i)%gegst         = vegetation_param(list(i))%gegst
        ! Respiration
-       data%vegdata(i)%Rresp         = vegetation_param(list(i))%Rresp/secs_pr_day
+       data%vegdata(i)%Rresp         = vegetation_param(list(i))%Rresp/secs_per_day
        data%vegdata(i)%saltfunc      = vegetation_param(list(i))%saltfunc
        data%vegdata(i)%minS          = vegetation_param(list(i))%minS
        data%vegdata(i)%Smin          = vegetation_param(list(i))%Smin
@@ -181,8 +180,8 @@ SUBROUTINE aed2_vegetation_load_params(data, dbase, count, list)
        data%vegdata(i)%Qresp         = vegetation_param(list(i))%Qresp
        data%vegdata(i)%SDA           = vegetation_param(list(i))%SDA
        ! Mortality
-       data%vegdata(i)%Rmort         = vegetation_param(list(i))%Rmort/secs_pr_day
-       data%vegdata(i)%Rpred         = vegetation_param(list(i))%Rpred/secs_pr_day
+       data%vegdata(i)%Rmort         = vegetation_param(list(i))%Rmort/secs_per_day
+       data%vegdata(i)%Rpred         = vegetation_param(list(i))%Rpred/secs_per_day
        data%vegdata(i)%fDO           = vegetation_param(list(i))%fDO
        data%vegdata(i)%K_BDO         = vegetation_param(list(i))%K_BDO
        data%vegdata(i)%KDO           = vegetation_param(list(i))%KDO
@@ -245,7 +244,6 @@ SUBROUTINE aed2_define_vegetation(data, namlst)
    CHARACTER(len=64)  :: ss_uptake_variable='' !sus. solids uptake variable
    CHARACTER(len=128) :: dbase='aed2_vegetation_pars.nml'
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    INTEGER  :: veg_i, prey_i, phy_i
 
    NAMELIST /aed2_vegetation/ num_veg, the_veg, &
@@ -334,12 +332,12 @@ SUBROUTINE aed2_define_vegetation(data, namlst)
    ENDIF
 
    ! Register diagnostic variables
-   data%id_grz = aed2_define_sheet_diag_variable('grz','mmolC/m**3',  'net vegetation grazing')
-   data%id_resp = aed2_define_sheet_diag_variable('resp','mmolC/m**3',  'net vegetation respiration')
-   data%id_mort = aed2_define_sheet_diag_variable('mort','mmolC/m**3/d','net vegetation mortality')
+   data%id_grz = aed2_define_sheet_diag_variable('grz','mmolC/m**2/d',  'net vegetation grazing')
+   data%id_resp = aed2_define_sheet_diag_variable('resp','mmolC/m**2/d',  'net vegetation respiration')
+   data%id_mort = aed2_define_sheet_diag_variable('mort','mmolC/m**2/d','net vegetation mortality')
 
-   data%id_excr = aed2_define_sheet_diag_variable('excr','mmolC/m**3/d','net vegetation excretion')
-   data%id_egst = aed2_define_sheet_diag_variable('egst','mmolC/m**3/d','net vegetation egestion')
+   data%id_excr = aed2_define_sheet_diag_variable('excr','mmolC/m**2/d','net vegetation excretion')
+   data%id_egst = aed2_define_sheet_diag_variable('egst','mmolC/m**2/d','net vegetation egestion')
 
    ! Register environmental dependencies
    data%id_tem = aed2_locate_global('temperature')
@@ -375,8 +373,6 @@ SUBROUTINE aed2_calculate_riparian_vegetation(data,column,layer_idx, pc_wet)
    !CAB added
    AED_REAL :: f_dens, W, Imax, psuedofaeces, ingestion, excretion, egestion, iteg, R20, oxy
 
-
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -658,12 +654,12 @@ SUBROUTINE aed2_calculate_riparian_vegetation(data,column,layer_idx, pc_wet)
       ENDIF
 
       ! Export diagnostic variables
-!     _DIAG_VAR_S_(data%id_grz  ) = grazing*secs_pr_day
-      _DIAG_VAR_S_(data%id_resp ) = respiration*secs_pr_day
-      _DIAG_VAR_S_(data%id_mort ) = mortality*secs_pr_day
+!     _DIAG_VAR_S_(data%id_grz  ) = grazing*secs_per_day
+      _DIAG_VAR_S_(data%id_resp ) = respiration*secs_per_day
+      _DIAG_VAR_S_(data%id_mort ) = mortality*secs_per_day
 
-      _DIAG_VAR_S_(data%id_excr ) = excretion*secs_pr_day
-      _DIAG_VAR_S_(data%id_egst ) = egestion*secs_pr_day
+      _DIAG_VAR_S_(data%id_excr ) = excretion*secs_per_day
+      _DIAG_VAR_S_(data%id_egst ) = egestion*secs_per_day
    ENDDO
 
 END SUBROUTINE aed2_calculate_riparian_vegetation

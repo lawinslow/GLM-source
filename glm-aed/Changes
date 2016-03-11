@@ -1,3 +1,16 @@
+# 2015/10/12
+# Version 2.2.0beta8
+#
+#   Added sediment zones
+#   Added isotope, isotope_c and radon modules
+#   Fixed minor memory leak in namelist reader
+#   Added attributes to some netcdf vars that were missing them
+#   Added variable outflows (Michael Weber)
+#   Added Bubbler
+#   Fixed some memory issues
+#   Added several new biogeochem models
+#   Various other bugfixes.
+#
 # 2015/08/26
 # Version 2.0.4
 # -- Since 2.0.3

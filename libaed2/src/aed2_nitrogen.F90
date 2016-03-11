@@ -100,7 +100,6 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
    CHARACTER(len=64) :: Fsed_nit_variable=''
 
 
-   AED_REAL, parameter :: secs_pr_day = 86400.
    NAMELIST /aed2_nitrogen/ nit_initial,nit_min, nit_max,                 &
                     amm_initial, amm_min, amm_max,                        &
                     Rnitrif,Rdenit,Fsed_amm,Fsed_nit,                     &
@@ -118,10 +117,10 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
    ! Store parameter values in our own derived type
    ! NB: all rates must be provided in values per day,
    ! and are converted here to values per second.
-   data%Rnitrif  = Rnitrif/secs_pr_day
-   data%Rdenit   = Rdenit/secs_pr_day
-   data%Fsed_amm = Fsed_amm/secs_pr_day
-   data%Fsed_nit = Fsed_nit/secs_pr_day
+   data%Rnitrif  = Rnitrif/secs_per_day
+   data%Rdenit   = Rdenit/secs_per_day
+   data%Fsed_amm = Fsed_amm/secs_per_day
+   data%Fsed_nit = Fsed_nit/secs_per_day
    data%Knitrif  = Knitrif
    data%Kdenit   = Kdenit
    data%Ksed_amm  = Ksed_amm
@@ -153,13 +152,13 @@ SUBROUTINE aed2_define_nitrogen(data, namlst)
 
    ! Register diagnostic variables
    data%id_nitrif = aed2_define_diag_variable('nitrif','mmol/m**3/d',       &
-                                                         'Nitrification rate')
+                                                         'nitrification rate')
    data%id_denit = aed2_define_diag_variable('denit','mmol/m**3/d',         &
-                                                         'De-nitrification rate')
+                                                         'de-nitrification rate')
    data%id_sed_amm = aed2_define_sheet_diag_variable('sed_amm','mmol/m**2/d',      &
-                                                         'Ammonium sediment flux')
+                                                         'ammonium sediment flux')
    data%id_sed_nit = aed2_define_sheet_diag_variable('sed_nit','mmol/m**2/d',      &
-                                                         'Nitrate sediment flux')
+                                                         'nitrate sediment flux')
 
    ! Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
@@ -180,7 +179,6 @@ SUBROUTINE aed2_calculate_nitrogen(data,column,layer_idx)
 !LOCALS
    AED_REAL           :: amm,nit,oxy,temp !State variables
    AED_REAL           :: nitrification,denitrification
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    AED_REAL,PARAMETER :: Yoxy_nitrif = 3. !ratio of oxygen to nitrogen utilised during nitrification
 !
 !-------------------------------------------------------------------------------
@@ -214,8 +212,8 @@ SUBROUTINE aed2_calculate_nitrogen(data,column,layer_idx)
    !end if
 
    ! Export diagnostic variables
-   _DIAG_VAR_(data%id_nitrif) =  nitrification
-   _DIAG_VAR_(data%id_denit) =  denitrification
+   _DIAG_VAR_(data%id_nitrif) =  amm*nitrification*secs_per_day
+   _DIAG_VAR_(data%id_denit) =  nit*denitrification*secs_per_day
 
 
 END SUBROUTINE aed2_calculate_nitrogen
@@ -247,13 +245,9 @@ SUBROUTINE aed2_calculate_benthic_nitrogen(data,column,layer_idx)
    ! Temporary variables
    AED_REAL :: amm_flux,nit_flux
    AED_REAL :: Fsed_amm, Fsed_nit
-
-   ! Parameters
-!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-
    ! Retrieve current environmental conditions for the bottom pelagic layer.
    temp = _STATE_VAR_(data%id_temp) ! local temperature
 
@@ -290,18 +284,17 @@ SUBROUTINE aed2_calculate_benthic_nitrogen(data,column,layer_idx)
 
    ! Set bottom fluxes for the pelagic (change per surface area per second)
    ! Transfer sediment flux value to AED2.
-   !_SET_BOTTOM_FLUX_(data%id_amm,amm_flux/secs_pr_day)
+   !_SET_BOTTOM_FLUX_(data%id_amm,amm_flux/secs_per_day)
    _FLUX_VAR_(data%id_amm) = _FLUX_VAR_(data%id_amm) + (amm_flux)
    _FLUX_VAR_(data%id_nit) = _FLUX_VAR_(data%id_nit) + (nit_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_amm) = _FLUX_VAR_B_(data%id_ben_amm) + (-amm_flux/secs_pr_day)
+   !_FLUX_VAR_B_(data%id_ben_amm) = _FLUX_VAR_B_(data%id_ben_amm) + (-amm_flux/secs_per_day)
 
    ! Also store sediment flux as diagnostic variable.
-   _DIAG_VAR_S_(data%id_sed_amm) = amm_flux
-   _DIAG_VAR_S_(data%id_sed_nit) = nit_flux
-
+   _DIAG_VAR_S_(data%id_sed_amm) = amm_flux*secs_per_day
+   _DIAG_VAR_S_(data%id_sed_nit) = nit_flux*secs_per_day
 END SUBROUTINE aed2_calculate_benthic_nitrogen
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

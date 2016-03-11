@@ -116,11 +116,10 @@ MODULE glm_fabm
    LOGICAL  :: lIce = .FALSE.
 
    !# Namelist variables
-   INTEGER :: ode_method = 1, split_factor = 1
-   LOGICAL :: bioshade_feedback = .TRUE., repair_state = .TRUE., multi_ben = .FALSE.
+   INTEGER :: ode_method = 1, split_factor = 1, benthic_mode = 0
+   LOGICAL :: bioshade_feedback = .TRUE., repair_state = .TRUE.
    LOGICAL :: mobility_off = .FALSE.  !# flag to turn mobility off
    LOGICAL :: do_plots = .TRUE.
-   LOGICAL :: do_zones = .FALSE.
 
    !# Model
    TYPE (type_model),POINTER :: model
@@ -199,11 +198,11 @@ END FUNCTION f_get_lun
 
 !###############################################################################
 SUBROUTINE fabm_set_flags(c_split_factor, c_mobility, c_bioshade,              &
-                  c_repair_state, c_ode, c_multi_ben, c_no_zones, c_do_plots) BIND(C, name=_WQ_SET_FLAGS)
+                  c_repair_state, c_ode, c_benthic_mode, c_do_plots) BIND(C, name=_WQ_SET_FLAGS)
 !-------------------------------------------------------------------------------
 !ARGUMENTS
-   CLOGICAL,INTENT(in) :: c_mobility, c_bioshade, c_repair_state, c_multi_ben, c_no_zones, c_do_plots
-   CINTEGER,INTENT(in) :: c_split_factor, c_ode
+   CLOGICAL,INTENT(in) :: c_mobility, c_bioshade, c_repair_state, c_do_plots
+   CINTEGER,INTENT(in) :: c_split_factor, c_ode, c_benthic_mode
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -212,8 +211,7 @@ SUBROUTINE fabm_set_flags(c_split_factor, c_mobility, c_bioshade,              &
    bioshade_feedback = c_bioshade
    ode_method = c_ode
    repair_state = c_repair_state
-   multi_ben = c_multi_ben .AND. c_no_zones
-   do_zones = c_multi_ben .AND. .NOT. c_no_zones
+   benthic_mode = c_benthic_mode
    do_plots = c_do_plots
 END SUBROUTINE fabm_set_flags
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -457,7 +455,7 @@ CINTEGER FUNCTION fabm_is_var(id,i_vname,len) BIND(C, name=_WQ_IS_VAR)
 
    DO i=1,ubound(model%info%state_variables_ben,1)
       IF ( TRIM(model%info%state_variables_ben(i)%name) == vname ) THEN
-         IF (multi_ben) THEN
+         IF (benthic_mode.EQ.1) THEN
             fabm_is_var=i
          ELSE
             fabm_is_var=-i
@@ -546,7 +544,7 @@ SUBROUTINE fabm_set_glm_data(Lake, MaxLayers, MetData, SurfData, dt_) &
    _LINK_POINTER_(extc_coef, Lake%ExtcCoefSW)
    _LINK_POINTER_(layer_stress, Lake%LayerStress)
 
-   if (do_zones) zz => z
+   if (benthic_mode .GT. 1) zz => z
 
    precip => MetData%Rain
    evap   => SurfData%Evap
@@ -641,7 +639,7 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
    CALL do_repair_state(wlev,'glm_fabm::do_glm_fabm, after advection/diffusion')
 
    DO split=1,split_factor
-      IF (do_zones) THEN
+      IF (benthic_mode .GT. 1) THEN
          CALL copy_to_zone(cc, wlev)
          CALL calc_zone_areas(area, wlev, z(wlev))
       ENDIF
@@ -678,10 +676,10 @@ SUBROUTINE fabm_do_glm(wlev, pIce) BIND(C, name=_WQ_DO_GLM)
       ENDDO
    ENDDO
 
-   IF ( do_zones ) CALL copy_from_zone(cc, wlev)
+   IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc, cc_diag, cc_diag_hz, wlev)
  ! n_vars     = ubound(model%info%state_variables,1)
  ! n_vars_ben = ubound(model%info%state_variables_ben,1)
- ! IF ( do_zones ) CALL copy_from_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
+ ! IF ( benthic_mode .GT. 1 ) CALL copy_from_zone(cc(:,n_vars+1:n_vars+n_vars_ben), wlev)
 END SUBROUTINE fabm_do_glm
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -790,7 +788,7 @@ SUBROUTINE right_hand_side_rhs(first,numc,nlev,cc,rhs)
    !# Distribute bottom flux into pelagic over bottom box (i.e., divide by layer height).
    rhs(1,:) = rhs(1,:) + rhs_flux(1,:)/dz(1)
 
-   IF ( multi_ben ) THEN
+   IF ( benthic_mode.EQ.1 ) THEN
       DO k=2,nlev
          !# fabm wants a horizontal variable so fake it
          bottom_stress => layer_stress(k)
@@ -954,13 +952,13 @@ END SUBROUTINE update_light
 
 
 !###############################################################################
-SUBROUTINE fabm_init_glm_output(ncid,x_dim,y_dim,z_dim,time_dim) BIND(C, name=_WQ_INIT_GLM_OUTPUT)
+SUBROUTINE fabm_init_glm_output(ncid,x_dim,y_dim,z_dim,zone_dim,time_dim) BIND(C, name=_WQ_INIT_GLM_OUTPUT)
 !-------------------------------------------------------------------------------
 !  Initialize the output by defining biogeochemical variables.
 !-------------------------------------------------------------------------------
 !
 !ARGUMENTS
-   CINTEGER,INTENT(in) :: ncid,x_dim,y_dim,z_dim,time_dim
+   CINTEGER,INTENT(in) :: ncid,x_dim,y_dim,z_dim,zone_dim,time_dim
 !
 !LOCALS
    INTEGER n
@@ -1018,7 +1016,7 @@ SUBROUTINE fabm_init_glm_output(ncid,x_dim,y_dim,z_dim,time_dim) BIND(C, name=_W
                             PARAM_FILLVALUE)
    ENDDO
 
-   !# Add a NetCDF variable for each 3D (longitude,latitude,time) biogeochemical diagnostic variable.
+   !# Add a NetCDF variable for each 2D (longitude,latitude,time) biogeochemical diagnostic variable.
    DO n=1,ubound(model%info%diagnostic_variables_hz,1)
       model%info%diagnostic_variables_hz(n)%externalid = NEW_NC_VARIABLE(ncid, &
                 TRIM(model%info%diagnostic_variables_hz(n)%name),              &
@@ -1087,7 +1085,7 @@ SUBROUTINE fabm_write_glm(ncid,wlev,nlev,lvl,point_nlevs) BIND(C, name=_WQ_WRITE
                                  XYT_SHAPE,scalar=cc(1, ubound(model%info%state_variables,1)+n))
 #ifdef PLOTS
       IF ( do_plots .AND. plot_id_sv(n).GE.0 ) THEN
-         IF ( do_zones ) THEN
+         IF ( benthic_mode .GT. 1 ) THEN
             CALL put_glm_val(plot_id_sv(n), cc(1:wlev, ubound(model%info%state_variables,1)+n))
          ELSE
             CALL put_glm_val_s(plot_id_sv(n), cc(1, ubound(model%info%state_variables,1)+n))

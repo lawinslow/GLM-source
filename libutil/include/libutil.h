@@ -7,7 +7,7 @@
  *     School of Earth & Environment                                          *
  *     The University of Western Australia                                    *
  *                                                                            *
- * Copyright 2013, 2014 -  The University of Western Australia                *
+ * Copyright 2013, 2014, 2015 -  The University of Western Australia          *
  *                                                                            *
  *  This file is part of GLM (General Lake Model)                             *
  *                                                                            *
@@ -28,7 +28,7 @@
 #ifndef _LIBUTIL_H_
 #define _LIBUTIL_H_
 
-#define LIB_UTIL_VERSION  "0.9.6"
+#define LIB_UTIL_VERSION  "1.0.2"
 
 #ifndef AED_REAL
    #if SINGLE
@@ -61,6 +61,10 @@
 #  endif
 #else
 #  define DIRSEP "/"
+#endif
+
+#if DEBUG
+#define CRASH(s) ( { int *x = (int*)1; fputs(s, stderr); *x = 1; } )
 #endif
 
 #endif
