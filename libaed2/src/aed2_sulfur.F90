@@ -40,8 +40,8 @@ MODULE aed2_sulfur
       INTEGER  :: id_sed_so4
 
       !# Model parameters
-      AED_REAL :: Fsed_dic,Ksed_dic,theta_sed_dic
-      LOGICAL  :: use_oxy,use_dic
+      AED_REAL :: Fsed_so4,Ksed_so4,theta_sed_so4
+      LOGICAL  :: use_oxy,use_so4
 
      CONTAINS
          PROCEDURE :: define            => aed2_define_sulfur
@@ -75,11 +75,10 @@ SUBROUTINE aed2_define_sulfur(data, namlst)
 !LOCALS
    INTEGER  :: status
    INTEGER  :: num_sulfurs
-   AED_REAL          :: decay(100)
-   AED_REAL          :: settling(100)
-   AED_REAL          :: Fsed(100)
+   AED_REAL :: decay(100)
+   AED_REAL :: settling(100)
+   AED_REAL :: Fsed(100)
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    NAMELIST /aed2_sulfur/ num_sulfurs,decay,settling,Fsed
 !
 !-------------------------------------------------------------------------------
@@ -113,19 +112,18 @@ SUBROUTINE aed2_calculate_sulfur(data,column,layer_idx)
    INTEGER,INTENT(in) :: layer_idx
 !
 !LOCALS
-!  AED_REAL           :: dic,diff_dic
-!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
+!  AED_REAL           :: so4,diff_so4
 
 !-------------------------------------------------------------------------------
 !BEGIN
 
    ! Retrieve current (local) state variable values.
-!  dic = _STATE_VAR_(data%id_dic)! sulfur
+!  so4 = _STATE_VAR_(data%id_so4)! sulfur
 
    ! Set temporal derivatives
-!  diff_dic = 0.
+!  diff_so4 = 0.
 
-!  _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (diff_dic)
+!  _FLUX_VAR_(data%id_so4) = _FLUX_VAR_(data%id_so4) + (diff_so4)
 
 
 END SUBROUTINE aed2_calculate_sulfur
@@ -152,13 +150,10 @@ SUBROUTINE aed2_calculate_benthic_sulfur(data,column,layer_idx)
    AED_REAL :: temp
 
    ! State
-!  AED_REAL :: dic,oxy
+!  AED_REAL :: so4,oxy
 
    ! Temporary variables
-!  AED_REAL :: dic_flux
-
-   ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
+!  AED_REAL :: so4_flux
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -167,15 +162,15 @@ SUBROUTINE aed2_calculate_benthic_sulfur(data,column,layer_idx)
 !  temp = _STATE_VAR_(data%id_temp) ! local temperature
 
     ! Retrieve current (local) state variable values.
-!  dic = _STATE_VAR_(data%id_dic)! sulfur
+!  so4 = _STATE_VAR_(data%id_so4)! sulfur
 
 !  IF (data%use_oxy) THEN
 !     ! Sediment flux dependent on oxygen and temperature
 !     oxy = _STATE_VAR_(data%id_oxy)
-!     dic_flux = data%Fsed_dic * data%Ksed_dic/(data%Ksed_dic+oxy) * (data%theta_sed_dic**(temp-20.0))
+!     so4_flux = data%Fsed_so4 * data%Ksed_so4/(data%Ksed_so4+oxy) * (data%theta_sed_so4**(temp-20.0))
 !  ELSE
 !     ! Sediment flux dependent on temperature only.
-!     dic_flux = data%Fsed_dic * (data%theta_sed_dic**(temp-20.0))
+!     so4_flux = data%Fsed_so4 * (data%theta_sed_so4**(temp-20.0))
 !  ENDIF
 
    ! TODO:
@@ -184,16 +179,16 @@ SUBROUTINE aed2_calculate_benthic_sulfur(data,column,layer_idx)
 
    ! Set bottom fluxes for the pelagic (change per surface area per second)
    ! Transfer sediment flux value to AED2.
-   !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_pr_day)
-   !_SET_SED_FLUX_(data%id_dic,dic_flux)
-!  _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (dic_flux)
+   !_SET_BOTTOM_FLUX_(data%id_so4,so4_flux/secs_per_day)
+   !_SET_SED_FLUX_(data%id_so4,so4_flux)
+!  _FLUX_VAR_(data%id_so4) = _FLUX_VAR_(data%id_so4) + (so4_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_dic) = _FLUX_VAR_B_(data%id_ben_dic) + (-dic_flux/secs_pr_day)
+   !_FLUX_VAR_B_(data%id_ben_so4) = _FLUX_VAR_B_(data%id_ben_so4) + (-so4_flux/secs_per_day)
 
    ! Also store sediment flux as diagnostic variable.
-!  _DIAG_VAR_S_(data%id_sed_dic) = dic_flux
+!  _DIAG_VAR_S_(data%id_sed_so4) = so4_flux
 
 
 END SUBROUTINE aed2_calculate_benthic_sulfur

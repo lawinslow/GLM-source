@@ -13,3 +13,5 @@ export FORTRAN_COMPILER=IFORT
 # export FORTRAN_COMPILER=GFORTRAN
 # export FORTRAN_COMPILER=OPEN64
 
+# The default is MacPorts : uncomment the next line if you use "homebrew"
+#export HOMEBREW=true

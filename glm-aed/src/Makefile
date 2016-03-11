@@ -40,6 +40,7 @@ ifeq ($(WITH_PLOTS),)
   ifeq ($(WITH_XPLOTS),)
     WITH_XPLOTS=true
   endif
+  PLOTDIR=../../libplot
 endif
 
 UTILDIR=../../libutil
@@ -55,19 +56,25 @@ ifeq ($(WITH_PLOTS),true)
   ifeq ($(WITH_XPLOTS),true)
     DEFINES+=-DXPLOTS
   endif
-  GLM_DEPS+=../../libplot/libplot.a
+  GLM_DEPS+=$(PLOTDIR)/libplot.a
+  CINCLUDES+=-I$(PLOTDIR)/include
 endif
 ifeq ($(SINGLE),true)
   DEFINES += -DSINGLE=1
 endif
 
-DEFINES += -DBUBBLER=1
-
 ifeq ($(OSTYPE),Darwin)
-  FINCLUDES+=-I/opt/local/include
-  CINCLUDES+=-I/opt/local/include
-  LIBS+=-L/opt/local/lib
-  EXTRALINKFLAGS=-Wl,-no_compact_unwind
+  ifeq ($(HOMEBREW),true)
+     FINCLUDES+=-I/usr/local/include
+     CINCLUDES+=-I/usr/local/include
+     LIBS+=-L/usr/local/lib
+  else
+     FINCLUDES+=-I/opt/local/include
+     CINCLUDES+=-I/opt/local/include
+     LIBS+=-L/opt/local/lib
+  endif
+  #EXTRALINKFLAGS=-Wl,-no_compact_unwind
+  EXTRALINKFLAGS=-Wl,-no_compact_unwind,-headerpad_max_install_names
 else
   EXTRALINKFLAGS=-Wl,--export-dynamic
 endif

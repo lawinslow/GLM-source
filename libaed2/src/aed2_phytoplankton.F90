@@ -112,7 +112,6 @@ SUBROUTINE aed2_phytoplankton_load_params(data, dbase, count, list, w_model)
    INTEGER  :: i,tfil
    AED_REAL :: minNut
 
-   AED_REAL, parameter :: secs_pr_day = 86400.
    TYPE(phyto_nml_data) :: pd(MAX_PHYTO_TYPES)
    NAMELIST /phyto_data/ pd
 !-------------------------------------------------------------------------------
@@ -144,10 +143,10 @@ SUBROUTINE aed2_phytoplankton_load_params(data, dbase, count, list, w_model)
        ! Assign parameters from database to simulated groups
        data%phytos(i)%p_name       = pd(list(i))%p_name
        data%phytos(i)%p0           = pd(list(i))%p0
-       data%phytos(i)%w_p          = pd(list(i))%w_p/secs_pr_day
+       data%phytos(i)%w_p          = pd(list(i))%w_p/secs_per_day
        data%phytos(i)%w_model      = w_model(i)
        data%phytos(i)%Xcc          = pd(list(i))%Xcc
-       data%phytos(i)%R_growth     = pd(list(i))%R_growth/secs_pr_day
+       data%phytos(i)%R_growth     = pd(list(i))%R_growth/secs_per_day
        data%phytos(i)%fT_Method    = pd(list(i))%fT_Method
        data%phytos(i)%theta_growth = pd(list(i))%theta_growth
        data%phytos(i)%T_std        = pd(list(i))%T_std
@@ -158,7 +157,7 @@ SUBROUTINE aed2_phytoplankton_load_params(data, dbase, count, list, w_model)
        data%phytos(i)%I_S          = pd(list(i))%I_S
        data%phytos(i)%KePHY        = pd(list(i))%KePHY
        data%phytos(i)%f_pr         = pd(list(i))%f_pr
-       data%phytos(i)%R_resp       = pd(list(i))%R_resp/secs_pr_day
+       data%phytos(i)%R_resp       = pd(list(i))%R_resp/secs_per_day
        data%phytos(i)%theta_resp   = pd(list(i))%theta_resp
        data%phytos(i)%k_fres       = pd(list(i))%k_fres
        data%phytos(i)%k_fdom       = pd(list(i))%k_fdom
@@ -175,9 +174,9 @@ SUBROUTINE aed2_phytoplankton_load_params(data, dbase, count, list, w_model)
        data%phytos(i)%X_ncon       = pd(list(i))%X_ncon
        data%phytos(i)%X_nmin       = pd(list(i))%X_nmin
        data%phytos(i)%X_nmax       = pd(list(i))%X_nmax
-       data%phytos(i)%R_nuptake    = pd(list(i))%R_nuptake/secs_pr_day
+       data%phytos(i)%R_nuptake    = pd(list(i))%R_nuptake/secs_per_day
        data%phytos(i)%k_nfix       = pd(list(i))%k_nfix
-       data%phytos(i)%R_nfix       = pd(list(i))%R_nfix/secs_pr_day
+       data%phytos(i)%R_nfix       = pd(list(i))%R_nfix/secs_per_day
        data%phytos(i)%simDIPUptake = pd(list(i))%simDIPUptake
        data%phytos(i)%simIPDynamics= pd(list(i))%simIPDynamics
        data%phytos(i)%P_0          = pd(list(i))%P_0
@@ -185,7 +184,7 @@ SUBROUTINE aed2_phytoplankton_load_params(data, dbase, count, list, w_model)
        data%phytos(i)%X_pcon       = pd(list(i))%X_pcon
        data%phytos(i)%X_pmin       = pd(list(i))%X_pmin
        data%phytos(i)%X_pmax       = pd(list(i))%X_pmax
-       data%phytos(i)%R_puptake    = pd(list(i))%R_puptake/secs_pr_day
+       data%phytos(i)%R_puptake    = pd(list(i))%R_puptake/secs_per_day
        data%phytos(i)%simSiUptake  = pd(list(i))%simSiUptake
        data%phytos(i)%Si_0         = pd(list(i))%Si_0
        data%phytos(i)%K_Si         = pd(list(i))%K_Si
@@ -244,15 +243,15 @@ SUBROUTINE aed2_phytoplankton_load_params(data, dbase, count, list, w_model)
 
        ENDIF
 
-       data%id_NtoP(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_NtoP','mmol/m**3', 'INi/IPi')
+       data%id_NtoP(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_NtoP','-', 'internal n:p ratio')
 
        IF (extra_debug) THEN
-          data%id_fT(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fT', 'mmol/m**3', 'fT')
-          data%id_fI(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fI', 'mmol/m**3', 'fI')
-          data%id_fNit(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fNit', 'mmol/m**3', 'fNit')
-          data%id_fPho(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fPho', 'mmol/m**3', 'fPho')
-          data%id_fSil(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fSil', 'mmol/m**3', 'fSil')
-          data%id_fSal(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fSal', 'mmol/m**3', 'fSal')
+          data%id_fI(i)   = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fI', '-', 'fI (0-1)')
+          data%id_fNit(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fNit', '-', 'fNit (0-1)')
+          data%id_fPho(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fPho', '-', 'fPho (0-1)')
+          data%id_fSil(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fSil', '-', 'fSil (0-1)')
+          data%id_fT(i)   = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fT', '-', 'fT (>0)')
+          data%id_fSal(i) = aed2_define_diag_variable( TRIM(data%phytos(i)%p_name)//'_fSal', '-', 'fSal (>1)')
        ENDIF
     ENDDO
 END SUBROUTINE aed2_phytoplankton_load_params
@@ -297,7 +296,6 @@ SUBROUTINE aed2_define_phytoplankton(data, namlst)
    CHARACTER(len=128) :: dbase='aed2_phyto_pars.nml'
 
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    AED_REAL           :: zerolimitfudgefactor = 0.9 * 3600
    NAMELIST /aed2_phytoplankton/ num_phytos, the_phytos, w_model,              &
                     p_excretion_target_variable,p_mortality_target_variable,   &
@@ -405,20 +403,20 @@ SUBROUTINE aed2_define_phytoplankton(data, namlst)
    ENDIF
 
    ! Register diagnostic variables
-   data%id_GPP = aed2_define_diag_variable('GPP','mmol/m**3',  'gross primary production')
-   data%id_NCP = aed2_define_diag_variable('NCP','mmol/m**3',  'net community production')
-   data%id_PPR = aed2_define_diag_variable('PPR','mmol/m**3/d','gross primary production rate')
-   data%id_NPR = aed2_define_diag_variable('NPR','mmol/m**3/d','net community production rate')
+   data%id_GPP = aed2_define_diag_variable('GPP','mmol/m**3/d',  'gross primary production')
+   data%id_NCP = aed2_define_diag_variable('NCP','mmol/m**3/d',  'net community production')
+   data%id_PPR = aed2_define_diag_variable('PPR','-','phytoplankton p/r ratio (gross)')
+   data%id_NPR = aed2_define_diag_variable('NPR','-','phytoplankton p/r ratio (net)')
 
    data%id_NUP = aed2_define_diag_variable('NUP','mmol/m**3/d','nitrogen uptake')
    data%id_PUP = aed2_define_diag_variable('PUP','mmol/m**3/d','phosphorous uptake')
    data%id_CUP = aed2_define_diag_variable('CUP','mmol/m**3/d','carbon uptake')
 
-   data%id_dPAR = aed2_define_diag_variable('PAR','W/m**2',  'photosynthetically active radiation')
-   data%id_TCHLA = aed2_define_diag_variable('TCHLA','ug/L', 'Total Chlorophyll-a')
-   data%id_TPHY = aed2_define_diag_variable('TPHYS','ug/L',  'Total Phytoplankton')
-   data%id_TIN = aed2_define_diag_variable('IN','ug/L',      'Total Chlorophyll-a')
-   data%id_TIP = aed2_define_diag_variable('IP','ug/L',      'Total Chlorophyll-a')
+   data%id_dPAR = aed2_define_diag_variable('PAR','W/m**2', 'photosynthetically active radiation')
+   data%id_TCHLA = aed2_define_diag_variable('TCHLA','ug/L', 'total chlorophyll-a')
+   data%id_TPHY = aed2_define_diag_variable('TPHYS','mmol/m**3', 'total phytoplankton')
+   data%id_TIN = aed2_define_diag_variable('IN','mmol/m**3', 'total phy nitrogen')
+   data%id_TIP = aed2_define_diag_variable('IP','mmol/m**3', 'total phy phosphorus')
 
    ! Register environmental dependencies
    data%id_tem = aed2_locate_global('temperature')
@@ -455,14 +453,13 @@ SUBROUTINE aed2_calculate_phytoplankton(data,column,layer_idx)
    AED_REAL :: puptake(data%num_phytos,1:2), pexcretion(data%num_phytos), pmortality(data%num_phytos)
    AED_REAL :: siuptake(data%num_phytos), siexcretion(data%num_phytos), simortality(data%num_phytos)
    AED_REAL :: fT, fNit, fPho, fSil, fI, fXl, fSal, PNf
-   AED_REAL :: upTot
+   AED_REAL :: upTot,net_cuptake
 
    INTEGER  :: phy_i,c
    AED_REAL :: flux, available
 
 ! MH to fix
 !  AED_REAL :: dt = 3600. ! just for now, hard code it
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -632,7 +629,7 @@ SUBROUTINE aed2_calculate_phytoplankton(data,column,layer_idx)
          exudation(phy_i) = zero_
       ENDIF
 
-      ! write(*,"(4X,'limitations (fT,fI,fN,fP,fSi,Io, par, mu): ',9F9.2)")fT,fI,fNit,fPho,fSil,Io,par,primprod*secs_pr_day
+      ! write(*,"(4X,'limitations (fT,fI,fN,fP,fSi,Io, par, mu): ',9F9.2)")fT,fI,fNit,fPho,fSil,Io,par,primprod*secs_per_day
 
 
       ! Carbon uptake and excretion
@@ -733,6 +730,7 @@ SUBROUTINE aed2_calculate_phytoplankton(data,column,layer_idx)
       ENDIF
    ENDIF
 
+   net_cuptake = ZERO_
    DO phy_i=1,data%num_phytos
 
       ! Retrieve this phytoplankton group
@@ -776,6 +774,7 @@ SUBROUTINE aed2_calculate_phytoplankton(data,column,layer_idx)
       ENDIF
       IF (data%do_Cuptake) THEN
          _FLUX_VAR_(data%id_Cupttarget) = _FLUX_VAR_(data%id_Cupttarget) + (  cuptake(phy_i) - respiration(phy_i)*data%phytos(phy_i)%k_fres*phy )
+         net_cuptake = net_cuptake + (cuptake(phy_i) - respiration(phy_i)*data%phytos(phy_i)%k_fres*phy)
       ENDIF
       IF (data%do_DOuptake) THEN
          _FLUX_VAR_(data%id_DOupttarget) = _FLUX_VAR_(data%id_DOupttarget) + ( -cuptake(phy_i) + respiration(phy_i)*data%phytos(phy_i)%k_fres*phy )
@@ -833,20 +832,20 @@ SUBROUTINE aed2_calculate_phytoplankton(data,column,layer_idx)
 
    ENDDO
 
-   _DIAG_VAR_(data%id_GPP) =  sum(primprod)
-   _DIAG_VAR_(data%id_NCP) =  sum(primprod - respiration)
-   _DIAG_VAR_(data%id_PPR) =  sum(primprod) * secs_pr_day
-   _DIAG_VAR_(data%id_NPR) =  sum(primprod - respiration) * secs_pr_day
+   _DIAG_VAR_(data%id_GPP) =  sum(cuptake)*secs_per_day
+   _DIAG_VAR_(data%id_NCP) =  net_cuptake*secs_per_day
+   _DIAG_VAR_(data%id_PPR) =  sum(cuptake) / ( sum(cuptake) - net_cuptake)
+   _DIAG_VAR_(data%id_NPR) =  net_cuptake / ( sum(cuptake) - net_cuptake)
 
-   _DIAG_VAR_(data%id_NUP) =  sum(nuptake)
-   _DIAG_VAR_(data%id_PUP) =  sum(puptake)
-   _DIAG_VAR_(data%id_CUP) =  sum(cuptake)
+   _DIAG_VAR_(data%id_NUP) =  sum(nuptake)*secs_per_day
+   _DIAG_VAR_(data%id_PUP) =  sum(puptake)*secs_per_day
+   _DIAG_VAR_(data%id_CUP) =  sum(cuptake)*secs_per_day
 
    _DIAG_VAR_(data%id_dPAR) =  par
-   _DIAG_VAR_(data%id_TCHLA) =  tchla
+   _DIAG_VAR_(data%id_TCHLA)=  tchla
    _DIAG_VAR_(data%id_TPHY) =  tphy
-   _DIAG_VAR_(data%id_TIN) =  tin
-   _DIAG_VAR_(data%id_TIP) =  tip
+   _DIAG_VAR_(data%id_TIN)  =  tin
+   _DIAG_VAR_(data%id_TIP)  =  tip
 
 
 END SUBROUTINE aed2_calculate_phytoplankton
@@ -869,9 +868,6 @@ SUBROUTINE aed2_calculate_benthic_phytoplankton(data,column,layer_idx)
    INTEGER  :: phy_i
    AED_REAL :: phy_flux
 
-   ! Parameters
-!  AED_REAL,PARAMETER :: secs_pr_day = 86400.
-!
 !-------------------------------------------------------------------------------
 !BEGIN
 

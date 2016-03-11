@@ -39,6 +39,9 @@ void read_daily_inflow(int julian, int NumInf, AED_REAL *flow, AED_REAL *temp,
 void open_outflow_file(int i, const char *fname, const char *timefmt);
 void read_daily_outflow(int julian, int NumOut, AED_REAL *drw);
 
+void open_withdrtemp_file(const char *fname, const char *timefmt);
+void read_daily_withdraw_temp(int julian, AED_REAL *withdrTemp);
+
 void open_met_file(const char *fname, int snow_sw, int rain_sw,
                                                            const char *timefmt);
 void read_daily_met(int julian, MetDataType *met);
@@ -51,6 +54,7 @@ void read_bubble_data(int julian, AED_REAL *aFlow, int *nPorts,
 void close_met_files(void);
 void close_inflow_files(void);
 void close_outflow_files(void);
+void close_withdrtemp_files(void);
 
 /* for fortran */
 void open_inflow_file_(int *inf_id, const char *fname, int *nlen,
@@ -60,6 +64,9 @@ void read_daily_inflow_(int *julian, int *NumInf, AED_REAL *flow, AED_REAL *temp
 
 void open_outflow_file_(int *i, const char *fname, int *nlen);
 void read_daily_outflow_(int *julian, int *NumOut, AED_REAL *drw);
+
+void open_withdrtemp_file_(const char *fname, int *nlen);
+void read_daily_withdraw_temp_(int *julian, AED_REAL withdrTemp);
 
 void open_met_file_(const char *fname, int *nlen, int *snow, int*rain);
 void read_daily_met_(int *julian, MetDataType *met);

@@ -13,7 +13,7 @@
 #ifndef _AED2_H_
 #define _AED2_H_
 
-#define AED2_VERSION  "1.1.0alpha8"
+#define AED2_VERSION  "1.1.0beta8"
 
 #define MAX_MODELS 40
 
@@ -32,6 +32,10 @@
 
 !# for aed2_macrophytes
 #define MAX_ZONES       256
+
+!# for aed2_ass
+#define MAX_ASS_PARAMS  20
+
 
 !#define MISVAL -9999.
 #define MISVAL misval_

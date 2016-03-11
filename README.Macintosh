@@ -1,18 +1,41 @@
 
 GLM macintosh version now has a preliminary GUI.
 
-First, the problems :
-
-   1) The menus don't work.
-   2) Using the --xdisp (ie using the GUI) runs very slowly
-
-Now, building requires :
+Building requires :
 
    1) XCode - available through the App Store
+       NB you will also need the commandline tools for XCode
+
+              xcode-select --install
+
    2) Since compiling with gfortran doesn't work, you will need Intel Fortran
    3) You will need netcdf - this is available from MacPorts - https://www.macports.org
+
              port install netcdf
+
+      Or you can use Homebrew - http://brew.sh/
+
+             brew install homebrew/science/netcdf
+
    4) To build the GUI you will need libgd - this is available through MacPorts
+
              port install gd2
 
+      or through Homebrew
 
+             brew install gd
+
+   5) To build a version including FABM you will need cmake :
+
+             port install cmake
+
+       or
+
+             brew install cmake
+
+NB: The macpkg.sh script included defaults to use for MacPorts at the moment. To change
+    to homebrew edit the GLM_CONFIG file
+
+NB: For some reason the colour maps on mac are the reverse of other systems - this
+    was fudged in the build (by using style=2 in plotter instead of style=1 in
+    the make_colour_map call)

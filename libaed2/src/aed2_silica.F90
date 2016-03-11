@@ -75,7 +75,6 @@ SUBROUTINE aed2_define_silica(data, namlst)
    CHARACTER(len=64) :: silica_reactant_variable=''
    CHARACTER(len=64) :: Fsed_rsi_variable=''
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    NAMELIST /aed2_silica/ rsi_initial,rsi_min,rsi_max,Fsed_rsi,Ksed_rsi,theta_sed_rsi, &
                          silica_reactant_variable,Fsed_rsi_variable
 !
@@ -88,7 +87,7 @@ SUBROUTINE aed2_define_silica(data, namlst)
    ! Store parameter values in our own derived type
    ! NB: all rates must be provided in values per day,
    ! and are converted here to values per second.
-   data%Fsed_rsi  = Fsed_rsi/secs_pr_day
+   data%Fsed_rsi  = Fsed_rsi/secs_per_day
    data%Ksed_rsi  = Ksed_rsi
    data%theta_sed_rsi = theta_sed_rsi
    data%use_oxy = silica_reactant_variable .NE. '' !This means oxygen module switched on
@@ -107,7 +106,7 @@ SUBROUTINE aed2_define_silica(data, namlst)
 
    ! Register diagnostic variables
    data%id_sed_rsi = aed2_define_sheet_diag_variable('sed_rsi','mmol/m**2/d', &
-                     'reactive silica')
+                     'Si exchange across sed/water interface')
 
    ! Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
@@ -128,18 +127,12 @@ SUBROUTINE aed2_calculate_silica(data,column,layer_idx)
 !
 !ARGUMENT
    !AED_REAL                   :: rsi,oxy,temp,tss !State variables
-   AED_REAL, parameter        :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
 
 
-
 END SUBROUTINE aed2_calculate_silica
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-!###############################################################################
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -163,9 +156,6 @@ SUBROUTINE aed2_calculate_benthic_silica(data,column,layer_idx)
 
    ! Temporary variables
    AED_REAL :: rsi_flux, Fsed_rsi
-
-   ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -191,20 +181,15 @@ SUBROUTINE aed2_calculate_benthic_silica(data,column,layer_idx)
        rsi_flux = Fsed_rsi * (data%theta_sed_rsi**(temp-20.0))
    ENDIF
 
-   ! TODO:
-   ! (1) Get benthic sink and source terms (sccb?) for current environment
-   ! (2) Get pelagic bttom fluxes (per surface area - division by layer height will be handled at a higher level)
-
    ! Set bottom fluxes for the pelagic (change per surface area per second)
-   ! Transfer sediment flux value to AED2.
    _FLUX_VAR_(data%id_rsi) = _FLUX_VAR_(data%id_rsi) + (rsi_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
-   ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_rsi) = _FLUX_VAR_B_(data%id_ben_rsi) + (-rsi_flux/secs_pr_day)
+   ! Note that this should include the fluxes to and from the pelagic.
+   !_FLUX_VAR_B_(data%id_ben_rsi) = _FLUX_VAR_B_(data%id_ben_rsi) + (-rsi_flux)
 
    ! Also store sediment flux as diagnostic variable.
-   _DIAG_VAR_S_(data%id_sed_rsi) = rsi_flux
+   _DIAG_VAR_S_(data%id_sed_rsi) = rsi_flux*secs_per_day
 
 
 END SUBROUTINE aed2_calculate_benthic_silica

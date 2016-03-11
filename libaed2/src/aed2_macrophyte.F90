@@ -213,8 +213,8 @@ SUBROUTINE aed2_define_macrophyte(data, namlst)
 
    ! Register diagnostic variables
    data%id_diag_PAR = aed2_define_sheet_diag_variable('par','W/m**2','benthic light intensity')
-   data%id_GPP = aed2_define_sheet_diag_variable('gpp','mmolC/m**3/day',  'benthic plant productivity')
-   data%id_P2R = aed2_define_sheet_diag_variable('p_r','-',  'macrophyte P/R ratio')
+   data%id_GPP = aed2_define_sheet_diag_variable('gpp','/d',  'benthic plant productivity')
+   data%id_P2R = aed2_define_sheet_diag_variable('p_r','-',  'macrophyte p/r ratio')
 
    ! Register environmental dependencies
    data%id_tem = aed2_locate_global('temperature')
@@ -226,32 +226,6 @@ SUBROUTINE aed2_define_macrophyte(data, namlst)
    data%id_sed_zone = aed2_locate_global_sheet('sed_zone')
 
 END SUBROUTINE aed2_define_macrophyte
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-!###############################################################################
-LOGICAL FUNCTION in_zone_set(matz, active_zones)
-!-------------------------------------------------------------------------------
-!ARGUMENTS
-   AED_REAL,INTENT(in) :: matz
-   AED_REAL,INTENT(in) :: active_zones(:)
-!
-!LOCALS
-   INTEGER :: i, l
-   LOGICAL :: res
-!BEGIN
-!-------------------------------------------------------------------------------
-   res = .FALSE.
-   l = size(active_zones)
-   do i=1,l
-      if ( active_zones(i) == matz ) then
-         res = .TRUE.
-         exit
-      endif
-   enddo
-
-   in_zone_set = res
-END FUNCTION in_zone_set
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -279,7 +253,7 @@ SUBROUTINE aed2_calculate_benthic_macrophyte(data,column,layer_idx)
 !-------------------------------------------------------------------------------
 !BEGIN
    matz = _STATE_VAR_S_(data%id_sed_zone)
-   if ( .NOT. in_zone_set(matz, data%active_zones) ) return
+   IF ( .NOT. in_zone_set(matz, data%active_zones) ) RETURN
 
    ! Retrieve current environmental conditions.
    temp = _STATE_VAR_(data%id_tem)      ! local temperature
@@ -312,7 +286,7 @@ SUBROUTINE aed2_calculate_benthic_macrophyte(data,column,layer_idx)
    ENDDO
 
    ! Export diagnostic variables
-   _DIAG_VAR_S_(data%id_gpp  ) = SUM(primprod)
+   _DIAG_VAR_S_(data%id_gpp  ) = SUM(primprod)*secs_per_day
    _DIAG_VAR_S_(data%id_diag_par )  = par
    _DIAG_VAR_S_(data%id_p2r )  = SUM(primprod(:)) / SUM(respiration(:))
 END SUBROUTINE aed2_calculate_benthic_macrophyte

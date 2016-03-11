@@ -510,7 +510,11 @@ void find_day(int csv, int time_idx, int jday)
 
     if ( !check_it(csv, time_idx) ) {
         fprintf(stderr, "Fatal error in find_day: file %d index %d\n", csv, time_idx);
+#if DEBUG
+        CRASH("find_day");
+#else
         exit(1);
+#endif
     }
 
     while( (tr = get_csv_val_r(csv, time_idx)) < jday) {

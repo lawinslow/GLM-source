@@ -8,7 +8,7 @@
 !# (C) The University of Western Australia                                     #
 !#                                                                             #
 !# In collaboration with :                                                     #
-!#     Cornell University, Biology Department                                  #
+!#     Cornell University, Department of Natural Resources                     #
 !#                                                                             #
 !#                                                                             #
 !# Copyright by the AED-team @ UWA under the GNU Public License - www.gnu.org  #
@@ -16,6 +16,7 @@
 !#   -----------------------------------------------------------------------   #
 !#                                                                             #
 !# Created January 2015                                                        #
+!# Updated December 2015 by Matt Hipsey & Lars Rudstam                         #
 !#                                                                             #
 !###############################################################################
 
@@ -30,7 +31,7 @@ MODULE aed2_bivalve
 !  aed2_bivalve --- multi-group bivalve biogeochemical model
 !-------------------------------------------------------------------------------
    USE aed2_core
-   USE aed2_util,ONLY : find_free_lun,aed2_bio_temp_function,fTemp_function,qsort
+   USE aed2_util
 !  USE aed2_zoop_utils
 
    IMPLICIT NONE
@@ -96,19 +97,21 @@ MODULE aed2_bivalve
       INTEGER  :: id_Nexctarget,id_Nmorttarget
       INTEGER  :: id_Pexctarget,id_Pmorttarget
       INTEGER  :: id_Cexctarget,id_Cmorttarget
-      INTEGER  :: id_DOupttarget
-      INTEGER  :: id_SSupttarget
-      INTEGER  :: id_tem, id_sal, id_extc
-      INTEGER  :: id_grz,id_resp,id_mort
-      INTEGER  :: id_excr, id_egst, id_tbiv, id_pbiv, id_3d_grz
-
+      INTEGER  :: id_DOupttarget,id_SSupttarget
+      INTEGER  :: id_tem,id_sal,id_sed_zone
+      INTEGER  :: id_grz,id_resp,id_mort,id_excr,id_egst
+      INTEGER  :: id_tbiv,id_nmp,id_3d_grz,id_fT,id_fD,id_fG
+      INTEGER  :: id_bivtr,id_pf,id_FR
 
       !# Model parameters
       INTEGER  :: num_biv
       TYPE(type_bivalve_data),DIMENSION(:),ALLOCATABLE :: bivalves
       LOGICAL  :: simDNexcr, simDPexcr, simDCexcr
       LOGICAL  :: simPNexcr, simPPexcr, simPCexcr
-      LOGICAL  :: simSSupt, preyFeedback
+      LOGICAL  :: simSSlim, simBivFeedback, simFixedEnv
+      INTEGER  :: n_zones
+      AED_REAL,ALLOCATABLE :: active_zones(:)
+      AED_REAL :: fixed_temp, fixed_sal, fixed_oxy, fixed_food
 
      CONTAINS
          PROCEDURE :: define            => aed2_define_bivalve
@@ -120,6 +123,7 @@ MODULE aed2_bivalve
    END TYPE
 
    LOGICAL :: debug = .TRUE.
+   LOGICAL :: extra_diag = .false.
 
 CONTAINS
 !===============================================================================
@@ -164,7 +168,7 @@ SUBROUTINE aed2_bivalve_load_params(data, dbase, count, list)
        ! Filtration & Ingestion
        data%bivalves(i)%Rgrz          = bivalve_param(list(i))%Rgrz/secs_per_day
        data%bivalves(i)%Ing           = bivalve_param(list(i))%Ing
-       data%bivalves(i)%WaI           = bivalve_param(list(i))%WaI
+       data%bivalves(i)%WaI           = bivalve_param(list(i))%WaI/secs_per_day
        data%bivalves(i)%WbI           = bivalve_param(list(i))%WbI
        data%bivalves(i)%fassim        = bivalve_param(list(i))%fassim
        data%bivalves(i)%Cmin_grz      = bivalve_param(list(i))%Cmin_grz
@@ -178,8 +182,8 @@ SUBROUTINE aed2_bivalve_load_params(data, dbase, count, list)
        data%bivalves(i)%SSmax         = bivalve_param(list(i))%SSmax
        data%bivalves(i)%maxSS         = bivalve_param(list(i))%maxSS
        ! Excretion & Egestion
-       data%bivalves(i)%Rexcr         = bivalve_param(list(i))%Rexcr/secs_per_day
-       data%bivalves(i)%Regst         = bivalve_param(list(i))%Regst/secs_per_day
+       data%bivalves(i)%Rexcr         = bivalve_param(list(i))%Rexcr
+       data%bivalves(i)%Regst         = bivalve_param(list(i))%Regst
        data%bivalves(i)%gegst         = bivalve_param(list(i))%gegst
        ! Respiration
        data%bivalves(i)%Rresp         = bivalve_param(list(i))%Rresp/secs_per_day
@@ -249,7 +253,12 @@ SUBROUTINE aed2_define_bivalve(data, namlst)
    INTEGER  :: status
 
    INTEGER  :: num_biv
+   LOGICAL  :: biv_tracer   = .false.          !include filtration rate tracer
+   LOGICAL  :: biv_feedback = .false.          !allow module to change prey/nutrient concs
+   LOGICAL  :: biv_fixedenv = .false.          !special case to overwrite env and food factors with constants
    INTEGER  :: the_biv(MAX_ZOOP_TYPES)
+   INTEGER  :: n_zones = 0, active_zones(MAX_ZONES), i
+   AED_REAL :: fixed_temp, fixed_sal, fixed_oxy, fixed_food
 
    CHARACTER(len=64)  :: dn_target_variable='' !dissolved nitrogen target variable
    CHARACTER(len=64)  :: pn_target_variable='' !particulate nitrogen target variable
@@ -263,24 +272,51 @@ SUBROUTINE aed2_define_bivalve(data, namlst)
 
    INTEGER  :: biv_i, prey_i, phy_i
 
-   NAMELIST /aed2_bivalve/ num_biv, the_biv, &
+   NAMELIST /aed2_bivalve/ num_biv, the_biv, biv_tracer, biv_feedback,          &
                     dn_target_variable, pn_target_variable, dp_target_variable, &
                     pp_target_variable, dc_target_variable, pc_target_variable, &
-                    do_uptake_variable, ss_uptake_variable, dbase
+                    do_uptake_variable, ss_uptake_variable, dbase,              &
+                    n_zones, active_zones, extra_diag,                          &
+                    biv_fixedenv, fixed_temp, fixed_sal, fixed_oxy, fixed_food
 !-----------------------------------------------------------------------
 !BEGIN
-!print *,'**** Reading /aed2_bivalve/ namelist'
    ! Read the namelist
    read(namlst,nml=aed2_bivalve,iostat=status)
    IF (status /= 0) STOP 'Error reading namelist aed2_bivalve'
 
-    data%preyFeedback = .true.
-    data%num_biv = 0
-   ! Store parameter values in our own derived type
+   ! Assign module level variables
+   data%simFixedEnv = biv_fixedenv
+   IF (biv_fixedenv) THEN
+     PRINT *,'Note - bivalves driven by fixed T,DO,A values'
+     PRINT *,'     - biv feedback disabled'
+     data%fixed_temp = fixed_temp
+     data%fixed_sal = fixed_sal
+     data%fixed_oxy = fixed_oxy
+     data%fixed_food = fixed_food
+     biv_feedback = .false.
+   END IF
+
+   data%simBivFeedback = biv_feedback
+   PRINT *,'Note - bivalve feedbacks on water column properties: ',biv_feedback
+   PRINT *,'Note - bivalve filtration tracer variable: ',biv_tracer
+
+   ! Configure which sediment zones to run within
+   data%n_zones = n_zones
+   IF (n_zones > 0) THEN
+      ALLOCATE(data%active_zones(n_zones))
+      DO i=1,n_zones
+         data%active_zones(i) = active_zones(i)
+      ENDDO
+      PRINT *,'Note - bivalves growing in these zones: ',data%active_zones
+   ELSE
+      PRINT *,'Note - bivalves growing in all zones'
+   ENDIF
+
+   ! Register variables and store parameter values in our own derived type
    ! NB: all rates must be provided in values per day,
    ! and are converted in aed2_bivalve_load_params to values per second.
+   data%num_biv = 0
    CALL aed2_bivalve_load_params(data, dbase, num_biv, the_biv)
-
 
    ! Not required if we use the Spillman quadratic fT
    !CALL aed2_bio_temp_function(data%num_biv,                 &
@@ -292,7 +328,6 @@ SUBROUTINE aed2_define_bivalve(data, namlst)
    !                           data%bivalves%bTn,            &
    !                           data%bivalves%kTn,            &
    !                           data%bivalves%name)
-
 
    !Register link to prey state variables
    DO biv_i = 1,num_biv
@@ -308,12 +343,12 @@ SUBROUTINE aed2_define_bivalve(data, namlst)
                                        TRIM(data%bivalves(biv_i)%prey(prey_i)%bivalve_prey)//'_IN')
               data%bivalves(biv_i)%id_phyIP(phy_i) = aed2_locate_variable( &
                                        TRIM(data%bivalves(biv_i)%prey(prey_i)%bivalve_prey)//'_IP')
-
           ENDIF
       ENDDO
    ENDDO
 
-   ! Register link to nutrient pools, if variable names are provided in namelist.
+   ! Register link to nutrient pools, if variable names are provided in namelist
+   !  and feedbacks are on
    data%simDNexcr = dn_target_variable .NE. ''
    IF (data%simDNexcr) THEN
      data%id_Nexctarget = aed2_locate_variable(dn_target_variable)
@@ -343,28 +378,42 @@ SUBROUTINE aed2_define_bivalve(data, namlst)
    if (do_uptake_variable .EQ. '') STOP 'bivalve needs DO uptake variable'
    data%id_DOupttarget = aed2_locate_variable(do_uptake_variable)
 
-   data%simSSupt = ss_uptake_variable .NE. ''
-   IF (data%simSSupt) THEN
+   data%simSSlim = ss_uptake_variable .NE. ''
+   IF (data%simSSlim) THEN
      data%id_SSupttarget = aed2_locate_variable(ss_uptake_variable)
    ENDIF
 
+   IF (biv_tracer) THEN
+       ! Register group as a state variable
+       data%id_bivtr = aed2_define_variable(                                   &
+                              'filtfrac',                                      &
+                              '-', 'fraction of water filtered by bivalves',   &
+                              ZERO_,  &
+                              minimum=ZERO_)
+   ENDIF
+
    ! Register diagnostic variables
-   data%id_grz = aed2_define_sheet_diag_variable('grz','mmolC/m**3',  'net bivalve grazing')
-   data%id_resp = aed2_define_sheet_diag_variable('resp','mmolC/m**3',  'net bivalve respiration')
-   data%id_mort = aed2_define_sheet_diag_variable('mort','mmolC/m**3/d','net bivalve mortality')
-
-   data%id_excr = aed2_define_sheet_diag_variable('excr','mmolC/m**3/d','net bivalve excretion')
-   data%id_egst = aed2_define_sheet_diag_variable('egst','mmolC/m**3/d','net bivalve egestion')
-
+   data%id_nmp  = aed2_define_sheet_diag_variable('nmp' ,'mmolC/m**2/d','net mussel production')
    data%id_tbiv = aed2_define_sheet_diag_variable('tbiv','mmolC/m**2','total bivalve mass')
-   data%id_pbiv = aed2_define_sheet_diag_variable('pbiv','mmolC/m**2','previous total bivalve mass')
-   data%id_3d_grz = aed2_define_diag_variable('tgrz','mmolC/m**3','total bivalve graze')
+   IF (extra_diag) THEN
+     data%id_grz  = aed2_define_sheet_diag_variable('grz' ,'/d', 'bivalve grazing')
+     data%id_resp = aed2_define_sheet_diag_variable('resp','/d','bivalve respiration')
+     data%id_mort = aed2_define_sheet_diag_variable('mort','/d','bivalve mortality')
+     data%id_excr = aed2_define_sheet_diag_variable('excr','/d','bivalve excretion')
+     data%id_egst = aed2_define_sheet_diag_variable('egst','/d','bivalve egestion')
+     data%id_fT = aed2_define_sheet_diag_variable('fT','-','temp limitation')
+     data%id_fD = aed2_define_sheet_diag_variable('fD','-','density limitation')
+     data%id_fG = aed2_define_sheet_diag_variable('fG','-','grazing limitation')
+     data%id_FR = aed2_define_sheet_diag_variable('FR','m3/mmolC/m2/day','filtration rate')
+     data%id_pf = aed2_define_sheet_diag_variable('pf','/d','pseudofeaces production rate')
+     data%id_3d_grz = aed2_define_diag_variable('tgrz','mmolC/m**3/day','water colum loss due to grazing')
+   ENDIF
 
    ! Register environmental dependencies
    data%id_tem = aed2_locate_global('temperature')
    data%id_sal = aed2_locate_global('salinity')
-   data%id_extc = aed2_locate_global('extc_coef')
-
+   data%id_sed_zone = aed2_locate_global_sheet('sed_zone')
+!
 END SUBROUTINE aed2_define_bivalve
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -380,7 +429,7 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
    INTEGER,INTENT(in) :: layer_idx
 !
 !LOCALS
-   AED_REAL :: biv,temp,salinity,oxy,ss !State variables
+   AED_REAL :: biv, temp, salinity, oxy, ss ,matz !State variables
    AED_REAL :: prey(MAX_ZOOP_PREY), grazing_prey(MAX_ZOOP_PREY) !Prey state variables
    AED_REAL :: phy_INcon(MAX_ZOOP_PREY), phy_IPcon(MAX_ZOOP_PREY) !Internal nutrients for phytoplankton
    AED_REAL :: dn_excr, dp_excr, dc_excr !Excretion state variables
@@ -391,22 +440,34 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
    AED_REAL :: grazing_n, grazing_p !Grazing on nutrients
    AED_REAL :: pon_excr, pop_excr, poc_excr !POM excretion rates
    AED_REAL :: don_excr, dop_excr, doc_excr, delta_C !DOM excretion rates
-   INTEGER  :: biv_i,prey_i,prey_j,phy_i
-
-   !CAB added
-   AED_REAL :: f_dens, W, Imax, psuedofaeces, ingestion, excretion, egestion, iteg, R20
+   AED_REAL :: f_Dens, W, Imax, psuedofaeces, ingestion, excretion, egestion, iteg, R20
+   AED_REAL :: bt, fr, Rbt !BivTracer vars
+   INTEGER  :: biv_i,prey_i,prey_j,phy_i !Counters
 !
 !-------------------------------------------------------------------------------
 !BEGIN
+   ! Check to ensure this zone is colonisable
+   matz = _STATE_VAR_S_(data%id_sed_zone)
+   IF ( .NOT. in_zone_set(matz, data%active_zones) ) RETURN
 
    ! Retrieve current environmental conditions.
-   temp = _STATE_VAR_(data%id_tem)       ! local temperature
-   salinity = _STATE_VAR_(data%id_sal)   ! local salinity
-   oxy = _STATE_VAR_(data%id_DOupttarget)! local oxygen
-   IF (data%simSSupt) THEN
-      ss = _STATE_VAR_(data%id_SSupttarget) ! local suspended solids (inorganic)
+
+   IF(data%simFixedEnv) THEN
+     temp = data%fixed_temp                    ! user provided temp
+     salinity = data%fixed_sal                 ! user provided salinity
+     oxy = data%fixed_oxy                      ! user provided oxygen
+     Ctotal_prey = data%fixed_food             ! user provided food
+     ss = zero_
    ELSE
-      ss = 0.
+     ! Normal operation
+     temp = _STATE_VAR_(data%id_tem)           ! local temperature
+     salinity = _STATE_VAR_(data%id_sal)       ! local salinity
+     oxy = _STATE_VAR_(data%id_DOupttarget)    ! local oxygen
+     IF (data%simSSlim) THEN
+        ss = _STATE_VAR_(data%id_SSupttarget)  ! local suspended solids (inorganic)
+     ELSE
+        ss = zero_
+     ENDIF
    ENDIF
 
    ! Retrieve current (local) state variable values.
@@ -419,31 +480,42 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
    IF (data%simPCexcr)  poc = _STATE_VAR_(data%id_Cmorttarget)
 
    _DIAG_VAR_S_(data%id_tbiv ) = 0
-   _DIAG_VAR_S_(data%id_pbiv ) = 0
+   !_DIAG_VAR_S_(data%id_pbiv ) = 0
 
+   ! Setup for bivalve filtration "tracer"
+   Rbt = zero_/secs_per_day            ! biv_tracer decay (/day)
+   fr = zero_                          ! filtration rate (m3/mmolC/day)
+   IF (data%id_bivtr>0) THEN
+     bt = _STATE_VAR_(data%id_bivtr)
+   ENDIF
+
+   ! Loop through number of configured groups
    DO biv_i=1,data%num_biv
 
-      ! Retrieve this bivalve group
+      ! Retrieve this bivalve group biomass (mmolC/m2)
       biv = _STATE_VAR_S_(data%id_biv(biv_i))
-      _DIAG_VAR_S_(data%id_pbiv) = _DIAG_VAR_S_(data%id_pbiv) + biv
+      !_DIAG_VAR_S_(data%id_pbiv) = _DIAG_VAR_S_(data%id_pbiv) + biv
 
       grazing       = zero_
       respiration   = zero_
       mortality     = zero_
 
-      !Retrieve prey groups
-      Ctotal_prey   = zero_
-      DO prey_i=1,data%bivalves(biv_i)%num_prey
-         prey(prey_i) = _STATE_VAR_(data%bivalves(biv_i)%id_prey(prey_i))
-         Ctotal_prey = Ctotal_prey + prey(prey_i)
-      ENDDO
+
+      ! Retrieve prey groups (mmolC/m3)
+      IF(.NOT.data%simFixedEnv) THEN
+        Ctotal_prey   = zero_
+        DO prey_i=1,data%bivalves(biv_i)%num_prey
+           prey(prey_i) = _STATE_VAR_(data%bivalves(biv_i)%id_prey(prey_i))
+           Ctotal_prey = Ctotal_prey + prey(prey_i)
+        ENDDO
+      ENDIF
 
       ! Get the grazing limitation function
       !fGrazing_Limitation = fPrey_Limitation(data%bivalves,biv_i,Ctotal_prey)
       fGrazing_Limitation = min(Ctotal_prey/data%bivalves(biv_i)%Kgrz,one_)
 
 
-      ! Get the temperature function
+      ! Get the temperature function impacting ingestion
       f_Temp = fTemp_function_biv(data,biv_i, temp)
       !f_T = fTemp_function(1, data%bivalves(biv_i)%Tmax,       &
       !                        data%bivalves(biv_i)%Tstd,       &
@@ -453,14 +525,13 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
       !                        data%bivalves(biv_i)%kTn,        &
       !                        temp)
 
-
       ! Get the suspended solids function
       f_SS = fSS_function(data,biv_i,ss)
 
       ! Get the density limitation function
-      f_dens = fD_function(data,biv_i,biv)
+      f_Dens = fD_function(data,biv_i,biv)
 
-      ! Get the final ingestion rate (/ s)
+      ! Now compute the final grazing rate (/s). This is the
       ! amount grazed in units of mass consumed/mass bivalve/unit time
       IF(data%bivalves(biv_i)%Ing==1) THEN
         W = (0.071/1000.) * data%bivalves(biv_i)%Length**2.8
@@ -468,17 +539,23 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
       ELSE
         Imax = data%bivalves(biv_i)%Rgrz
       END IF
-      grazing = Imax * fGrazing_Limitation * f_Temp * f_dens * f_SS
+      grazing = Imax * fGrazing_Limitation * f_Temp * f_Dens * f_SS
+
+      IF(Ctotal_prey<data%bivalves(biv_i)%Kgrz) THEN
+        FR = grazing / data%bivalves(biv_i)%Kgrz
+      ELSE
+        FR = grazing / Ctotal_prey
+      END IF
 
       ! Now determine available prey and limit grazing amount to availability of prey
-      ! food is total amount of food in units of mass/unit volume/unit time
+      ! food is total amount of food in units of mass/unit volume/unit time (mmolC/m2/s)
       food = grazing * biv
       IF (Ctotal_prey < data%bivalves(biv_i)%num_prey * data%bivalves(biv_i)%Cmin_grz ) THEN
          food = zero_
          grazing = zero_
       ELSEIF (food > Ctotal_prey - data%bivalves(biv_i)%num_prey * data%bivalves(biv_i)%Cmin_grz ) THEN
          food = Ctotal_prey - data%bivalves(biv_i)%num_prey * data%bivalves(biv_i)%Cmin_grz
-         grazing = food / biv
+         grazing = food / MAX(biv,1e-2)
       ENDIF
 
 
@@ -487,25 +564,26 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
       ! Prey has been ordered in grazing preference
       ! So take food in order of preference up to availability minus value of minimum residual
       ! grazing_prey is in units of mass consumed/unit volumne/unit time
-
-      DO prey_i = 1,data%bivalves(biv_i)%num_prey
-          !Add up preferences for remaining prey
+      IF(.NOT.data%simFixedEnv) THEN
+       DO prey_i = 1,data%bivalves(biv_i)%num_prey
+          ! Add up preferences for remaining prey
           pref_factor = zero_
           DO prey_j = prey_i,data%bivalves(biv_i)%num_prey
              pref_factor = pref_factor + data%bivalves(biv_i)%prey(biv_i)%Pbiv_prey
           ENDDO
           IF (food * data%bivalves(biv_i)%prey(prey_i)%Pbiv_prey / pref_factor <= &
-                        prey(prey_i) - data%bivalves(biv_i)%Cmin_grz) THEN
-             !Take fraction of left over food based on preference factor
+                                        prey(prey_i) - data%bivalves(biv_i)%Cmin_grz) THEN
+             ! Take fraction of left over food based on preference factor
              grazing_prey(prey_i) = food * data%bivalves(biv_i)%prey(prey_i)%Pbiv_prey / pref_factor
           ELSEIF (prey(prey_i) > data%bivalves(biv_i)%Cmin_grz) THEN
              grazing_prey(prey_i) = prey(prey_i) - data%bivalves(biv_i)%Cmin_grz
           ELSE
              grazing_prey(prey_i) = zero_
           ENDIF
-          !Food remaining after grazing from current prey
+          ! Food remaining after grazing from current prey
           food = food - grazing_prey(prey_i)
-      ENDDO
+       ENDDO
+      ENDIF
 
       ! Now determine nutrient composition of food based on prey type
       ! At this stage only the AED model state variables have multiple
@@ -515,10 +593,14 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
       ! grazing_n is in units of mass N consumed/unit volume/unit time
       ! grazing_p is in units of mass P consumed/unit volume/unit time
 
-      grazing_n = zero_
-      grazing_p = zero_
-      phy_i = 0
-      DO prey_i = 1,data%bivalves(biv_i)%num_prey
+      IF(data%simFixedEnv) THEN
+        grazing_n = grazing * 16./106.
+        grazing_p = grazing * 1./106.
+      ELSE
+        grazing_n = zero_
+        grazing_p = zero_
+        phy_i = 0
+        DO prey_i = 1,data%bivalves(biv_i)%num_prey
          IF (data%bivalves(biv_i)%prey(prey_i)%bivalve_prey .EQ. _OGMPOC_) THEN
             IF (poc > zero_) THEN
                 grazing_n = grazing_n + grazing_prey(prey_i) * pon/poc
@@ -537,10 +619,11 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
             grazing_n = grazing_n + grazing_prey(prey_i) * data%bivalves(biv_i)%INC
             grazing_p = grazing_p + grazing_prey(prey_i) * data%bivalves(biv_i)%IPC
          ENDIF
-      ENDDO
+        ENDDO
+      ENDIF
 
 
-
+      ! Now compute the rate of food ingestion (/s)
       psuedofaeces = (one_ - data%bivalves(biv_i)%fassim) * grazing
       ingestion = data%bivalves(biv_i)%fassim * grazing
 
@@ -554,28 +637,26 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
         egestion    = zero_
 
       ELSE
+        ! Get the egestion (/s) => I * alphaEG * EXP(gammaEG * MIN([A]/KA,1))
+        egestion = ingestion * data%bivalves(biv_i)%Regst * &
+                   exp(data%bivalves(biv_i)%gegst * min(Ctotal_prey/data%bivalves(biv_i)%Kgrz,one_))
 
-        egestion = data%bivalves(biv_i)%Regst * exp(data%bivalves(biv_i)%gegst + &
-                   min(Ctotal_prey/data%bivalves(biv_i)%Kgrz,one_)) * ingestion
-
-        ! Get the respiration rate (/ s)
+        ! Get the respiration rate (/s)
         iteg = ingestion - egestion
         respiration = aed2_bivalve_respiration(data,biv_i,iteg,temp,salinity)
 
         ! Get the excretion rate (of carbon!) (/s)
         excretion =  data%bivalves(biv_i)%Rexcr * iteg
 
-        ! Get the mortality rate (/ s)
+        ! Get the mortality rate (/s)
         mortality = data%bivalves(biv_i)%Rmort * f_DO(data,biv_i,oxy)
 
-        ! Add the predation losses to mortality
+        ! Add predation losses to mortality
         mortality = mortality + data%bivalves(biv_i)%Rpred
-
 
       ENDIF
 
-
-      ! Calculate losses into the particulate organic matter pools - Units mmol/s
+      ! Calculate losses into the particulate organic matter pools - (mmolC/m2/s)
       poc_excr = (psuedofaeces + egestion + mortality)*biv
 
       pon_excr = (psuedofaeces * grazing_n / grazing  &
@@ -587,12 +668,13 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
       ! Now we know the rates of carbon consumption and excretion, calculate rates
       ! of n & p excretion to maintain internal nutrient stores
 
-      ! First, compute rate of change so far of bivalve carbon biomass (mmolC / m2 /s)
+      ! First, compute rate of change so far of bivalve carbon biomass (mmolC/m2/s)
       delta_C = (ingestion - respiration - egestion - excretion - mortality) * biv
 
 
       ! Then calc nutrient excretion require to balance internal nutrient store
-      ! Note pon_excr includes loss due to messy feeding so no need to include assimilation fraction on grazing_n & grazing_p
+      ! Note pon_excr includes loss due to messy feeding so no need to include
+      ! assimilation fraction on grazing_n & grazing_p
       don_excr = grazing_n - pon_excr - delta_C * data%bivalves(biv_i)%INC
       dop_excr = grazing_p - pop_excr - delta_C * data%bivalves(biv_i)%IPC
 
@@ -625,71 +707,98 @@ SUBROUTINE aed2_calculate_benthic_bivalve(data,column,layer_idx)
           doc_excr = zero_
       ENDIF
 
-
       !write(*,"(4X,'limitations (f_T,f_Salinity): ',2F8.2)")f_T,f_Salinity
       !write(*,"(4X,'sources/sinks (grazing,respiration,mortaility): ',3F8.2)")grazing,excretion,mortality
 
 
       ! SET TEMPORAL DERIVATIVES FOR ODE SOLVER
 
-      ! Production / losses in mmolC/s
+      ! Biv production & losses (mmolC/m2/s)
+      _FLUX_VAR_B_(data%id_biv(biv_i)) = _FLUX_VAR_B_(data%id_biv(biv_i)) + &
+                     ( (ingestion - respiration - excretion - egestion - mortality)*biv )
 
-!print*,'POOP',ingestion,respiration,excretion,egestion,mortality
-      _FLUX_VAR_B_(data%id_biv(biv_i)) = _FLUX_VAR_B_(data%id_biv(biv_i)) + ((ingestion - respiration - excretion - egestion - mortality)*biv )
-
-
-      IF (data%preyFeedback) THEN
-         ! Now take food grazed by zooplankton from food pools in mmolC/s
+      ! Effects on prey and nutrients
+      _DIAG_VAR_(data%id_3d_grz) = zero_
+      IF (data%simBivFeedback) THEN
+         ! Now take food grazed by mussels from food pools in mmolC/m3/s
          phy_i = 0
          DO prey_i = 1,data%bivalves(biv_i)%num_prey
-            _FLUX_VAR_(data%bivalves(biv_i)%id_prey(prey_i)) = _FLUX_VAR_(data%bivalves(biv_i)%id_prey(prey_i)) + ( -1.0 * grazing_prey(prey_i))
+            _FLUX_VAR_(data%bivalves(biv_i)%id_prey(prey_i)) = &
+            _FLUX_VAR_(data%bivalves(biv_i)%id_prey(prey_i)) + ( -1.0*grazing_prey(prey_i))
             IF (data%bivalves(biv_i)%prey(prey_i)%bivalve_prey .EQ. _OGMPOC_) THEN
-               IF (poc > zero_) THEN
-                  _FLUX_VAR_(data%id_Nmorttarget) = _FLUX_VAR_(data%id_Nmorttarget) + ( -1.0 * grazing_prey(prey_i) * pon/poc)
-                  _FLUX_VAR_(data%id_Pmorttarget) = _FLUX_VAR_(data%id_Pmorttarget) + ( -1.0 * grazing_prey(prey_i) * pop/poc)
+               IF (poc > 1e-5) THEN
+                  _FLUX_VAR_(data%id_Nmorttarget) = _FLUX_VAR_(data%id_Nmorttarget) + &
+                                                    ( -1.0*grazing_prey(prey_i) * pon/poc)
+                  _FLUX_VAR_(data%id_Pmorttarget) = _FLUX_VAR_(data%id_Pmorttarget) + &
+                                                    ( -1.0*grazing_prey(prey_i) * pop/poc)
                ENDIF
-            ELSEIF (data%bivalves(biv_i)%prey(prey_i)%bivalve_prey(1:_PHYLEN_).EQ. _PHYMOD_) THEN
+            ELSEIF (data%bivalves(biv_i)%prey(prey_i)%bivalve_prey(1:_PHYLEN_) .EQ. _PHYMOD_) THEN
                phy_i = phy_i + 1
-               _FLUX_VAR_(data%bivalves(biv_i)%id_phyIN(phy_i)) = _FLUX_VAR_(data%bivalves(biv_i)%id_phyIN(phy_i)) + ( -1.0 * grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i))
-               _FLUX_VAR_(data%bivalves(biv_i)%id_phyIP(phy_i)) = _FLUX_VAR_(data%bivalves(biv_i)%id_phyIP(phy_i)) + ( -1.0 * grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i))
+               _FLUX_VAR_(data%bivalves(biv_i)%id_phyIN(phy_i)) = &
+                                        _FLUX_VAR_(data%bivalves(biv_i)%id_phyIN(phy_i)) + &
+                                        ( -1.0*grazing_prey(prey_i) / prey(prey_i) * phy_INcon(phy_i))
+               _FLUX_VAR_(data%bivalves(biv_i)%id_phyIP(phy_i)) = &
+                                        _FLUX_VAR_(data%bivalves(biv_i)%id_phyIP(phy_i)) + &
+                                        ( -1.0*grazing_prey(prey_i) / prey(prey_i) * phy_IPcon(phy_i))
             ENDIF
-            _DIAG_VAR_(data%id_3d_grz) = _FLUX_VAR_(data%bivalves(biv_i)%id_prey(prey_i))
+            _DIAG_VAR_(data%id_3d_grz) = _DIAG_VAR_(data%id_3d_grz) + _FLUX_VAR_(data%bivalves(biv_i)%id_prey(prey_i))
          ENDDO
-      ENDIF
 
+        ! Now manage excretion contributions to DOM pool
+        IF (data%simDCexcr) THEN
+           _FLUX_VAR_(data%id_Cexctarget) = _FLUX_VAR_(data%id_Cexctarget) + excretion + doc_excr
+        ENDIF
+        IF (data%simDNexcr) THEN
+           _FLUX_VAR_(data%id_Nexctarget) = _FLUX_VAR_(data%id_Nexctarget) + don_excr
+        ENDIF
+        IF (data%simDPexcr) THEN
+           _FLUX_VAR_(data%id_Pexctarget) = _FLUX_VAR_(data%id_Pexctarget) + dop_excr
+        ENDIF
 
-      ! Now manage excretion contributions to DOM
-      IF (data%simDCexcr) THEN
-         _FLUX_VAR_(data%id_Cexctarget) = _FLUX_VAR_(data%id_Cexctarget) + excretion + doc_excr
-      ENDIF
-      IF (data%simDNexcr) THEN
-         _FLUX_VAR_(data%id_Nexctarget) = _FLUX_VAR_(data%id_Nexctarget) + (don_excr)
-      ENDIF
-      IF (data%simDPexcr) THEN
-         _FLUX_VAR_(data%id_Pexctarget) = _FLUX_VAR_(data%id_Pexctarget) + (dop_excr)
-      ENDIF
+        ! Now manage psuedofaeces, egestion and mortality contributions to POM
+        IF (data%simPCexcr) THEN
+           _FLUX_VAR_(data%id_Cmorttarget) = _FLUX_VAR_(data%id_Cmorttarget) + ( poc_excr * mortality )
+        ENDIF
+        IF (data%simPNexcr) THEN
+           _FLUX_VAR_(data%id_Nmorttarget) = _FLUX_VAR_(data%id_Nmorttarget) + pon_excr
+        ENDIF
+        IF (data%simPPexcr) THEN
+           _FLUX_VAR_(data%id_Pmorttarget) = _FLUX_VAR_(data%id_Pmorttarget) + pop_excr
+        ENDIF
 
-      ! Now manage psuedofaeces, egestion and mortality contributions to POM
-      IF (data%simPCexcr) THEN
-         _FLUX_VAR_(data%id_Cmorttarget) = _FLUX_VAR_(data%id_Cmorttarget) + ( poc_excr * mortality )
-      ENDIF
-      IF (data%simPNexcr) THEN
-         _FLUX_VAR_(data%id_Nmorttarget) = _FLUX_VAR_(data%id_Nmorttarget) + ( pon_excr)
-      ENDIF
-      IF (data%simPPexcr) THEN
-         _FLUX_VAR_(data%id_Pmorttarget) = _FLUX_VAR_(data%id_Pmorttarget) + ( pop_excr)
+        ! Now effects of respiration
+        !IF (data%id_DOupttarget) THEN
+           _FLUX_VAR_(data%id_DOupttarget) = _FLUX_VAR_(data%id_DOupttarget) - respiration*biv
+        !ENDIF
+        !IF (data%id_CO2upttarget) THEN
+        !   _FLUX_VAR_(data%id_DOupttarget) = _FLUX_VAR_(data%id_DOupttarget) + respiration*biv
+        !ENDIF
+
       ENDIF
 
       ! Export diagnostic variables
-      _DIAG_VAR_S_(data%id_grz)  = grazing*secs_per_day
-      _DIAG_VAR_S_(data%id_resp) = respiration*secs_per_day
-      _DIAG_VAR_S_(data%id_mort) = mortality*secs_per_day
-
-      _DIAG_VAR_S_(data%id_excr) = excretion*secs_per_day
-      _DIAG_VAR_S_(data%id_egst) = egestion*secs_per_day
-
       _DIAG_VAR_S_(data%id_tbiv) = _DIAG_VAR_S_(data%id_tbiv) + biv
+      _DIAG_VAR_S_(data%id_nmp)  = (ingestion-respiration-excretion-egestion-mortality)*biv*secs_per_day
+      IF (extra_diag) THEN
+        _DIAG_VAR_S_(data%id_grz)  = grazing*secs_per_day
+        _DIAG_VAR_S_(data%id_resp) = respiration*secs_per_day
+        _DIAG_VAR_S_(data%id_mort) = mortality*secs_per_day
+        _DIAG_VAR_S_(data%id_excr) = excretion*secs_per_day
+        _DIAG_VAR_S_(data%id_egst) = egestion*secs_per_day
+        _DIAG_VAR_(data%id_3d_grz) = _DIAG_VAR_(data%id_3d_grz)*secs_per_day
+        _DIAG_VAR_S_(data%id_fT) = f_Temp
+        _DIAG_VAR_S_(data%id_fD) = f_Dens
+        _DIAG_VAR_S_(data%id_fG) = fGrazing_Limitation
+        _DIAG_VAR_S_(data%id_FR) = FR
+        _DIAG_VAR_S_(data%id_pf) = psuedofaeces*secs_per_day
+      ENDIF
+
+      ! Update biv_tracer
+      IF (data%id_bivtr>0) THEN
+        _FLUX_VAR_(data%id_bivtr) = _FLUX_VAR_(data%id_bivtr) + (fr*biv)*(1.-MIN(bt,1.)) - Rbt
+      END IF
    ENDDO
+!
 END SUBROUTINE aed2_calculate_benthic_bivalve
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
@@ -747,11 +856,11 @@ FUNCTION aed2_bivalve_respiration(data,biv_i,iteg,temp,sal) RESULT(resp)
    ELSE
      ! Unknown option
      resp = data%bivalves(biv_i)%Rresp
-   END IF
 
+   END IF
 !   ! Get the salinity limitation.
 !   resp = resp * fSalinity_Limitation(data%bivalves,biv_i,sal)
-
+!
 END FUNCTION aed2_bivalve_respiration
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

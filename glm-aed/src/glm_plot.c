@@ -118,8 +118,6 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
        return;
     }
 
-    close_namelist(namlst);
-
     if ( nplots > MAX_PLOTS ) {
         fprintf(stderr, "Built-in plotter can only handle %d plots\n", MAX_PLOTS);
         nplots = MAX_PLOTS;
@@ -180,8 +178,13 @@ void init_plots(int jstart, int ndays, AED_REAL crest)
         }
         set_plot_version(theplots[i], glm_vers);
         set_plot_varname(theplots[i], vars[i]);
+        if ( n_zones > 0 ) {
+            int j;
+            for (j = 0; j < n_zones; j++) show_h_line(i, zone_heights[j]);
+        }
     }
     free(glm_vers);
+    close_namelist(namlst);
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 

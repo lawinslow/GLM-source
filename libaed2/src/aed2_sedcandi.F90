@@ -3552,7 +3552,7 @@ END DO ! Search "Ferret"
          candi%RFeOHAppt(:) = candi%kfeohAppt * ( ONE - (ONE / (candi%IAP(candi%FeOHy,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RFeOHAppt(:) = candi%kfeohAppt * -ONE * ( ONE - (candi%IAP(candi%FeOHy,:)) )
+         candi%RFeOHAppt(:) = candi%kfeohAppt * (-ONE) * ( ONE - (candi%IAP(candi%FeOHy,:)) )
        END WHERE
        !  print *, ('FeOHAppt'),RFeOHAppt
        !  print *, ('IAP FeOHA'),IAP(FeOHy,:)
@@ -3576,7 +3576,7 @@ END DO ! Search "Ferret"
          candi%RFeOHBppt(:) = 0.
        ELSEWHERE
          ! Dissolution
-         candi%RFeOHBppt(:) = candi%kfeohbppt * -ONE * ( ONE - (candi%IAP(candi%FeOHy,:)) )
+         candi%RFeOHBppt(:) = candi%kfeohbppt * (-ONE) * ( ONE - (candi%IAP(candi%FeOHy,:)) )
        END WHERE
           END IF ! End if rxn mode = 0, 1, 2 or 3
      !-- MnO2A precipitation
@@ -3595,7 +3595,7 @@ END DO ! Search "Ferret"
          candi%RMnO2Appt(:) = candi%kMnO2Appt * ( ONE - (ONE / (candi%IAP(candi%MnO2y,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RMnO2Appt(:) = candi%kMnO2Appt * -ONE * ( ONE - (candi%IAP(candi%MnO2y,:)) )
+         candi%RMnO2Appt(:) = candi%kMnO2Appt * (-ONE) * ( ONE - (candi%IAP(candi%MnO2y,:)) )
        END WHERE
         ! print *, ('MnO2Appt'),RMnO2Appt
         ! print *, ('IAP MnO2A'),IAP(MnO2y,:)
@@ -3616,7 +3616,7 @@ END DO ! Search "Ferret"
          candi%RMnO2Bppt(:) = candi%kMnO2Bppt * ( ONE - (ONE / (candi%IAP(candi%MnO2By,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RMnO2Bppt(:) = candi%kMnO2Bppt * -ONE * ( ONE - (candi%IAP(candi%MnO2By,:)) )
+         candi%RMnO2Bppt(:) = candi%kMnO2Bppt * (-ONE) * ( ONE - (candi%IAP(candi%MnO2By,:)) )
        END WHERE
 
      END IF ! End if rxn mode = 0, 1, 2 or 3
@@ -3639,7 +3639,7 @@ END DO ! Search "Ferret"
          candi%RSidppt(:) = candi%kSidppt * ( ONE - (ONE / (candi%IAP(candi%Sidy,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RSidppt(:) = candi%kSidppt * -ONE * ( ONE - (candi%IAP(candi%Sidy,:)) )
+         candi%RSidppt(:) = candi%kSidppt * (-ONE) * ( ONE - (candi%IAP(candi%Sidy,:)) )
        END WHERE
 
        END IF ! End if rxn mode = 0, 1, 2 or 3
@@ -3661,7 +3661,7 @@ END DO ! Search "Ferret"
          candi%RRodppt(:) = candi%kRodppt * ( ONE - (ONE / (candi%IAP(candi%Rody,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RRodppt(:) = candi%kRodppt * -ONE * ( ONE - (candi%IAP(candi%Rody,:)) )
+         candi%RRodppt(:) = candi%kRodppt * (-ONE) * ( ONE - (candi%IAP(candi%Rody,:)) )
        END WHERE
      END IF ! End if rxn mode = 0, 1, 2 or 3
    ELSE                 !  - Else if not Sim Mn Fe
@@ -3748,7 +3748,7 @@ END DO ! Search "Ferret"
          candi%RFeSppt(:) = candi%kFeSppt * ( ONE - (ONE / (candi%IAP(candi%FeSy,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RFeSppt(:) = candi%kFeSppt * -ONE * ( ONE - (candi%IAP(candi%FeSy,:)) )
+         candi%RFeSppt(:) = candi%kFeSppt * (-ONE) * ( ONE - (candi%IAP(candi%FeSy,:)) )
 
        END WHERE
 
@@ -3814,7 +3814,7 @@ END DO ! Search "Ferret"
          candi%RCalppt(:) = candi%kCalppt * ( ONE - (ONE / (candi%IAP(candi%Caly,:))) )
        ELSEWHERE
          ! Dissolution
-         candi%RCalppt(:) = candi%kCalppt * -ONE * ( ONE - (candi%IAP(candi%Caly,:)) )
+         candi%RCalppt(:) = candi%kCalppt * (-ONE) * ( ONE - (candi%IAP(candi%Caly,:)) )
        END WHERE
      END IF ! End if rxn mode = 0, 1 2 or 3
    END IF ! End if simulate CaCO3

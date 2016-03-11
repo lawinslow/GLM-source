@@ -43,13 +43,14 @@ MODULE aed2_organic_matter
       INTEGER  :: id_pop,id_dop           ! particulate & dissolved organic phosphorus
       INTEGER  :: id_docr,id_donr,id_dopr ! dissolved refractory OM pools
       INTEGER  :: id_cpom                 ! coarse particulate OM (bulk) pool
+      INTEGER  :: id_photolysis           ! photolysis
 
       INTEGER  :: id_oxy,id_amm,id_frp,id_dic
       INTEGER  :: id_Fsed_pon, id_Fsed_don ! sed. rate organic nitrogen
       INTEGER  :: id_Fsed_pop, id_Fsed_dop ! sed. rate organic phosphorus
       INTEGER  :: id_Fsed_poc, id_Fsed_doc ! sed. rate organic carbon
       INTEGER  :: id_Psed_poc, id_Psed_pon, id_Psed_pop ! sedimentation rates
-      INTEGER  :: id_temp, id_salt, id_light
+      INTEGER  :: id_temp, id_salt, id_vis, id_uva, id_uvb
       INTEGER  :: id_pon_miner, id_don_miner
       INTEGER  :: id_pop_miner, id_dop_miner
       INTEGER  :: id_poc_miner, id_doc_miner
@@ -74,7 +75,7 @@ MODULE aed2_organic_matter
                           w_cpom,X_cpom_n,X_cpom_p,KeDOMR,KeCPOM
 
       LOGICAL  :: use_oxy, use_amm, use_frp, use_dic, use_Fsed_model, use_Psed_model
-      LOGICAL  :: simRPools, extra_diag
+      LOGICAL  :: simRPools, extra_diag, photolysis_off
 
      CONTAINS
          PROCEDURE :: define            => aed2_define_organic_matter
@@ -108,6 +109,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
 
    AED_REAL                  :: poc_initial = 4.5
    AED_REAL                  :: doc_initial = 4.5
+   AED_REAL                  :: poc_min=0.
+   AED_REAL                  :: poc_max=nan_
+   AED_REAL                  :: doc_min=0.
+   AED_REAL                  :: doc_max=nan_
    AED_REAL                  :: w_poc       = 0.0
    AED_REAL                  :: Rpoc_miner  = 0.01
    AED_REAL                  :: Rdoc_miner  = 0.01
@@ -119,8 +124,8 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    AED_REAL                  :: theta_poc_miner = 1.0
    AED_REAL                  :: theta_doc_miner = 1.0
    AED_REAL                  :: theta_sed_doc   = 1.0
-   AED_REAL                  :: KeDOM = 0.01
-   AED_REAL                  :: KePOM = 0.01
+   AED_REAL                  :: KeDOM = 0.0001
+   AED_REAL                  :: KePOM = 0.0001
    CHARACTER(len=64)         :: doc_miner_product_variable=''
    CHARACTER(len=64)         :: doc_miner_reactant_variable=''
    CHARACTER(len=64)         :: Fsed_poc_variable=''
@@ -128,6 +133,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
 
    AED_REAL                  :: pon_initial = 4.5
    AED_REAL                  :: don_initial = 4.5
+   AED_REAL                  :: pon_min=0.
+   AED_REAL                  :: pon_max=nan_
+   AED_REAL                  :: don_min=0.
+   AED_REAL                  :: don_max=nan_
    AED_REAL                  :: w_pon       = 0.0
    AED_REAL                  :: Rpon_miner  = 0.01
    AED_REAL                  :: Rdon_miner  = 0.01
@@ -145,6 +154,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
 
    AED_REAL                  :: pop_initial = 4.5
    AED_REAL                  :: dop_initial = 4.5
+   AED_REAL                  :: pop_min=0.
+   AED_REAL                  :: pop_max=nan_
+   AED_REAL                  :: dop_min=0.
+   AED_REAL                  :: dop_max=nan_
    AED_REAL                  :: w_pop       = 0.0
    AED_REAL                  :: Rpop_miner  = 0.01
    AED_REAL                  :: Rdop_miner  = 0.01
@@ -176,17 +189,20 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    AED_REAL                  :: w_cpom       = 0.0
    AED_REAL                  :: X_cpom_n     = 0.0
    AED_REAL                  :: X_cpom_p     = 0.0
-   AED_REAL                  :: KeDOMR = 0.01
-   AED_REAL                  :: KeCPOM = 0.01
+   AED_REAL                  :: KeDOMR = 0.0001
+   AED_REAL                  :: KeCPOM = 0.0001
    CHARACTER(len=64)         :: docr_miner_product_variable='OGM_doc'
    CHARACTER(len=64)         :: donr_miner_product_variable='OGM_don'
    CHARACTER(len=64)         :: dopr_miner_product_variable='OGM_dop'
 
    LOGICAL                   :: extra_diag = .FALSE.
+   LOGICAL                   :: photolysis_off = .FALSE.
 
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    NAMELIST /aed2_organic_matter/ &
+             poc_min, poc_max, doc_min, doc_max, &
+             pon_min, pon_max, don_min, don_max, &
+             pop_min, pop_max, dop_min, dop_max, &
              poc_initial, doc_initial, w_poc, Rpoc_miner, Rdoc_miner, Fsed_poc, Fsed_doc, &
              Kpoc_miner, Kdoc_miner, Ksed_doc,                &
              theta_poc_miner, theta_doc_miner, theta_sed_doc, KeDOM, KePOM, &
@@ -207,7 +223,7 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
              Rdocr_miner, Rdonr_miner, Rdopr_miner, Rcpom_bdown, &
              w_cpom, X_cpom_n, X_cpom_p, KeDOMR, KeCPOM, &
            ! docr_miner_product_variable, donr_miner_product_variable,dopr_miner_product_variable, &
-             extra_diag
+             extra_diag, photolysis_off
 
 
 !-------------------------------------------------------------------------------
@@ -221,12 +237,12 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    ! and are converted here to values per second.
 
    ! Organic Carbon
-   data%w_poc           = w_poc/secs_pr_day
-   data%Rpoc_miner      = Rpoc_miner/secs_pr_day
-   data%Rdoc_miner      = Rdoc_miner/secs_pr_day
- ! data%Fsed_poc        = Fsed_poc/secs_pr_day
+   data%w_poc           = w_poc/secs_per_day
+   data%Rpoc_miner      = Rpoc_miner/secs_per_day
+   data%Rdoc_miner      = Rdoc_miner/secs_per_day
+ ! data%Fsed_poc        = Fsed_poc/secs_per_day
    data%Fsed_poc        = 0.0
-   data%Fsed_doc        = Fsed_doc/secs_pr_day
+   data%Fsed_doc        = Fsed_doc/secs_per_day
    data%Kpoc_miner      = Kpoc_miner
    data%Kdoc_miner      = Kdoc_miner
    data%Ksed_doc        = Ksed_doc
@@ -236,12 +252,12 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    data%KeDOM           = KeDOM
    data%KePOM           = KePOM
    ! Organic Nitrogen
-   data%w_pon           = w_pon/secs_pr_day
-   data%Rpon_miner      = Rpon_miner/secs_pr_day
-   data%Rdon_miner      = Rdon_miner/secs_pr_day
- ! data%Fsed_pon        = Fsed_pon/secs_pr_day
+   data%w_pon           = w_pon/secs_per_day
+   data%Rpon_miner      = Rpon_miner/secs_per_day
+   data%Rdon_miner      = Rdon_miner/secs_per_day
+ ! data%Fsed_pon        = Fsed_pon/secs_per_day
    data%Fsed_pon        = 0.0
-   data%Fsed_don        = Fsed_don/secs_pr_day
+   data%Fsed_don        = Fsed_don/secs_per_day
    data%Kpon_miner      = Kpon_miner
    data%Kdon_miner      = Kdon_miner
    data%Ksed_don        = Ksed_don
@@ -249,12 +265,12 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    data%theta_don_miner = theta_don_miner
    data%theta_sed_don   = theta_sed_don
    ! Organic Phosphorus
-   data%w_pop           = w_pop/secs_pr_day
-   data%Rpop_miner      = Rpop_miner/secs_pr_day
-   data%Rdop_miner      = Rdop_miner/secs_pr_day
- ! data%Fsed_pop        = Fsed_pop/secs_pr_day
+   data%w_pop           = w_pop/secs_per_day
+   data%Rpop_miner      = Rpop_miner/secs_per_day
+   data%Rdop_miner      = Rdop_miner/secs_per_day
+ ! data%Fsed_pop        = Fsed_pop/secs_per_day
    data%Fsed_pop        = 0.0
-   data%Fsed_dop        = Fsed_dop/secs_pr_day
+   data%Fsed_dop        = Fsed_dop/secs_per_day
    data%Kpop_miner      = Kpop_miner
    data%Kdop_miner      = Kdop_miner
    data%Ksed_dop        = Ksed_dop
@@ -267,10 +283,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    data%donr_initial    = donr_initial
    data%dopr_initial    = dopr_initial
    data%cpom_initial    = cpom_initial
-   data%Rdocr_miner     = Rdocr_miner/secs_pr_day
-   data%Rdonr_miner     = Rdonr_miner/secs_pr_day
-   data%Rdopr_miner     = Rdopr_miner/secs_pr_day
-   data%Rcpom_bdown     = Rcpom_bdown/secs_pr_day
+   data%Rdocr_miner     = Rdocr_miner/secs_per_day
+   data%Rdonr_miner     = Rdonr_miner/secs_per_day
+   data%Rdopr_miner     = Rdopr_miner/secs_per_day
+   data%Rcpom_bdown     = Rcpom_bdown/secs_per_day
    data%w_cpom          = w_cpom
    data%X_cpom_n        = X_cpom_n
    data%X_cpom_p        = X_cpom_p
@@ -278,20 +294,21 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
    data%KeCPOM          = KeCPOM
 
    data%extra_diag      = extra_diag
+   data%photolysis_off  = photolysis_off
 
    ! Register state variables
    data%id_doc = aed2_define_variable('doc','mmol/m**3','dissolved organic carbon',       &
-                                    doc_initial,minimum=zero_)
+                                    doc_initial,minimum=doc_min,maximum=doc_max)
    data%id_poc = aed2_define_variable('poc','mmol/m**3','particulate organic carbon',     &
-                                    poc_initial,minimum=zero_,mobility=data%w_poc)
+                                    poc_initial,minimum=poc_min,maximum=poc_max,mobility=data%w_poc)
    data%id_don = aed2_define_variable('don','mmol/m**3','dissolved organic nitrogen',     &
-                                    don_initial,minimum=zero_)
+                                    don_initial,minimum=don_min,maximum=don_max)
    data%id_pon = aed2_define_variable('pon','mmol/m**3','particulate organic nitrogen',   &
-                                    pon_initial,minimum=zero_,mobility=data%w_pon)
+                                    pon_initial,minimum=pon_min,maximum=pon_max,mobility=data%w_pon)
    data%id_dop = aed2_define_variable('dop','mmol/m**3','dissolved organic phosphorus',   &
-                                    dop_initial,minimum=zero_)
+                                    dop_initial,minimum=dop_min,maximum=dop_max)
    data%id_pop = aed2_define_variable('pop','mmol/m**3','particulate organic phosphorus', &
-                                    pop_initial,minimum=zero_,mobility=data%w_pop)
+                                    pop_initial,minimum=pop_min,maximum=pop_max,mobility=data%w_pop)
 
    IF (simRPools) THEN
      data%id_docr = aed2_define_variable('docr','mmol/m**3','dissolved organic carbon R', &
@@ -302,6 +319,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
                                     dopr_initial,minimum=zero_)
      data%id_cpom = aed2_define_variable('cpom','mmol/m**3','coarse particulate matter',  &
                                     cpom_initial,minimum=zero_,mobility=data%w_cpom)
+
+     data%id_vis= aed2_locate_global('par')
+     data%id_uva= aed2_locate_global('uva')
+     data%id_uvb= aed2_locate_global('uvb')
    ENDIF
 
 
@@ -354,8 +375,10 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
         data%id_Psed_pop = aed2_locate_global_sheet(Psed_pop_variable)
    ENDIF
 
+   !# Register diagnostic variables
 
-   ! Register diagnostic variables
+   data%id_cdom = aed2_define_diag_variable('CDOM','/m',  'Chromophoric DOM (CDOM)')
+
    IF (extra_diag) THEN
      data%id_pon_miner = aed2_define_diag_variable('pon_miner','mmol/m**3/d',  'PON mineralisation')
      data%id_don_miner = aed2_define_diag_variable('don_miner','mmol/m**3/d',  'DON mineralisation')
@@ -372,19 +395,52 @@ SUBROUTINE aed2_define_organic_matter(data, namlst)
      data%id_sed_poc = aed2_define_sheet_diag_variable('sed_poc','mmol/m**2/d',  'POC sediment flux')
      data%id_sed_doc = aed2_define_sheet_diag_variable('sed_doc','mmol/m**2/d',  'DOC sediment flux')
 
-     data%id_bod = aed2_define_diag_variable('BOD','mmol/m**3',  'Biochemical Oxygen Demand (BOD)')
-
-     IF (simRPools) THEN
-       data%id_cdom = aed2_define_diag_variable('CDOM','mmol/m**3',  'Chromophoric DOM (CDOM)')
-     ENDIF
+     data%id_bod = aed2_define_diag_variable('BOD5','mg O2/L',  'Biochemical Oxygen Demand (BOD)')
+     IF ( .NOT. photolysis_off ) &
+        data%id_photolysis = aed2_define_diag_variable('photolysis','mmol C/m3/d',  'photolysis rate of breakdown of DOC')
    ENDIF
 
    ! Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
    data%id_salt = aed2_locate_global('salinity')
-   data%id_light= aed2_locate_global('par')
 
 END SUBROUTINE aed2_define_organic_matter
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+AED_REAL FUNCTION photo(Q, cdom, band)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   AED_REAL,INTENT(in) :: Q          ! [W/m2] incoming light intensity
+   AED_REAL,INTENT(in) :: cdom       ! [/m] current cdom absorbance (based on doc)
+   INTEGER, INTENT(in) :: band       ! [-] bandwidth identifier (VIS, UVA, UVB)
+!LOCALS
+   AED_REAL,PARAMETER :: c = 7.52    ! !!! make this available from NML please !!!
+   AED_REAL,PARAMETER :: d = 0.0122  ! ref
+   AED_REAL,PARAMETER :: S = 0.0188  ! ref
+   AED_REAL,PARAMETER :: x = 440.    ! [nm] wavelength at which cdom is measured
+   AED_REAL,PARAMETER :: lamda(3) = (/440., 358., 298./) ! [nm] wavelengths
+! vis = 390-700 nanometers
+! uva = 315-400 nanometers
+! uvb = 280-315 nanometers
+!
+   AED_REAL :: phi, alpha, QQ
+!
+!-------------------------------------------------------------------------------
+!BEGIN
+   ! convert incoming light to quantum units: [mol photons /m2 /hr]
+   QQ = Q * 4.53 * 1e-3 * 3.6e3
+
+   ! apparent quantum yield [mol produced /(mol absorbed photons) /nm-1]
+   phi = c * 10.**(d*lamda(band))
+
+   ! absorption coefficient (/m)
+   alpha = cdom*exp(-1*S*(x-lamda(band)))
+
+   ! return the rate at which DOC is broken down [mmol C /m3 /s]
+   photo = phi * QQ * alpha * 1e3 / 3.6e3
+END FUNCTION photo
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -399,26 +455,27 @@ SUBROUTINE aed2_calculate_organic_matter(data,column,layer_idx)
    INTEGER,INTENT(in) :: layer_idx
 !
 !LOCALS
-   AED_REAL                   :: pon,don,amm,oxy,temp !State variables
-   AED_REAL                   :: pon_mineralisation, don_mineralisation
-   AED_REAL                   :: pop,dop,frp !State variables
-   AED_REAL                   :: pop_mineralisation, dop_mineralisation
-   AED_REAL                   :: poc,doc,dic !State variables
-   AED_REAL                   :: poc_mineralisation, doc_mineralisation
-   AED_REAL                   :: docr,donr,dopr,cpom,cdom
-   AED_REAL                   :: docr_mineralisation, donr_mineralisation
-   AED_REAL                   :: dopr_mineralisation, cpom_breakdown
-   AED_REAL                   :: photolysis
+   AED_REAL  :: pon,don,amm,oxy,temp !State variables
+   AED_REAL  :: pon_mineralisation, don_mineralisation
+   AED_REAL  :: pop,dop,frp !State variables
+   AED_REAL  :: pop_mineralisation, dop_mineralisation
+   AED_REAL  :: poc,doc,dic !State variables
+   AED_REAL  :: poc_mineralisation, doc_mineralisation
+   AED_REAL  :: docr,donr,dopr,cpom,cdom
+   AED_REAL  :: docr_mineralisation, donr_mineralisation
+   AED_REAL  :: dopr_mineralisation, cpom_breakdown
+   AED_REAL  :: photolysis
+   AED_REAL  :: vis, uva, uvb
 
+   AED_REAL, PARAMETER  :: Yoxy_doc_miner = 32./12. !ratio of oxygen to carbon utilised during doc mineralisation
 
-   AED_REAL, parameter        :: secs_pr_day = 86400.
- ! AED_REAL, parameter        :: Yoxy_don_miner = 6.625 !ratio of oxygen to nitrogen utilised during don mineralisation
- ! AED_REAL, parameter        :: Yoxy_dop_miner = 6.625 !ratio of oxygen to phosphoros utilised during dop mineralisation
-   AED_REAL, parameter        :: Yoxy_doc_miner = 32./12. !ratio of oxygen to carbon utilised during doc mineralisation
+   AED_REAL :: photo_fmin = 0.9        !!!MAKE THIS GOTO NAMELIST
 
 !-----------------------------------------------------------------------
 !BEGIN
     !CALL log_message('model aed2_organic_matter enter do loop successfully.')
+
+   photolysis = zero_
 
    ! Retrieve current (local) state variable values.
    pon = _STATE_VAR_(data%id_pon)! particulate organic nitrogen
@@ -434,6 +491,10 @@ SUBROUTINE aed2_calculate_organic_matter(data,column,layer_idx)
     donr = _STATE_VAR_(data%id_donr)
     dopr = _STATE_VAR_(data%id_dopr)
     cpom = _STATE_VAR_(data%id_cpom)
+    vis = _STATE_VAR_(data%id_vis)
+    uva = _STATE_VAR_(data%id_uva)
+    uvb = _STATE_VAR_(data%id_uvb)
+    cdom = _DIAG_VAR_(data%id_cdom)
    ENDIF
 
 
@@ -473,6 +534,10 @@ SUBROUTINE aed2_calculate_organic_matter(data,column,layer_idx)
     donr_mineralisation = fdoc_miner(data%use_oxy,data%Rdonr_miner,data%Kdoc_miner,data%theta_doc_miner,oxy,temp)
     dopr_mineralisation = fdoc_miner(data%use_oxy,data%Rdopr_miner,data%Kdoc_miner,data%theta_doc_miner,oxy,temp)
     cpom_breakdown = fpoc_miner(data%use_oxy,data%Rcpom_bdown,data%Kpoc_miner,data%theta_poc_miner,oxy,temp)
+    IF ( .NOT. data%photolysis_off ) THEN
+       photolysis = photo(vis,cdom,1) + photo(uva,cdom,2) + photo(uvb,cdom,3)
+       IF(photolysis>0.9*docr) photolysis =0.9*docr
+    ENDIF
    ENDIF
 
 
@@ -484,12 +549,12 @@ SUBROUTINE aed2_calculate_organic_matter(data,column,layer_idx)
    _FLUX_VAR_(data%id_poc)  = _FLUX_VAR_(data%id_poc) + (-poc*poc_mineralisation)
    _FLUX_VAR_(data%id_doc)  = _FLUX_VAR_(data%id_doc) + (poc*poc_mineralisation-doc*doc_mineralisation)
    IF(data%simRPools) THEN
-    _FLUX_VAR_(data%id_docr) = _FLUX_VAR_(data%id_docr) - docr*docr_mineralisation
-    _FLUX_VAR_(data%id_doc)  = _FLUX_VAR_(data%id_doc)  + docr*docr_mineralisation
-    _FLUX_VAR_(data%id_donr) = _FLUX_VAR_(data%id_donr) - donr*donr_mineralisation
-    _FLUX_VAR_(data%id_don)  = _FLUX_VAR_(data%id_don)  + donr*donr_mineralisation
-    _FLUX_VAR_(data%id_dopr) = _FLUX_VAR_(data%id_dopr) - dopr*dopr_mineralisation
-    _FLUX_VAR_(data%id_dop)  = _FLUX_VAR_(data%id_dop)  + dopr*dopr_mineralisation
+    _FLUX_VAR_(data%id_docr) = _FLUX_VAR_(data%id_docr) - docr*docr_mineralisation - photolysis
+    _FLUX_VAR_(data%id_doc)  = _FLUX_VAR_(data%id_doc)  + docr*docr_mineralisation + photolysis*photo_fmin
+    _FLUX_VAR_(data%id_donr) = _FLUX_VAR_(data%id_donr) - donr*donr_mineralisation - photolysis*(donr/docr)
+    _FLUX_VAR_(data%id_don)  = _FLUX_VAR_(data%id_don)  + donr*donr_mineralisation + photolysis*photo_fmin*(donr/docr)
+    _FLUX_VAR_(data%id_dopr) = _FLUX_VAR_(data%id_dopr) - dopr*dopr_mineralisation - photolysis*(dopr/docr)
+    _FLUX_VAR_(data%id_dop)  = _FLUX_VAR_(data%id_dop)  + dopr*dopr_mineralisation + photolysis*photo_fmin*(dopr/docr)
     _FLUX_VAR_(data%id_cpom) = _FLUX_VAR_(data%id_cpom) - cpom*cpom_breakdown
     _FLUX_VAR_(data%id_poc)  = _FLUX_VAR_(data%id_poc) + (cpom*cpom_breakdown)
     _FLUX_VAR_(data%id_pon)  = _FLUX_VAR_(data%id_pon) + (cpom*cpom_breakdown)*data%X_cpom_n
@@ -499,38 +564,45 @@ SUBROUTINE aed2_calculate_organic_matter(data,column,layer_idx)
 
    ! If an externally maintained oxygen pool is present, take mineralisation from it
    IF (data%use_oxy) THEN
-      _FLUX_VAR_(data%id_oxy) = _FLUX_VAR_(data%id_oxy) + (-Yoxy_doc_miner*doc*doc_mineralisation)
+      !_FLUX_VAR_(data%id_oxy) = _FLUX_VAR_(data%id_oxy) + (-Yoxy_doc_miner*doc*doc_mineralisation)
+      _FLUX_VAR_(data%id_oxy) = _FLUX_VAR_(data%id_oxy) + (-doc*doc_mineralisation)
    ENDIF
    if (data%use_dic) THEN
       _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (doc*doc_mineralisation)
+      IF ( data%simRPools ) _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + photolysis*(1.-photo_fmin)
    ENDIF
    IF (data%use_amm) THEN
       _FLUX_VAR_(data%id_amm) = _FLUX_VAR_(data%id_amm) + (don*don_mineralisation)
+      IF ( data%simRPools ) _FLUX_VAR_(data% id_amm) = _FLUX_VAR_(data% id_amm) + photolysis*(1.-photo_fmin)*(donr/docr)
    ENDIF
    IF (data%use_frp) THEN
       _FLUX_VAR_(data%id_frp) = _FLUX_VAR_(data%id_frp) + (dop*dop_mineralisation)
+      IF ( data%simRPools ) _FLUX_VAR_(data% id_frp) = _FLUX_VAR_(data% id_frp) + photolysis*(1.-photo_fmin)*(dopr/docr)
    ENDIF
 
-   ! Export diagnostic variables
+   !# Export diagnostic variables
+
+   ! CDOM computed as a function of DOC amount, as empirically defined by
+   ! Kostoglidis et al 2005 for Swan-Canning
+   IF ( data%simRPools ) THEN
+      _DIAG_VAR_(data%id_cdom) = 0.35*exp(0.1922*(doc+docr)*(12./1e3))
+   ELSE
+      _DIAG_VAR_(data%id_cdom) = 0.35*exp(0.1922*(doc)*(12./1e3))
+   ENDIF
+
    IF (data%extra_diag) THEN
-     _DIAG_VAR_(data%id_pon_miner) = pon_mineralisation
-     _DIAG_VAR_(data%id_don_miner) = don_mineralisation
-     _DIAG_VAR_(data%id_pop_miner) = pop_mineralisation
-     _DIAG_VAR_(data%id_dop_miner) = dop_mineralisation
-     _DIAG_VAR_(data%id_poc_miner) = poc_mineralisation
-     _DIAG_VAR_(data%id_doc_miner) = doc_mineralisation
-     _DIAG_VAR_(data%id_bod) = poc+doc
-     ! CDOM computed as a function of DOC amount, as empirically defined by
-     ! Kostoglidis et al 2005 for Swan-Canning
-     IF ( data%simRPools ) &
-        _DIAG_VAR_(data%id_cdom) = 0.35*exp(0.1922*(doc+docr)*(12./1e3))
+     _DIAG_VAR_(data%id_pon_miner) = pon_mineralisation*pon*secs_per_day
+     _DIAG_VAR_(data%id_don_miner) = don_mineralisation*don*secs_per_day
+     _DIAG_VAR_(data%id_pop_miner) = pop_mineralisation*pop*secs_per_day
+     _DIAG_VAR_(data%id_dop_miner) = dop_mineralisation*dop*secs_per_day
+     _DIAG_VAR_(data%id_poc_miner) = poc_mineralisation*poc*secs_per_day
+     _DIAG_VAR_(data%id_doc_miner) = doc_mineralisation*doc*secs_per_day
+     IF ( .NOT. data%photolysis_off ) &
+        _DIAG_VAR_(data%id_photolysis)= photolysis*secs_per_day  !! ADD THIS TO THE LIST
+     ! BOD5 is computed as the amount of oxygen consumed over a 5-day period (mgO2/L)
+     _DIAG_VAR_(data%id_bod) = Yoxy_doc_miner*(doc*doc_mineralisation*secs_per_day*12./1e3)*5.0
    ENDIF
-
 END SUBROUTINE aed2_calculate_organic_matter
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-!###############################################################################
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -563,9 +635,6 @@ SUBROUTINE aed2_calculate_benthic_organic_matter(data,column,layer_idx)
    AED_REAL :: Fsed_pop,Fsed_dop
    AED_REAL :: Fsed_poc,Fsed_doc
    AED_REAL :: Psed_poc, Psed_pon, Psed_pop
-
-   ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -634,7 +703,7 @@ SUBROUTINE aed2_calculate_benthic_organic_matter(data,column,layer_idx)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_amm) = _FLUX_VAR_B_(data%id_ben_amm) + (-amm_flux/secs_pr_day)
+   !_FLUX_VAR_B_(data%id_ben_amm) = _FLUX_VAR_B_(data%id_ben_amm) + (-amm_flux/secs_per_day)
 
    ! Also store sediment flux as diagnostic variable.
    IF (data%extra_diag) THEN
@@ -661,11 +730,10 @@ SUBROUTINE aed2_light_extinction_organic_matter(data,column,layer_idx,extinction
    AED_REAL,INTENT(inout) :: extinction
 !
 !LOCALS
-   AED_REAL :: doc,poc
+   AED_REAL :: doc,poc, cpom, cdom
 !
 !-------------------------------------------------------------------------------
 !BEGIN
-
    ! Retrieve current (local) state variable values.
    doc = _STATE_VAR_(data%id_doc)
    poc = _STATE_VAR_(data%id_poc)
@@ -673,7 +741,13 @@ SUBROUTINE aed2_light_extinction_organic_matter(data,column,layer_idx,extinction
    ! Self-shading with explicit contribution from background OM concentration.
    extinction = extinction + (data%KeDOM*doc +data%KePOM*poc)
 
+   IF (data%simRPools) THEN
+     cdom = _DIAG_VAR_(data%id_cdom)    ! CDOM is in "/m" units here
+     cpom = _STATE_VAR_(data%id_cpom)   ! CPOM is in "mmol/m3" units here
 
+     extinction = extinction + (data%KeDOMR*cdom)
+     extinction = extinction + (data%KeCPOM*cpom)
+   ENDIF
 END SUBROUTINE aed2_light_extinction_organic_matter
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

@@ -32,7 +32,7 @@ MODULE aed2_util
    PUBLIC find_free_lun, qsort
    PUBLIC aed2_gas_piston_velocity, aed2_oxygen_sat, exp_integral
    PUBLIC aed2_bio_temp_function,fTemp_function
-   PUBLIC PO4AdsorptionFraction
+   PUBLIC PO4AdsorptionFraction, in_zone_set
 !
 
 
@@ -578,6 +578,32 @@ SUBROUTINE PO4AdsorptionFraction(PO4AdsorptionModel, &
    END IF
 
 END SUBROUTINE PO4AdsorptionFraction
+!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+!###############################################################################
+LOGICAL FUNCTION in_zone_set(matz, active_zones)
+!-------------------------------------------------------------------------------
+!ARGUMENTS
+   AED_REAL,INTENT(in) :: matz
+   AED_REAL,INTENT(in) :: active_zones(:)
+!
+!LOCALS
+   INTEGER :: i, l
+   LOGICAL :: res
+!BEGIN
+!-------------------------------------------------------------------------------
+   res = .FALSE.
+   l = size(active_zones)
+   DO i=1,l
+      IF ( active_zones(i) == matz ) THEN
+         res = .TRUE.
+         EXIT
+      ENDIF
+   ENDDO
+
+   in_zone_set = res
+END FUNCTION in_zone_set
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

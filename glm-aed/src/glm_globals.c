@@ -76,6 +76,11 @@ InflowDataType Inflows[MaxInf];    //# Array of Inflows
 
 int NumOut = 0;                    //# Number of outflows
 OutflowDataType Outflows[MaxOut];  //# Array of Outflows
+int O2crit;
+int O2critdep;
+int O2critdays;
+CLOGICAL MIXwithdraw = FALSE;
+AED_REAL WithdrawalTemp;
 
 //------------------------------------------------------------------------------
 
@@ -165,7 +170,7 @@ int noSecs;
 AED_REAL *WQ_Vars = NULL;  //# water quality array, nlayers, nvars
 
 int       n_zones;
-AED_REAL *zone_dep = NULL;
+AED_REAL *zone_heights = NULL;
 AED_REAL *zone_area = NULL;
 
 

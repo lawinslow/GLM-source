@@ -33,8 +33,10 @@ MODULE aed2_common
    USE aed2_core
 
    USE aed2_sedflux
+   USE aed2_ass
    USE aed2_chlorophylla
    USE aed2_oxygen
+   USE ufz_oxygen
    USE aed2_silica
    USE aed2_carbon
    USE aed2_nitrogen
@@ -44,6 +46,9 @@ MODULE aed2_common
    USE aed2_phytoplankton
    USE aed2_pathogens
    USE aed2_iron
+   USE aed2_isotope
+   USE aed2_isotope_c
+   USE aed2_radon
    USE aed2_sulfur
    USE aed2_zooplankton
    USE aed2_bivalve
@@ -99,8 +104,10 @@ FUNCTION aed2_new_model(modelname) RESULT(model)
 
    SELECT CASE (modelname)
       CASE ('aed2_sedflux');        prefix = 'SDF'; ALLOCATE(aed2_sedflux_data_t::model)
+      CASE ('aed2_ass');            prefix = 'ASS'; ALLOCATE(aed2_ass_data_t::model)
       CASE ('aed2_chlorophylla');   prefix = 'CHL'; ALLOCATE(aed2_chla_data_t::model)
       CASE ('aed2_oxygen');         prefix = 'OXY'; ALLOCATE(aed2_oxygen_data_t::model)
+      CASE ('ufz_oxygen');          prefix = 'UOX'; ALLOCATE(ufz_oxygen_data_t::model)
       CASE ('aed2_silica');         prefix = 'SIL'; ALLOCATE(aed2_silica_data_t::model)
       CASE ('aed2_carbon');         prefix = 'CAR'; ALLOCATE(aed2_carbon_data_t::model)
       CASE ('aed2_nitrogen');       prefix = 'NIT'; ALLOCATE(aed2_nitrogen_data_t::model)
@@ -112,6 +119,9 @@ FUNCTION aed2_new_model(modelname) RESULT(model)
       CASE ('aed2_macrophyte');     prefix = 'MAC'; ALLOCATE(aed2_macrophyte_data_t::model)
       CASE ('aed2_pathogens');      prefix = 'PAT'; ALLOCATE(aed2_pathogens_data_t::model)
       CASE ('aed2_iron');           prefix = 'IRN'; ALLOCATE(aed2_iron_data_t::model)
+      CASE ('aed2_isotope');        prefix = 'ISO'; ALLOCATE(aed2_isotope_data_t::model)
+      CASE ('aed2_isotope_c');      prefix = 'ISC'; ALLOCATE(aed2_isotope_c_data_t::model)
+      CASE ('aed2_radon');          prefix = 'RAD'; ALLOCATE(aed2_radon_data_t::model)
       CASE ('aed2_sulfur');         prefix = 'SLF'; ALLOCATE(aed2_sulfur_data_t::model)
       CASE ('aed2_tracer');         prefix = 'TRC'; ALLOCATE(aed2_tracer_data_t::model)
       CASE ('aed2_geochemistry');   prefix = 'GEO'; ALLOCATE(aed2_geochemistry_data_t::model)

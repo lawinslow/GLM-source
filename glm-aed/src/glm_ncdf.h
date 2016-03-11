@@ -119,7 +119,7 @@
   void store_nc_scalar(int ncid, int id, int var_shape, AED_REAL scalar);
   void store_nc_array(int ncid, int id, int var_shape, int nvals, int maxvals, AED_REAL *array);
 
-  extern int ncid, x_dim, y_dim, z_dim, time_dim;
+  extern int ncid, x_dim, y_dim, z_dim, zone_dim, time_dim;
 
 #endif
 

@@ -61,7 +61,6 @@ MODULE aed2_carbon
 !        PROCEDURE :: mobility          => aed2_mobility_carbon
 !        PROCEDURE :: light_extinction  => aed2_light_extinction_carbon
 !        PROCEDURE :: delete            => aed2_delete_carbon
-
    END TYPE
 
 
@@ -106,7 +105,6 @@ SUBROUTINE aed2_define_carbon(data, namlst)
    CHARACTER(len=64) :: methane_reactant_variable=''
 
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    NAMELIST /aed2_carbon/ dic_initial,pH_initial,ionic,Fsed_dic,Ksed_dic,theta_sed_dic,Fsed_dic_variable, &
                          ch4_initial,Fsed_ch4,Ksed_ch4,theta_sed_ch4,Fsed_ch4_variable, &
                          atmco2,Rch4ox,Kch4ox,vTch4ox,methane_reactant_variable
@@ -123,14 +121,14 @@ SUBROUTINE aed2_define_carbon(data, namlst)
    ! Store parameter values in our own derived type
    ! NB: all rates must be provided in values per day,
    ! and are converted here to values per second.
-   data%Fsed_dic      = Fsed_dic/secs_pr_day
+   data%Fsed_dic      = Fsed_dic/secs_per_day
    data%Ksed_dic      = Ksed_dic
    data%theta_sed_dic = theta_sed_dic
    data%ionic         = ionic
-   data%Fsed_ch4      = Fsed_ch4/secs_pr_day
+   data%Fsed_ch4      = Fsed_ch4/secs_per_day
    data%Ksed_ch4      = Ksed_ch4
    data%theta_sed_ch4 = theta_sed_ch4
-   data%Rch4ox        = Rch4ox/secs_pr_day
+   data%Rch4ox        = Rch4ox/secs_per_day
    data%Kch4ox        = Kch4ox
    data%vTch4ox       = vTch4ox
    data%atmco2        = atmco2
@@ -169,9 +167,9 @@ SUBROUTINE aed2_define_carbon(data, namlst)
       data%id_Fsed_ch4 = aed2_locate_global_sheet(Fsed_ch4_variable)
 
    !# Register diagnostic variables
-   data%id_ch4ox = aed2_define_diag_variable('ch4ox','/d', 'methane oxidation rate')
+   data%id_ch4ox = aed2_define_diag_variable('ch4ox','mmol/m**3/d', 'methane oxidation rate')
    data%id_sed_dic = aed2_define_sheet_diag_variable('sed_dic','mmol/m**2/d',        &
-                                                      'Filterable reactive carbon')
+                                                      'CO2 exchange across sed/water interface')
 
    data%id_atm_co2_exch = aed2_define_sheet_diag_variable('atm_co2_exch',            &
                              'mmol/m**2/d', 'CO2 exchange across atm/water interface')
@@ -231,14 +229,10 @@ SUBROUTINE aed2_calculate_carbon(data,column,layer_idx)
       ENDIF
 
       ! Export diagnostic variables
-      _DIAG_VAR_(data%id_ch4ox) =  ch4oxidation
+      _DIAG_VAR_(data%id_ch4ox) =  ch4*ch4oxidation*secs_per_day
    ENDIF
 
 END SUBROUTINE aed2_calculate_carbon
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-!###############################################################################
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
@@ -312,8 +306,8 @@ SUBROUTINE aed2_calculate_surface_carbon(data,column,layer_idx)
      ! Transfer surface exchange value to AED2 (mmmol/m2) converted by driver.
      _FLUX_VAR_T_(data%id_dic) = -FCO2
 
-     ! Also store oxygen flux across the atm/water interface as diagnostic variable (mmmol/m2).
-     _DIAG_VAR_S_(data%id_atm_co2_exch) = FCO2
+     ! Also store oxygen flux across the atm/water interface as diagnostic variable (mmmol/m2/d).
+     _DIAG_VAR_S_(data%id_atm_co2_exch) = FCO2*secs_per_day
    END IF
 
    ! CH4 flux
@@ -352,8 +346,8 @@ SUBROUTINE aed2_calculate_surface_carbon(data,column,layer_idx)
      ! Transfer surface exchange value to AED2 (mmmol/m2) converted by driver.
      _FLUX_VAR_T_(data%id_ch4) = -FCH4
 
-     ! Also store ch4 flux across the atm/water interface as diagnostic variable (mmmol/m2).
-     _DIAG_VAR_S_(data%id_atm_ch4_exch) = FCH4
+     ! Also store ch4 flux across the atm/water interface as diagnostic variable (mmmol/m2/d).
+     _DIAG_VAR_S_(data%id_atm_ch4_exch) = FCH4*secs_per_day
    END IF
 END SUBROUTINE aed2_calculate_surface_carbon
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -379,9 +373,6 @@ SUBROUTINE aed2_calculate_benthic_carbon(data,column,layer_idx)
 
    ! Temporary variables
    AED_REAL :: dic_flux, ch4_flux, Fsed_dic, Fsed_ch4
-
-   ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -423,14 +414,14 @@ SUBROUTINE aed2_calculate_benthic_carbon(data,column,layer_idx)
 
    ! Set bottom fluxes for the pelagic (change per surface area per second)
    ! Transfer sediment flux value to AED2.
-   !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_pr_day)
+   !_SET_BOTTOM_FLUX_(data%id_dic,dic_flux/secs_per_day)
    !_SET_SED_FLUX_(data%id_dic,dic_flux)
    _FLUX_VAR_(data%id_dic) = _FLUX_VAR_(data%id_dic) + (dic_flux)
    _FLUX_VAR_(data%id_ch4) = _FLUX_VAR_(data%id_ch4) + (ch4_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
    ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_dic) = _FLUX_VAR_B_(data%id_ben_dic) + (-dic_flux/secs_pr_day)
+   !_FLUX_VAR_B_(data%id_ben_dic) = _FLUX_VAR_B_(data%id_ben_dic) + (-dic_flux/secs_per_day)
 
    ! Also store sediment flux as diagnostic variable.
    _DIAG_VAR_S_(data%id_sed_dic) = dic_flux

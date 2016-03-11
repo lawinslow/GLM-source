@@ -205,7 +205,7 @@ void resize_internals(int icode, int lnu)
             l = lnu;
         }
 
-        /* comupute to one below current surface */
+        /* compute to one below current surface */
         for (k = l; k < surfLayer; k++) {
             while (j < Nmorph) {
                 if (Lake[k].Vol1 <= MphLevelVoldash[j]) {

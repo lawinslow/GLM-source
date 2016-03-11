@@ -3,6 +3,12 @@
 # This script is used to bundle the glm binaries and uncommon library dependancies into an app.
 #  The bundle rpaths are modified to find the libraries in the bundle.
 
+if [ "$1" = "true" ] ; then
+   BASEDIR=usr
+else
+   BASEDIR=opt
+fi
+
 /bin/rm -rf glm.app
 
 VERSION=`grep GLM_VERSION ../src/glm.h | cut -f2 -d\"`
@@ -23,23 +29,24 @@ cp InfoPlist.strings glm.app/Contents/Resources/English.lproj
 
 # find_libs path bin
 find_libs () {
-   L2=`otool -L glm.app/Contents/MacOS/$2 | grep \/opt\/$1 | cut -d\  -f1 | sed "s^/opt/$1/lib/^^"`
+   L2=`otool -L glm.app/Contents/MacOS/$2 | grep \/${BASEDIR}\/$1 | cut -d\  -f1 | grep -o '[^/]*$'`
    LIST=""
    while [ "$L2" != "$LIST" ] ; do
       LIST=$L2
       for i in $LIST ; do
          if [ ! -f glm.app/Contents/MacOS/$i ] ; then
-            cp /opt/local/lib/$i glm.app/Contents/MacOS
+            cp /${BASEDIR}/local/lib/$i glm.app/Contents/MacOS
             if [ $? != 0 ] ; then
                echo " ####### Failed to copy $i" 1>&2
             else
                chmod +w glm.app/Contents/MacOS/$i
             fi
          fi
-         NLST=`otool -L /opt/$1/lib/$i | grep -v $i | grep \/opt\/$1 | cut -d\  -f1 | sed "s^/opt/$1/lib/^^"`
+         NLST=`otool -L /${BASEDIR}/$1/lib/$i | grep -v $i | grep \/${BASEDIR}\/$1 | cut -d\  -f1 | grep -o '[^/]*$'`
          for j in $NLST ; do
             echo $L2 | grep $j > /dev/null 2>&1
             if [ $? != 0 ] ; then
+               echo '**** Adding ' $j 1>&2
                L2+=" $j"
             fi
          done
@@ -68,14 +75,17 @@ echo "LIBS2 = $LIBS2"
 # These general libraries
 for i in $LIBS1 ; do
    echo "*** Configuring : $i ***"
-   cp /opt/local/lib/$i glm.app/Contents/MacOS
+   cp /${BASEDIR}/local/lib/$i glm.app/Contents/MacOS
    install_name_tool -id $i glm.app/Contents/MacOS/$i
-   install_name_tool -change /opt/local/lib/$i '@executable_path/'$i glm.app/Contents/MacOS/glm
-   # now update the paths for libraries that this library references
-#  NLST=`otool -L /opt/local/lib/$i | grep -v $i | grep \/opt\/local | cut -d\  -f1 | sed "s^/opt/local/lib/^^"`
-#  for j in $NLST ; do
-#    install_name_tool -change /opt/local/lib/$j '@executable_path/'$j glm.app/Contents/MacOS/$i
-#  done
+   install_name_tool -change /${BASEDIR}/local/lib/$i '@executable_path/'$i glm.app/Contents/MacOS/glm
+   if [ "${BASEDIR}" = "usr" ] ; then
+      # This is probably a HOMEBREW setup, so there might be references into the Cellar
+      NLST=`otool -L glm.app/Contents/MacOS/$i | grep \/${BASEDIR}\/local/Cellar | cut -d\  -f1`
+      for j in $NLST ; do
+         k=`echo $j | grep -o '[^/]*$'`
+         install_name_tool -change $j '@executable_path/'$k glm.app/Contents/MacOS/$i
+      done
+   fi
 done
 
 # These fortran libraries
@@ -89,7 +99,7 @@ done
 # now update these paths in the libraries as well
 for j in $LIBS1 $LIBS2 ; do
    for i in $LIBS1 ; do
-      install_name_tool -change /opt/local/lib/$i '@executable_path/'$i glm.app/Contents/MacOS/$j
+      install_name_tool -change /${BASEDIR}/local/lib/$i '@executable_path/'$i glm.app/Contents/MacOS/$j
    done
 
    for i in $LIBS2 ; do
@@ -98,6 +108,6 @@ for j in $LIBS1 $LIBS2 ; do
 done
 
 # ln -s glm.app/Contents/MacOS/glm glm
-zip -r glm_$VERSION.zip glm.app # glm
+zip -r glm_${VERSION}_macos.zip glm.app # glm
 
 exit 0
