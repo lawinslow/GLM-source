@@ -45,8 +45,8 @@
  #endif
 #endif
 #define DEBUG_VALS 0
-#include <plotter.h>
 #include <libplot.h>
+#include <plotter.h>
 
 //#define DEBUG 1
 
@@ -449,6 +449,26 @@ void set_plot_z_label(int plot, const char *label)
 
 
 /******************************************************************************/
+void show_l_line(int plot, AED_REAL y)
+{
+    int ypos;
+    ypos = _plots[plot].maxy - ((y - _plots[plot].ymin) * _plots[plot].yscale);
+
+    gdImageLine(_plots[plot].im, _plots[plot].xposp+2, ypos+20,
+                                 _plots[plot].xposp+7, ypos+20, red);
+}
+/******************************************************************************/
+void show_h_line(int plot, AED_REAL y)
+{
+    int ypos;
+    ypos = _plots[plot].maxy - ((y - _plots[plot].ymin) * _plots[plot].yscale);
+
+    gdImageLine(_plots[plot].im,                   19, ypos+20,
+                                 _plots[plot].maxx+23, ypos+20, grey);
+}
+
+
+/******************************************************************************/
 void set_plot_x_limits_(int *plot, AED_REAL *min, AED_REAL *max)
 { set_plot_x_limits(*plot, *min, *max); }
 /*----------------------------------------------------------------------------*/
@@ -751,7 +771,6 @@ void flush_all_plots()
     for (plot = 0; plot <= last_plot; plot++)
         FlushPicture(_plots[plot].im, _plots[plot].item_id);
     CheckUI();
-    FlushUI();
 }
 
 /******************************************************************************/
@@ -891,7 +910,8 @@ void do_cleanup(int saveall)
             EnableControl(_plots[i].save_id);
     }
 
-    while ( (hit = DoUI()) != okItm ) {
+    while ( (hit = DoUI()) >= 0 ) {
+        if ( hit == okItm ) break;
         if ( hit == saveAllIn1Itm ) {
             save_all_plots();
             DisableControl(saveAllIn1Itm);

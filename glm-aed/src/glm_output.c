@@ -99,7 +99,7 @@ void init_output(int jstart, const char *out_dir, const char *out_fn,
     init_csv_output(out_dir);
 
     //# Initialize WQ output (creates NetCDF variables)
-    if (wq_calc) wq_init_glm_output(&ncid, &x_dim, &y_dim, &z_dim, &time_dim);
+    if (wq_calc) wq_init_glm_output(&ncid, &x_dim, &y_dim, &z_dim, &zone_dim, &time_dim);
 
 #ifdef PLOTS
     if ( do_plots ) {
@@ -316,23 +316,14 @@ void write_diags(int jday, AED_REAL LakeNum)
 /******************************************************************************
  * Write the outflow data file with WQ variables.                             *
  ******************************************************************************/
-void write_outflow(int of_idx, int jday, AED_REAL vol)
+void write_outflow(int of_idx, int jday, AED_REAL DrawHeight, AED_REAL vol)
 {
     char ts[64];
     int i, lvl;
-    AED_REAL DrawHeight;
     extern int csv_outlet_allinone, csv_outfl_nvars;
     extern int ofl_wq_idx[];
     static AED_REAL vol_tot, state_of_v[MaxCSVOutVars];
-
     //# work out which level the outflow is at now.
-    if (Outflows[of_idx].FloatOff) {
-        DrawHeight = Lake[surfLayer].Height - Outflows[of_idx].OLev;
-        //# Let it sit on the bottom if the lake has drained
-        if (DrawHeight < 0.) DrawHeight = 0.;
-    } else
-        DrawHeight = Outflows[of_idx].OLev; //# Fixed height offtake
-
     for (lvl = botmLayer; lvl <= surfLayer; lvl++)
         if (Lake[lvl].Height >= DrawHeight) break;
 
@@ -352,7 +343,7 @@ void write_outflow(int of_idx, int jday, AED_REAL vol)
         of_idx = 0;
     } else if (wq_calc) {
         for (i = 0; i < csv_outfl_nvars; i++)
-            state_of_v[i] = _WQ_Vars(ofl_wq_idx[i], lvl);
+            if ( ofl_wq_idx[i] >= 0 ) state_of_v[i] = _WQ_Vars(ofl_wq_idx[i], lvl);
     }
 
     write_time_string(ts, jday, 0);

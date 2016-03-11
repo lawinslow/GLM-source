@@ -7,7 +7,7 @@
  *     School of Earth & Environment                                          *
  *     The University of Western Australia                                    *
  *                                                                            *
- * Copyright 2013, 2014 -  The University of Western Australia                *
+ * Copyright 2013, 2014, 2.015 -  The University of Western Australia         *
  *                                                                            *
  *  This file is part of libplot - a plotting library for GLM                 *
  *                                                                            *
@@ -34,6 +34,7 @@
 /* the C prototypes */
 int init_plotter(int *maxx, int *maxy);
 int create_plot(int posx, int posy, int maxx, int maxy, const char *title);
+void show_h_line(int plot, AED_REAL y);
 void set_plot_x_limits(int plot, double min, double max);
 void set_plot_y_limits(int plot, double min, double max);
 void set_plot_z_limits(int plot, double min, double max);

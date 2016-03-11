@@ -100,8 +100,6 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
    INTEGER  :: PO4AdsorptionModel = 1
    CHARACTER(len=64) :: po4sorption_target_variable=''
 
-   AED_REAL, parameter :: secs_pr_day = 86400.
-
    NAMELIST /aed2_phosphorus/ frp_initial,frp_min,frp_max,Fsed_frp,Ksed_frp,theta_sed_frp, &
                              phosphorus_reactant_variable,Fsed_frp_variable,   &
                              simPO4Adsorption,ads_use_external_tss,            &
@@ -117,7 +115,7 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
    ! Store parameter values in our own derived type
    ! NB: all rates must be provided in values per day,
    ! and are converted here to values per second.
-   data%Fsed_frp             = Fsed_frp/secs_pr_day
+   data%Fsed_frp             = Fsed_frp/secs_per_day
    data%Ksed_frp             = Ksed_frp
    data%theta_sed_frp        = theta_sed_frp
    data%simPO4Adsorption     = simPO4Adsorption
@@ -127,7 +125,7 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
    data%Kpo4p                = Kpo4p
    data%Kadsratio            = Kadsratio
    data%Qmax                 = Qmax
-   data%w_po4ads             = w_po4ads/secs_pr_day
+   data%w_po4ads             = w_po4ads/secs_per_day
 
 
    ! Register main state variable
@@ -169,7 +167,7 @@ SUBROUTINE aed2_define_phosphorus(data, namlst)
 
    ! Register diagnostic variables
    data%id_sed_frp = aed2_define_sheet_diag_variable('sed_frp','mmol/m**2/d', &
-                                         'Filterable reactive phosphorus')
+                                         'PO4 exchange across sed/water interface')
 
    ! Register environmental dependencies
    data%id_temp = aed2_locate_global('temperature')
@@ -264,16 +262,13 @@ SUBROUTINE aed2_calculate_benthic_phosphorus(data,column,layer_idx)
    ! Temporary variables
    AED_REAL :: frp_flux, Fsed_frp
 
-   ! Parameters
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
-
 !-------------------------------------------------------------------------------
 !BEGIN
 
    ! Retrieve current environmental conditions for the bottom pelagic layer.
    temp = _STATE_VAR_(data%id_temp) ! local temperature
 
-    ! Retrieve current (local) state variable values.
+   ! Retrieve current (local) state variable values.
    frp = _STATE_VAR_(data%id_frp)! phosphorus
 
    IF (data%ben_use_aedsed) THEN
@@ -291,22 +286,15 @@ SUBROUTINE aed2_calculate_benthic_phosphorus(data,column,layer_idx)
       frp_flux = Fsed_frp * (data%theta_sed_frp**(temp-20.0))
    ENDIF
 
-   ! TODO:
-   ! (1) Get benthic sink and source terms (sccb?) for current environment
-   ! (2) Get pelagic bttom fluxes (per surface area - division by layer height will be handled at a higher level)
-
    ! Set bottom fluxes for the pelagic (change per surface area per second)
-   ! Transfer sediment flux value to AED2.
-   !_SET_BOTTOM_FLUX_(data%id_frp,frp_flux/secs_pr_day)
-   !_SET_SED_FLUX_(data%id_frp,frp_flux)
    _FLUX_VAR_(data%id_frp) = _FLUX_VAR_(data%id_frp) + (frp_flux)
 
    ! Set sink and source terms for the benthos (change per surface area per second)
-   ! Note that this must include the fluxes to and from the pelagic.
-   !_FLUX_VAR_B_(data%id_ben_frp) = _FLUX_VAR_B_(data%id_ben_frp) + (-frp_flux/secs_pr_day)
+   ! Note that this should include the fluxes to and from the pelagic.
+   !_FLUX_VAR_B_(data%id_ben_frp) = _FLUX_VAR_B_(data%id_ben_frp) + (-frp_flux)
 
    ! Also store sediment flux as diagnostic variable.
-   _DIAG_VAR_S_(data%id_sed_frp) = frp_flux
+   _DIAG_VAR_S_(data%id_sed_frp) = frp_flux*secs_per_day
 
 
 END SUBROUTINE aed2_calculate_benthic_phosphorus

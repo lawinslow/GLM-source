@@ -90,7 +90,7 @@ extern int Num_WQ_Ben;       //* number of benthic water quality variables
 extern AED_REAL *WQ_Vars;    //* water quality array : nlayers, nvars
 
 extern int       n_zones;    //* number of sediment zones
-extern AED_REAL *zone_dep;   //* depths for sed_zones
+extern AED_REAL *zone_heights;   //* heights for sed_zones
 extern AED_REAL *zone_area;  //* areas for sed_zones
 
 
@@ -114,6 +114,11 @@ extern InflowDataType Inflows[];    //* Array of Inflows
 
 extern int NumOut;                 //* Number of outflows
 extern OutflowDataType Outflows[];  //* Array of Outflows
+extern int O2crit;
+extern int O2critdep;
+extern int O2critdays;
+extern CLOGICAL MIXwithdraw;
+extern AED_REAL WithdrawalTemp;
 
 /*----------------------------------------------------------------------------*/
 

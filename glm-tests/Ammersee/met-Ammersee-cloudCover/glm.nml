@@ -22,7 +22,7 @@
    min_layer_vol = 0.025
    min_layer_thick = 0.250
    max_layer_thick = 4.000
-   Kw = 0.35					!Büche: calculated form Secchi-depths after Kirk (1994)
+   Kw = 0.35					!B che: calculated form Secchi-depths after Kirk (1994)
    coef_inf_entrain = 0.
    coef_mix_conv = 0.2
    coef_wind_stir = 0.23

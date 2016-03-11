@@ -45,8 +45,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include&quot;;..\..\..\libutil\include;..\..\..\libplot"
-				PreprocessorDefinitions="_VISUAL_C_;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
+				AdditionalIncludeDirectories="..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\"
+				PreprocessorDefinitions="_VISUAL_C_;AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -64,10 +64,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib glm-fabm.lib fabm-glm.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.8"
-				AdditionalLibraryDirectories="&quot;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)&quot;;&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\additions\lib_$(PlatformName)\&quot;;&quot;$(PlatformName)-$(ConfigurationName)&quot;;&quot;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32&quot;"
-				IgnoreDefaultLibraryNames="LIBCMTD"
+				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
+				Version="2.2.0beta9"
+				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP\;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName)\;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32\"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;MSVCRT;libmmt"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -118,8 +119,8 @@
 			<Tool
 				Name="VCCLCompilerTool"
 				Optimization="0"
-				AdditionalIncludeDirectories="&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include&quot;;..\..\..\libutil\include;..\..\..\libplot"
-				PreprocessorDefinitions="_VISUAL_C_;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
+				AdditionalIncludeDirectories="..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\"
+				PreprocessorDefinitions="_VISUAL_C_;AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="3"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -137,10 +138,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib glm-fabm.lib fabm-glm.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.8"
-				AdditionalLibraryDirectories="&quot;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)&quot;;&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\additions\lib_$(PlatformName)\&quot;;&quot;$(PlatformName)-$(ConfigurationName)&quot;;&quot;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64&quot;"
-				IgnoreDefaultLibraryNames="LIBCMTD"
+				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
+				Version="2.2.0beta9"
+				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP\;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName)\;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64\"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;MSVCRT;libmmt"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -190,8 +192,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include&quot;;..\..\..\libutil\include;..\..\..\libplot"
-				PreprocessorDefinitions="_VISUAL_C_;PLOTS;XPLOTS;NDEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
+				AdditionalIncludeDirectories="..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\"
+				PreprocessorDefinitions="_VISUAL_C_;AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -209,10 +211,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib glm-fabm.lib fabm-glm.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.8"
-				AdditionalLibraryDirectories="&quot;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)&quot;;&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\additions\lib_$(PlatformName)\&quot;;&quot;$(PlatformName)-$(ConfigurationName)&quot;;&quot;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32&quot;"
-				IgnoreDefaultLibraryNames="LIBCMT"
+				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
+				Version="2.2.0beta9"
+				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP\;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName)\;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\ia32\"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;libmmt"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -263,8 +266,8 @@
 			/>
 			<Tool
 				Name="VCCLCompilerTool"
-				AdditionalIncludeDirectories="&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include&quot;;..\..\..\libutil\include;..\..\..\libplot"
-				PreprocessorDefinitions="_VISUAL_C_;PLOTS;XPLOTS;NDEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
+				AdditionalIncludeDirectories="..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\include;..\..\..\libplot\include;..\..\..\libutil\include;..\"
+				PreprocessorDefinitions="_VISUAL_C_;AED2;FABM;PLOTS;XPLOTS;_DEBUG;_LIB;NONDLL;_CRT_SECURE_NO_WARNINGS"
 				RuntimeLibrary="2"
 				WarningLevel="3"
 				DebugInformationFormat="3"
@@ -282,10 +285,11 @@
 			/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib glm-fabm.lib fabm-glm.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
-				Version="2.1.8"
-				AdditionalLibraryDirectories="&quot;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)&quot;;&quot;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\&quot;;&quot;..\..\..\..\additions\lib_$(PlatformName)\&quot;;&quot;$(PlatformName)-$(ConfigurationName)&quot;;&quot;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64&quot;"
-				IgnoreDefaultLibraryNames="LIBCMT"
+				AdditionalDependencies="glm-aed2.lib libaed2.lib glm-fabm.lib fabm-glm.lib libutil.lib libplot.lib libpng.lib libgd.lib freetype2.lib zlib.lib netcdf.lib netcdff90.lib hdf5.lib hdf5_hl.lib"
+				Version="2.2.0beta9"
+				AdditionalLibraryDirectories="$(PlatformName)-$(ConfigurationName)_DP\;..\..\..\fabm-git\compilers\vs2008\glm\$(PlatformName)-$(ConfigurationName)\;..\..\..\..\WinLibs\NetCDF4_dll_$(PlatformName)\lib\;..\..\..\..\WinLibs\HDF5_dll_$(PlatformName)\lib\;..\..\..\..\additions\lib_$(PlatformName)\;$(PlatformName)-$(ConfigurationName)\;C:\Program Files\Intel\Composer XE 2011 SP1\compiler\lib\intel64\"
+				IgnoreAllDefaultLibraries="false"
+				IgnoreDefaultLibraryNames="LIBCMTD;LIBCMT;libmmt"
 			/>
 			<Tool
 				Name="VCALinkTool"
@@ -318,6 +322,18 @@
 			Filter="cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx"
 			UniqueIdentifier="{4FC737F1-C7A5-4376-A066-2A32D752A2FF}"
 			>
+			<File
+				RelativePath="..\..\src\glm_bird.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\glm_bubbler.c"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\glm_const.c"
+				>
+			</File>
 			<File
 				RelativePath="..\..\src\glm_csv.c"
 				>
@@ -394,14 +410,30 @@
 				RelativePath="..\..\src\glm_util.c"
 				>
 			</File>
+			<File
+				RelativePath="..\..\src\glm_wqual.c"
+				>
+			</File>
 		</Filter>
 		<Filter
-			Name="Resource Files"
-			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav"
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl;inc;xsd"
 			UniqueIdentifier="{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}"
 			>
 			<File
 				RelativePath="..\..\src\glm.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\glm_bird.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\glm_bubbler.h"
+				>
+			</File>
+			<File
+				RelativePath="..\..\src\glm_const.h"
 				>
 			</File>
 			<File
@@ -410,10 +442,6 @@
 			</File>
 			<File
 				RelativePath="..\..\src\glm_deep.h"
-				>
-			</File>
-			<File
-				RelativePath="..\..\src\glm_fabm.h"
 				>
 			</File>
 			<File
@@ -482,6 +510,19 @@
 			</File>
 			<File
 				RelativePath="..\..\src\libplot.h"
+				>
+			</File>
+		</Filter>
+		<Filter
+			Name="Resource Files"
+			Filter="rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+			>
+			<File
+				RelativePath="..\glm.ico"
+				>
+			</File>
+			<File
+				RelativePath="..\glm.rc"
 				>
 			</File>
 		</Filter>

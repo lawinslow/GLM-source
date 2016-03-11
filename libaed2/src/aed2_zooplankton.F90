@@ -83,7 +83,6 @@ SUBROUTINE aed2_zooplankton_load_params(data, dbase, count, list)
    INTEGER  :: i,j,tfil,sort_i(MAX_ZOOP_PREY)
    AED_REAL :: Pzoo_prey(MAX_ZOOP_PREY)
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    TYPE(type_zoop_params)  :: zoop_param(MAX_ZOOP_TYPES)
    NAMELIST /zoop_params/ zoop_param
 !-------------------------------------------------------------------------------
@@ -102,12 +101,12 @@ SUBROUTINE aed2_zooplankton_load_params(data, dbase, count, list)
        data%zoops(i)%zoop_name         = zoop_param(list(i))%zoop_name
        data%zoops(i)%zoop_initial      = zoop_param(list(i))%zoop_initial
        data%zoops(i)%min_zoo           = zoop_param(list(i))%min_zoo
-       data%zoops(i)%Rgrz_zoo          = zoop_param(list(i))%Rgrz_zoo/secs_pr_day
+       data%zoops(i)%Rgrz_zoo          = zoop_param(list(i))%Rgrz_zoo/secs_per_day
        data%zoops(i)%fassim_zoo        = zoop_param(list(i))%fassim_zoo
        data%zoops(i)%Kgrz_zoo          = zoop_param(list(i))%Kgrz_zoo
        data%zoops(i)%theta_grz_zoo     = zoop_param(list(i))%theta_grz_zoo
-       data%zoops(i)%Rresp_zoo         = zoop_param(list(i))%Rresp_zoo/secs_pr_day
-       data%zoops(i)%Rmort_zoo         = zoop_param(list(i))%Rmort_zoo/secs_pr_day
+       data%zoops(i)%Rresp_zoo         = zoop_param(list(i))%Rresp_zoo/secs_per_day
+       data%zoops(i)%Rmort_zoo         = zoop_param(list(i))%Rmort_zoo/secs_per_day
        data%zoops(i)%ffecal_zoo        = zoop_param(list(i))%ffecal_zoo
        data%zoops(i)%fexcr_zoo         = zoop_param(list(i))%fexcr_zoo
        data%zoops(i)%ffecal_sed        = zoop_param(list(i))%ffecal_sed
@@ -176,7 +175,6 @@ SUBROUTINE aed2_define_zooplankton(data, namlst)
    CHARACTER(len=64)  :: pc_target_variable='' !particulate carbon target variable
    CHARACTER(len=128) :: dbase='aed2_zoop_pars.nml'
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    INTEGER  :: zoop_i, prey_i, phy_i
 
    NAMELIST /aed2_zooplankton/ num_zoops, the_zoops, &
@@ -256,8 +254,8 @@ SUBROUTINE aed2_define_zooplankton(data, namlst)
 
 
    ! Register diagnostic variables
-   data%id_grz = aed2_define_diag_variable('grz','mmolC/m**3',  'net zooplankton grazing')
-   data%id_resp = aed2_define_diag_variable('resp','mmolC/m**3',  'net zooplankton respiration')
+   data%id_grz = aed2_define_diag_variable('grz','mmolC/m**3/d',  'net zooplankton grazing')
+   data%id_resp = aed2_define_diag_variable('resp','mmolC/m**3/d',  'net zooplankton respiration')
    data%id_mort = aed2_define_diag_variable('mort','mmolC/m**3/d','net zooplankton mortality')
 
    ! Register environmental dependencies
@@ -291,7 +289,6 @@ SUBROUTINE aed2_calculate_zooplankton(data,column,layer_idx)
    AED_REAL           :: pon_excr, pop_excr, poc_excr !POM excretion rates
    AED_REAL           :: don_excr, dop_excr, doc_excr, delta_C !DOM excretion rates
    INTEGER  :: zoop_i,prey_i,prey_j,phy_i
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 !
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -530,17 +527,13 @@ SUBROUTINE aed2_calculate_zooplankton(data,column,layer_idx)
       ENDIF
 
       ! Export diagnostic variables
-      _DIAG_VAR_(data%id_grz ) = grazing*secs_pr_day
-      _DIAG_VAR_(data%id_resp ) = respiration*secs_pr_day
-      _DIAG_VAR_(data%id_mort ) = mortality*secs_pr_day
+      _DIAG_VAR_(data%id_grz ) = zoo*grazing*secs_per_day
+      _DIAG_VAR_(data%id_resp ) = zoo*respiration*secs_per_day
+      _DIAG_VAR_(data%id_mort ) = zoo*mortality*secs_per_day
 
    ENDDO
 
 END SUBROUTINE aed2_calculate_zooplankton
-!+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-
-
-!###############################################################################
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 

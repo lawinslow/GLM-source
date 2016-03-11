@@ -44,7 +44,7 @@ int ncid=-1;
 static int set_no = -1;
 
 //# dimension sizes
-int x_dim, y_dim, z_dim, time_dim;
+int x_dim, y_dim, z_dim, zone_dim, time_dim;
 
 //# dimension lengths
 static int lon_len=1;
@@ -71,7 +71,7 @@ int init_glm_ncdf(const char *fn, const char *title, AED_REAL lat,
 {
     int ncid;
     char time_str[128], history[128];
-    extern char *wq_lib;
+    extern char wq_lib[];
 
     int dims[4];
 /*----------------------------------------------------------------------------*/
@@ -87,6 +87,8 @@ int init_glm_ncdf(const char *fn, const char *title, AED_REAL lat,
     check_nc_error(nc_def_dim(ncid, "lon", 1, &x_dim));
     check_nc_error(nc_def_dim(ncid, "lat", 1, &y_dim));
     check_nc_error(nc_def_dim(ncid, "z", nlev, &z_dim));
+    if ( n_zones > 0 )
+        check_nc_error(nc_def_dim(ncid, "nzones", n_zones, &zone_dim));
     check_nc_error(nc_def_dim(ncid, "time", NC_UNLIMITED, &time_dim));
 
     //# define coordinates
@@ -143,17 +145,28 @@ int init_glm_ncdf(const char *fn, const char *title, AED_REAL lat,
     //# coordinates
     set_nc_attributes(ncid, lon_id,    "degrees_east",  NULL        PARAM_FILLVALUE);
     set_nc_attributes(ncid, lat_id,    "degrees_north", NULL        PARAM_FILLVALUE);
-    set_nc_attributes(ncid,   z_id,    "meters",        NULL        PARAM_FILLVALUE);
 
     set_nc_attributes(ncid, time_id,   time_str,        NULL        PARAM_FILLVALUE);
+
+//  set_nc_attributes(ncid, NS_id,     "",        "Number of Layers" PARAM_FILLVALUE);
+    {
+    char *t = "Number of Layers";
+    nc_put_att(ncid, NS_id, "long_name", NC_CHAR, strlen(t), t);
+    }
+
+    set_nc_attributes(ncid, HICE_id,   "meters",  "Height of Ice"   PARAM_FILLVALUE);
+    set_nc_attributes(ncid, HSNOW_id,  "meters",  "Height of Snow"  PARAM_FILLVALUE);
+    set_nc_attributes(ncid, HWICE_id,  "meters",  "Height of WhiteIce" PARAM_FILLVALUE);
 
     //# x,y,t
     set_nc_attributes(ncid, precip_id, "m/s",     "precipitation"   PARAM_FILLVALUE);
     set_nc_attributes(ncid, evap_id,   "m/s",     "evaporation"     PARAM_FILLVALUE);
+    set_nc_attributes(ncid, i0_id,     "10E-6m",  "Shortwave"       PARAM_FILLVALUE);
     set_nc_attributes(ncid, wnd_id,    "m/s",     "wind"            PARAM_FILLVALUE);
     set_nc_attributes(ncid, TV_id,     "m3",      "lake volume"     PARAM_FILLVALUE);
 
     //# x,y,z,t
+    set_nc_attributes(ncid, z_id,      "meters",  "layer heights"   PARAM_FILLVALUE);
     set_nc_attributes(ncid, V_id,      "m3",      "layer volume"    PARAM_FILLVALUE);
     set_nc_attributes(ncid, salt_id,   "g/kg",    "salinity"        PARAM_FILLVALUE);
     set_nc_attributes(ncid, temp_id,   "celsius", "temperature"     PARAM_FILLVALUE);
@@ -385,10 +398,14 @@ void store_nc_array(int ncid, int id, int var_shape, int nvals,
     /*------------------------------------------------------------------------*/
     if (var_shape == Z_SHAPE) {
         start[0] = 0;      edges[0] = height_len;
-    } else if (var_shape == XYZT_SHAPE) {
+    } else if (var_shape == XYZT_SHAPE || var_shape == XYNT_SHAPE) {
         start[3] = 0;      edges[3] = lon_len;
         start[2] = 0;      edges[2] = lat_len;
-        start[1] = 0;      edges[1] = height_len;
+        if ( var_shape == XYZT_SHAPE ) {
+            start[1] = 0;      edges[1] = height_len;
+        } else {
+            start[1] = 0;      edges[1] = n_zones;
+        }
         start[0] = set_no; edges[0] = 1;
     } else {
         fprintf(stderr, "store_nc_array : non valid shape %d\n", var_shape);

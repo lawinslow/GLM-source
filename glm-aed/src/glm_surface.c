@@ -477,7 +477,8 @@ void do_surface_thermodynamics(int jday, int iclock, int LWModel,
             //      for melting ice
 
             // If there is snow, melt that first
-            if (SurfData.HeightSnow != 0.0) {
+            if (SurfData.HeightSnow > 0.0) {
+            //if (SurfData.HeightSnow != 0.0) {   !MH Getting -ve Snow Height in lake.csv
 
                 if (RHOSNO == 0.0) RHOSNO = RHOMXSNO;
                 SurfData.dHt = (1/(L_S*RHOSNO))*(H_FLUX+Q01)*noSecs;

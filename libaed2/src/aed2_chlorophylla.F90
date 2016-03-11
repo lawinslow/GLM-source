@@ -86,7 +86,6 @@ SUBROUTINE aed2_define_chla(data,  namlst)
    CHARACTER(len=64)  :: mortality_target_variable=''
    CHARACTER(len=64)  :: uptake_target_variable=''
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
    NAMELIST /aed2_chla/ p_initial,p0,w_p,i_min,rmax,alpha,rpn,rpdu,rpdl, &
                     excretion_target_variable,mortality_target_variable,uptake_target_variable
 
@@ -101,15 +100,15 @@ SUBROUTINE aed2_define_chla(data,  namlst)
    ! and are converted here to values per second.
    data%p0    = p0
    data%i_min = i_min
-   data%rmax  = rmax/secs_pr_day
+   data%rmax  = rmax/secs_per_day
    data%alpha = alpha
-   data%rpn  = rpn /secs_pr_day
-   data%rpdu = rpdu/secs_pr_day
-   data%rpdl = rpdl/secs_pr_day
+   data%rpn  = rpn /secs_per_day
+   data%rpdu = rpdu/secs_per_day
+   data%rpdl = rpdl/secs_per_day
 
    ! Register state variables
    data%id_p = aed2_define_variable('phy','mmol/m**3','phytoplankton', &
-                                    p_initial,minimum=zero_,mobility=w_p/secs_pr_day)
+                                    p_initial,minimum=zero_,mobility=w_p/secs_per_day)
 
    ! Register link to external DIC pool, if DIC variable name is provided in namelist.
    data%do_exc = excretion_target_variable .NE. ''
@@ -121,10 +120,10 @@ SUBROUTINE aed2_define_chla(data,  namlst)
 
 
    ! Register diagnostic variables
-   data%id_GPP = aed2_define_diag_variable('GPP','mmol/m**3',  'gross primary production')
-   data%id_NCP = aed2_define_diag_variable('NCP','mmol/m**3',  'net community production')
-   data%id_PPR = aed2_define_diag_variable('PPR','mmol/m**3/d','gross primary production rate')
-   data%id_NPR = aed2_define_diag_variable('NPR','mmol/m**3/d','net community production rate')
+   data%id_GPP = aed2_define_diag_variable('GPP','mmol/m**3/d',  'gross primary production')
+   data%id_NCP = aed2_define_diag_variable('NCP','mmol/m**3/d',  'net community production')
+   data%id_PPR = aed2_define_diag_variable('PPR','-','phytoplankton p/r ratio (gross)')
+   data%id_NPR = aed2_define_diag_variable('NPR','-','phytoplankton p/r ratio (net)')
    data%id_dPAR = aed2_define_diag_variable('PAR','W/m**2',    'photosynthetically active radiation')
 
    ! Register environmental dependencies
@@ -150,7 +149,6 @@ SUBROUTINE aed2_calculate_chla(data,column,layer_idx)
 !LOCALS
    AED_REAL           :: n,p,par,I_0
    AED_REAL           :: iopt,rpd,primprod
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
 
 !-------------------------------------------------------------------------------
 !BEGIN
@@ -192,10 +190,10 @@ SUBROUTINE aed2_calculate_chla(data,column,layer_idx)
 
    ! Export diagnostic variables
    _DIAG_VAR_(data%id_dPAR) = par
-   _DIAG_VAR_(data%id_GPP ) = primprod
-   _DIAG_VAR_(data%id_NCP ) = primprod - data%rpn*p
-   _DIAG_VAR_(data%id_PPR ) = primprod*secs_pr_day
-   _DIAG_VAR_(data%id_NPR ) = (primprod - data%rpn*p)*secs_pr_day
+   _DIAG_VAR_(data%id_GPP ) = primprod*secs_per_day
+   _DIAG_VAR_(data%id_NCP ) = (primprod - data%rpn*p)*secs_per_day
+   _DIAG_VAR_(data%id_PPR ) = primprod/(data%rpn*p - rpd*p)
+   _DIAG_VAR_(data%id_NPR ) = (primprod - data%rpn*p)/(data%rpn*p - rpd*p)
 
 
 END SUBROUTINE aed2_calculate_chla

@@ -66,9 +66,9 @@ wq_is_var_t          p_wq_is_var          = NULL;
 
 
 int ode_method = 1, split_factor = 1;
-CLOGICAL bioshade_feedback = TRUE, repair_state = TRUE, multi_ben = TRUE;
+int benthic_mode = 0;
+CLOGICAL bioshade_feedback = TRUE, repair_state = TRUE;
 CLOGICAL mobility_off = FALSE;     //  !# flag to turn mobility off
-CLOGICAL no_zones = FALSE;         // flag to turn of zones (makes multi_ben use old behaviour)
 
 
 #if USE_DL_LOADER
@@ -175,11 +175,11 @@ int prime_glm_wq(const char *which)
     // This is weird. Comment out the debug frpintf below and the flags come out wrong, leave the debug in and
     // they are OK ....
     fprintf(stderr,
-        "X) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d multi_ben %d do_plots %d\n",
-                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, multi_ben, do_plots);
+        "X) split_factor %d mobility_off %d bioshade_feedback %d repair_state %d ode_method %d benthic_mode %d do_plots %d\n",
+                    split_factor, mobility_off, bioshade_feedback,repair_state, ode_method, benthic_mode, do_plots);
 
     (*p_wq_set_flags)(&split_factor, &mobility_off, &bioshade_feedback,
-                                     &repair_state, &ode_method, &multi_ben, &no_zones, &do_plots);
+                                     &repair_state, &ode_method, &benthic_mode, &do_plots);
 
     return 0;
 }

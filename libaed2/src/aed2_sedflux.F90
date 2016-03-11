@@ -59,9 +59,6 @@ MODULE aed2_sedflux
 
    END TYPE
 
-   AED_REAL,PARAMETER :: secs_pr_day = 86400.
-
-
 !===============================================================================
 CONTAINS
 
@@ -101,46 +98,46 @@ SUBROUTINE load_sed_zone_data(data,namlst)
 
    data%n_zones = n_zones
    IF (Fsed_oxy(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_oxy_P(n_zones)) ; data%Fsed_oxy_P(1:n_zones) = Fsed_oxy(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_oxy_P(n_zones)) ; data%Fsed_oxy_P(1:n_zones) = Fsed_oxy(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_rsi(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_rsi_P(n_zones)) ; data%Fsed_rsi_P(1:n_zones) = Fsed_rsi(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_rsi_P(n_zones)) ; data%Fsed_rsi_P(1:n_zones) = Fsed_rsi(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_amm(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_amm_P(n_zones)) ; data%Fsed_amm_P(1:n_zones) = Fsed_amm(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_amm_P(n_zones)) ; data%Fsed_amm_P(1:n_zones) = Fsed_amm(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_nit(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_nit_P(n_zones)) ; data%Fsed_nit_P(1:n_zones) = Fsed_nit(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_nit_P(n_zones)) ; data%Fsed_nit_P(1:n_zones) = Fsed_nit(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_frp(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_frp_P(n_zones)) ; data%Fsed_frp_P(1:n_zones) = Fsed_frp(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_frp_P(n_zones)) ; data%Fsed_frp_P(1:n_zones) = Fsed_frp(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_pon(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_pon_P(n_zones)) ; data%Fsed_pon_P(1:n_zones) = Fsed_pon(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_pon_P(n_zones)) ; data%Fsed_pon_P(1:n_zones) = Fsed_pon(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_don(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_don_P(n_zones)) ; data%Fsed_don_P(1:n_zones) = Fsed_don(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_don_P(n_zones)) ; data%Fsed_don_P(1:n_zones) = Fsed_don(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_pop(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_pop_P(n_zones)) ; data%Fsed_pop_P(1:n_zones) = Fsed_pop(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_pop_P(n_zones)) ; data%Fsed_pop_P(1:n_zones) = Fsed_pop(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_dop(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_dop_P(n_zones)) ; data%Fsed_dop_P(1:n_zones) = Fsed_dop(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_dop_P(n_zones)) ; data%Fsed_dop_P(1:n_zones) = Fsed_dop(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_poc(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_poc_P(n_zones)) ; data%Fsed_poc_P(1:n_zones) = Fsed_poc(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_poc_P(n_zones)) ; data%Fsed_poc_P(1:n_zones) = Fsed_poc(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_doc(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_doc_P(n_zones)) ; data%Fsed_doc_P(1:n_zones) = Fsed_doc(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_doc_P(n_zones)) ; data%Fsed_doc_P(1:n_zones) = Fsed_doc(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_dic(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_dic_P(n_zones)) ; data%Fsed_dic_P(1:n_zones) = Fsed_dic(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_dic_P(n_zones)) ; data%Fsed_dic_P(1:n_zones) = Fsed_dic(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_ch4(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_ch4_P(n_zones)) ; data%Fsed_ch4_P(1:n_zones) = Fsed_ch4(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_ch4_P(n_zones)) ; data%Fsed_ch4_P(1:n_zones) = Fsed_ch4(1:n_zones)/secs_per_day
    ENDIF
    IF (Fsed_feii(1) .NE. MISVAL ) THEN
-      ALLOCATE(data%Fsed_feii_P(n_zones)) ; data%Fsed_feii_P(1:n_zones) = Fsed_feii(1:n_zones)/secs_pr_day
+      ALLOCATE(data%Fsed_feii_P(n_zones)) ; data%Fsed_feii_P(1:n_zones) = Fsed_feii(1:n_zones)/secs_per_day
    ENDIF
 END SUBROUTINE load_sed_zone_data
 !+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -149,9 +146,9 @@ END SUBROUTINE load_sed_zone_data
 !###############################################################################
 SUBROUTINE aed2_define_sedflux(data, namlst)
 !-------------------------------------------------------------------------------
-! Initialise the AED model
+! Initialise the AED2 model
 !
-!  Here, the aed namelist is read and te variables exported
+!  Here, the aed namelist is read and the variables exported
 !  by the model are registered with AED2.
 !-------------------------------------------------------------------------------
 !ARGUMENTS
@@ -174,9 +171,9 @@ SUBROUTINE aed2_define_sedflux(data, namlst)
 
    NAMELIST /aed2_sedflux/ sedflux_model
    NAMELIST /aed2_sed_constant/ nzones,                                           &
-                               Fsed_oxy, Fsed_rsi, Fsed_amm, Fsed_nit, Fsed_frp, &
-                               Fsed_pon, Fsed_don, Fsed_pop, Fsed_dop,           &
-                               Fsed_poc, Fsed_doc, Fsed_dic, Fsed_ch4, Fsed_feii
+                                Fsed_oxy, Fsed_rsi, Fsed_amm, Fsed_nit, Fsed_frp, &
+                                Fsed_pon, Fsed_don, Fsed_pop, Fsed_dop,           &
+                                Fsed_poc, Fsed_doc, Fsed_dic, Fsed_ch4, Fsed_feii
 
 !
 !-------------------------------------------------------------------------------
@@ -195,20 +192,20 @@ SUBROUTINE aed2_define_sedflux(data, namlst)
       ! Store parameter values in our own derived type
       ! NB: all rates must be provided in values per day,
       ! and are converted here to values per second.
-      data%Fsed_oxy = Fsed_oxy/secs_pr_day
-      data%Fsed_rsi = Fsed_rsi/secs_pr_day
-      data%Fsed_amm = Fsed_amm/secs_pr_day
-      data%Fsed_nit = Fsed_nit/secs_pr_day
-      data%Fsed_frp = Fsed_frp/secs_pr_day
-      data%Fsed_pon = Fsed_pon/secs_pr_day
-      data%Fsed_don = Fsed_don/secs_pr_day
-      data%Fsed_pon = Fsed_pop/secs_pr_day
-      data%Fsed_don = Fsed_dop/secs_pr_day
-      data%Fsed_poc = Fsed_poc/secs_pr_day
-      data%Fsed_doc = Fsed_doc/secs_pr_day
-      data%Fsed_dic = Fsed_dic/secs_pr_day
-      data%Fsed_ch4 = Fsed_ch4/secs_pr_day
-      data%Fsed_feii = Fsed_feii/secs_pr_day
+      data%Fsed_oxy = Fsed_oxy/secs_per_day
+      data%Fsed_rsi = Fsed_rsi/secs_per_day
+      data%Fsed_amm = Fsed_amm/secs_per_day
+      data%Fsed_nit = Fsed_nit/secs_per_day
+      data%Fsed_frp = Fsed_frp/secs_per_day
+      data%Fsed_pon = Fsed_pon/secs_per_day
+      data%Fsed_don = Fsed_don/secs_per_day
+      data%Fsed_pon = Fsed_pop/secs_per_day
+      data%Fsed_don = Fsed_dop/secs_per_day
+      data%Fsed_poc = Fsed_poc/secs_per_day
+      data%Fsed_doc = Fsed_doc/secs_per_day
+      data%Fsed_dic = Fsed_dic/secs_per_day
+      data%Fsed_ch4 = Fsed_ch4/secs_per_day
+      data%Fsed_feii = Fsed_feii/secs_per_day
       data%sed_modl = 1
    ELSEIF ( sedflux_model .EQ. "Spatially Variable" ) THEN
       data%id_zones = aed2_locate_global_sheet('sed_zone')
@@ -231,7 +228,7 @@ SUBROUTINE aed2_define_sedflux(data, namlst)
    ENDIF
 
    ! Register state variables
-   ! NOTE the benthic=.true. argument, which specifies the variable is benthic.
+   ! NOTE the "_sheet_"  which specifies the variable is benthic.
    IF ( Fsed_oxy .GT. MISVAL ) &
       data%id_Fsed_oxy = aed2_define_sheet_diag_variable('Fsed_oxy','mmol/m**2',   &
                                           'sedimentation rate of oxygen')

@@ -41,13 +41,6 @@
 
 #include <gd.h>
 
-#ifndef INCLUDE_MENUS
-#define INCLUDE_MENUS 0
-#endif
-#ifndef INCLUDE_SAVED
-#define INCLUDE_SAVED 0
-#endif
-
 /******************************************************************************/
 int InitUI(int *width, int *height);
 int CleanupUI(void);
@@ -57,9 +50,7 @@ void FlushUI(void);
 int CheckUI(void);
 int DoUI(void);
 void GetMouse(int *x, int *y);
-#if INCLUDE_SAVED
 char *DoSaveDialog(char *fname);
-#endif
 
     /**********************************************************/
 int NewControl(int type, const char*title,
@@ -78,8 +69,6 @@ int NewEditTextItem(int left, int top, int width, int height, const char*text);
 int NewTextItem(int left, int top, int width, int height, const char*text);
 
     /**********************************************************/
-#if INCLUDE_MENUS
-int NewMenu(const char*title);
-#endif
+int create_menu(const char*title, const char *data);
 
 #endif

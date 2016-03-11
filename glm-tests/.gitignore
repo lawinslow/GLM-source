@@ -4,3 +4,4 @@ WQ_*.csv
 lake.csv
 outlet.csv
 overflow.csv
+.DS*

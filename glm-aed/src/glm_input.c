@@ -61,6 +61,10 @@ typedef struct _out_data_ {
     int draw_idx;
 } OutflowDataT;
 
+typedef struct _withdrTemp_data_ {
+    int withdrTempf;
+    int wtemp_idx;
+} WithdrawalTempDataT;
 
 typedef struct _bubl_data_ {
     int bubf;
@@ -72,6 +76,7 @@ typedef struct _bubl_data_ {
 
 static InflowDataT inf[MaxInf];
 static OutflowDataT outf[MaxOut];
+static WithdrawalTempDataT withdrTempf = { -1, -1 };
 static BubbleDataT bubl;
 
 static int metf;
@@ -143,6 +148,20 @@ void read_daily_outflow(int julian, int NumOut, AED_REAL *draw)
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void read_daily_withdraw_temp(int julian, AED_REAL *withdrTemp)
+{
+    int csv;
+
+    if ( (csv = withdrTempf.withdrTempf) > -1 ) {
+        find_day(csv, time_idx, julian);
+        *withdrTemp = get_csv_val_r(csv, withdrTempf.wtemp_idx);
+    } else
+        *withdrTemp = 0.;
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 /******************************************************************************
  *                                                                            *
@@ -359,7 +378,11 @@ void open_met_file(const char *fname, int snow_sw, int rain_sw,
     wind_idx = find_csv_var(metf,"WindSpeed");
     if ( have_snow ) {
         snow_idx = find_csv_var(metf,"Snow");
-        if ( snow_idx < 0 ) have_snow = FALSE;
+        if ( snow_idx < 0 ) {
+            have_snow = FALSE;
+            fprintf(stderr,"Warning in met file, snowice is enabled but Snow column not found!\n");
+        }
+
     }
     if (have_rain_conc) {
         rpo4_idx = find_csv_var(metf,"rainPO4");
@@ -447,6 +470,23 @@ void open_outflow_file(int idx, const char *fname, const char *timefmt)
 /******************************************************************************
  *                                                                            *
  ******************************************************************************/
+void open_withdrtemp_file(const char *fname, const char *timefmt)
+{
+    if ( (withdrTempf.withdrTempf = open_csv_input(fname, timefmt)) < 0 ) {
+        fprintf(stderr, "Failed to open '%s'\n", fname);
+        exit(1) ;
+    }
+
+    locate_time_column(withdrTempf.withdrTempf, "withdrTemp", fname);
+
+    withdrTempf.wtemp_idx = find_csv_var(withdrTempf.withdrTempf,"temp");
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
 void open_bubbler_file(const char *fname, const char *timefmt)
 {
     if ( (bubl.bubf = open_csv_input(fname, timefmt)) < 0 ) {
@@ -475,4 +515,7 @@ void close_inflow_files()
 /*----------------------------------------------------------------------------*/
 void close_outflow_files()
 { int i; for (i = 0; i < NumOut; i++) close_csv_input(outf[i].outf); }
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+void close_withdrtemp_files()
+{ if ( withdrTempf.withdrTempf > -1 ) close_csv_input(withdrTempf.withdrTempf); }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
