@@ -82,6 +82,9 @@ static BubbleDataT bubl;
 static int metf;
 static int rain_idx, hum_idx, lwav_idx, sw_idx, atmp_idx, wind_idx, snow_idx,
            rpo4_idx, rtp_idx, rno3_idx, rnh4_idx, rtn_idx, rsi_idx;
+           
+static int kd_idx;
+static int kdf;
 
 static int time_idx = -1;
 
@@ -503,6 +506,42 @@ void open_bubbler_file(const char *fname, const char *timefmt)
 }
 /*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
+
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void open_kw_file(const char *fname, const char *timefmt)
+{
+    if ( (kdf = open_csv_input(fname, timefmt)) < 0 ) {
+        fprintf(stderr, "Failed to open '%s'\n", fname);
+        exit(1);
+    }
+
+    locate_time_column(kdf, "Kd", fname);
+
+    if ( (kd_idx = find_csv_var(kdf, "Kd")) < 0 ) {
+        fprintf(stderr,"Error in Kd file, Kd not found!\n");
+        exit(1);
+    }
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+
+/******************************************************************************
+ *                                                                            *
+ ******************************************************************************/
+void read_daily_kw(int julian, AED_REAL *kwout)
+{
+    int csv;
+
+    if ( (csv = kdf) > -1 ) {
+        find_day(csv, time_idx, julian);
+        *kwout = get_csv_val_r(csv, kd_idx);
+        
+    } else
+        *kwout = Kw; //just use the Kw supplied in the file
+//        *withdrTemp = 0.;
+}
+/*++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 /******************************************************************************
  *                                                                            *

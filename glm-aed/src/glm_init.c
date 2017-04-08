@@ -87,6 +87,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     AED_REAL        min_layer_thick;
     AED_REAL        max_layer_thick;
 //  AED_REAL        Kw;
+    char           *Kw_file = NULL; // Name of Kw input file
     extern AED_REAL Benthic_Imin;
 //  AED_REAL        coef_mix_conv;
 //  AED_REAL        coef_mix_eta;
@@ -263,6 +264,7 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
           { "min_layer_thick",   TYPE_DOUBLE,           &min_layer_thick   },
           { "max_layer_thick",   TYPE_DOUBLE,           &max_layer_thick   },
           { "Kw",                TYPE_DOUBLE,           &Kw                },
+          { "Kw_file",           TYPE_STR,              &Kw_file           },
           { "Benthic_Imin",      TYPE_DOUBLE,           &Benthic_Imin      },
           { "coef_mix_conv",     TYPE_DOUBLE,           &coef_mix_conv     },
           { "coef_wind_stir",    TYPE_DOUBLE,           &coef_wind_stir    },
@@ -456,6 +458,11 @@ void init_glm(int *jstart, char *outp_dir, char *outp_fn, int *nsave)
     DMin = min_layer_thick;
     DMax = max_layer_thick;
     NumLayers = 0;
+
+    if ( Kw_file != NULL ) {
+        open_kw_file(Kw_file, timefmt_m);
+    }
+    
 
     wq_calc   = TRUE;
 
